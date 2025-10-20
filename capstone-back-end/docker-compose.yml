@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: capstone-postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: mypostgresdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command: >
+      bash -c "fuser -k 5432/tcp || true && docker-entrypoint.sh postgres"
+
+volumes:
+  postgres_data:
