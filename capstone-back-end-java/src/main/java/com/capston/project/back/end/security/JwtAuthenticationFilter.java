@@ -1,7 +1,7 @@
 package com.capston.project.back.end.security;
 
 import com.capston.project.back.end.repository.TokenRepository;
-import com.capston.project.back.end.service.JwtService;
+import com.capston.project.back.end.service.impl.JwtServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,7 +20,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-	private final JwtService jwtService;
+	private final JwtServiceImpl jwtService;
 	private final UserDetailsService userDetailsService;
 	private final TokenRepository tokenRepository;
 

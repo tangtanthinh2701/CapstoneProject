@@ -27,54 +27,54 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class User {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-	@Column(length = 100)
-	private String fullname;
+  @Column(length = 100)
+  private String fullname;
 
-	@Column(nullable = false, unique = true, length = 100)
-	private String username;
+  @Column(nullable = false, unique = true, length = 100)
+  private String username;
 
-	@Column(nullable = false, length = 100)
-	private String password;
+  @Column(nullable = false, length = 100)
+  private String password;
 
-	@Column(name = "phone_number", nullable = false, length = 10)
-	private String phoneNumber;
+  @Column(name = "phone_number", nullable = false, length = 10)
+  private String phoneNumber;
 
-	@Column(length = 200)
-	private String address;
+  @Column(length = 200)
+  private String address;
 
-	@Column(name = "created_at")
-	private LocalDateTime createdAt;
+  @Column(name = "created_at")
+  private LocalDateTime createdAt;
 
-	@Column(name = "updated_at")
-	private LocalDateTime updatedAt;
+  @Column(name = "updated_at")
+  private LocalDateTime updatedAt;
 
-	@Column(name = "is_active")
-	private Boolean isActive = true;
+  @Column(name = "is_active")
+  private Boolean isActive = true;
 
-	@Column(name = "date_of_birth")
-	private LocalDateTime dateOfBirth;
+  @Column(name = "date_of_birth")
+  private LocalDateTime dateOfBirth;
 
-	@Column(name = "facebook_account_id")
-	private Integer facebookAccountId = 0;
+  @Column(name = "facebook_account_id")
+  private Integer facebookAccountId = 0;
 
-	@Column(name = "google_account_id")
-	private Integer googleAccountId = 0;
+  @Column(name = "google_account_id")
+  private Integer googleAccountId = 0;
 
-	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-	private List<Token> tokens;
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+  private List<Token> tokens;
 
-	@PrePersist
-	protected void onCreate() {
-		createdAt = LocalDateTime.now();
-		updatedAt = LocalDateTime.now();
-	}
+  @PrePersist
+  protected void onCreate() {
+    createdAt = LocalDateTime.now();
+    updatedAt = LocalDateTime.now();
+  }
 
-	@PreUpdate
-	protected void onUpdate() {
-		updatedAt = LocalDateTime.now();
-	}
+  @PreUpdate
+  protected void onUpdate() {
+    updatedAt = LocalDateTime.now();
+  }
 }
