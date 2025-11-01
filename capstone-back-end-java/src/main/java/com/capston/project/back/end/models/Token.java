@@ -24,26 +24,26 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class Token {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-	@Column(unique = true, nullable = false)
-	private String token;
+  @Column(unique = true, nullable = false)
+  private String token;
 
-	@Column(name = "token_type", nullable = false, length = 50)
-	private String tokenType;
+  @Column(name = "token_type", nullable = false, length = 50)
+  private String tokenType;
 
-	@Column(name = "expiration_date")
-	private LocalDateTime expirationDate;
+  @Column(name = "expiration_date")
+  private LocalDateTime expirationDate;
 
-	@Column(nullable = false)
-	private Boolean revoked;
+  @Column(nullable = false)
+  private Boolean revoked;
 
-	@Column(nullable = false)
-	private Boolean expired;
+  @Column(nullable = false)
+  private Boolean expired;
 
-	@ManyToOne
-	@JoinColumn(name = "user_id")
-	private User user;
+  @ManyToOne
+  @JoinColumn(name = "user_id")
+  private User user;
 }

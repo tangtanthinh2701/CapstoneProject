@@ -10,9 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuthResponse {
-	private String token;
-	private String tokenType = "Bearer";
-	private Integer userId;
-	private String username;
-	private String fullname;
+  private String token;
+  private String tokenType = "Bearer"; // When using builder to create instance, if not set, this field will null
+  private Long userId;
+  private String username;
+  private String fullName;
 }
