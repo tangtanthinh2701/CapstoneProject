@@ -43,6 +43,9 @@ public class User {
   @Column(name = "phone_number", nullable = false, length = 10)
   private String phoneNumber;
 
+  @Column(length = 100)
+  private String email;
+
   @Column(length = 200)
   private String address;
 

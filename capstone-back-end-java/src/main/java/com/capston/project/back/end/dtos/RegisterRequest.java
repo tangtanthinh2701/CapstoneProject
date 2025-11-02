@@ -30,6 +30,7 @@ public class RegisterRequest {
   @Pattern(regexp = "^[0-9]{10}$", message = "Phone number must have 10 digits")
   private String phoneNumber;
 
+  private String email;
   private String address;
   private LocalDate dateOfBirth;
 }
