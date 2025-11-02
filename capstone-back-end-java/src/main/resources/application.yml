@@ -2,10 +2,10 @@ server:
   port: 8088
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/postgres
+    url: jdbc:postgresql://localhost:5432/mypostgresdb
     driver-class-name: org.postgresql.Driver
     username: postgres
-    password: 123456
+    password: 123
   jpa:
     show-sql: true
     hibernate:
@@ -21,7 +21,7 @@ spring:
 jwt:
   expiration: 2592000 #30 days = 30 * 24 * 60 * 60
   expiration-refresh-token: 5184000 #60 days = 60 * 24 * 60 * 60
-  secretKey: MTIzYWJjZA==
+  secretKey: "bXktc3VwZXItc2VjdXJlLXNlY3JldC1rZXktMzJieXRlcy0xMjM0NTY3ODkw"
 
 logging:
   level:

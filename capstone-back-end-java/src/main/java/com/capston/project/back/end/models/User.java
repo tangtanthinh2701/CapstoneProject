@@ -31,7 +31,7 @@ public class User {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(length = 100)
+  @Column(name = "fullname", length = 100)
   private String fullname;
 
   @Column(nullable = false, unique = true, length = 100)
@@ -61,11 +61,11 @@ public class User {
   @Column(name = "date_of_birth")
   private LocalDateTime dateOfBirth;
 
-  @Column(name = "facebook_account_id")
-  private Integer facebookAccountId = 0;
+  @Column(name = "facebook_account_id", nullable = false)
+  private int facebookAccountId = 0;
 
-  @Column(name = "google_account_id")
-  private Integer googleAccountId = 0;
+  @Column(name = "google_account_id", nullable = false)
+  private int googleAccountId = 0;
 
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
   private List<Token> tokens;

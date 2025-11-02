@@ -33,7 +33,7 @@ public class AuthServiceImpl implements AuthService {
 
     User user =
         User.builder()
-            .fullname(request.getFullName())
+            .fullname(request.getFullname())
             .username(request.getUsername())
             .password(passwordEncoder.encode(request.getPassword()))
             .phoneNumber(request.getPhoneNumber())
@@ -91,7 +91,7 @@ public class AuthServiceImpl implements AuthService {
 
     User user =
         User.builder()
-            .fullname(request.getFullName())
+            .fullname(request.getFullname())
             .username(request.getUsername())
             .password(passwordEncoder.encode(request.getPassword()))
             .phoneNumber(request.getPhoneNumber())
