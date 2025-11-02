@@ -17,7 +17,7 @@ import lombok.Setter;
 @Builder
 public class RegisterRequest {
   @NotBlank(message = "Full name must not be empty")
-  private String fullName;
+  private String fullname;
 
   @NotBlank(message = "User name must not be empty")
   private String username;
