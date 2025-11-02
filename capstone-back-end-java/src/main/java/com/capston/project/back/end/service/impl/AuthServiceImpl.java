@@ -37,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
             .username(request.getUsername())
             .password(passwordEncoder.encode(request.getPassword()))
             .phoneNumber(request.getPhoneNumber())
+            .email(request.getEmail())
             .address(request.getAddress())
             .dateOfBirth(request.getDateOfBirth().atStartOfDay())
             .isActive(true)
@@ -63,7 +64,7 @@ public class AuthServiceImpl implements AuthService {
             .orElseThrow(() -> new RuntimeException("Username or password is incorrect"));
 
     if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-      throw new RuntimeException("Username hoặc password không đúng");
+      throw new RuntimeException("Username or password is incorrect.");
     }
 
     if (!user.getIsActive()) {
@@ -94,6 +95,7 @@ public class AuthServiceImpl implements AuthService {
             .username(request.getUsername())
             .password(passwordEncoder.encode(request.getPassword()))
             .phoneNumber(request.getPhoneNumber())
+            .email(request.getEmail())
             .address(request.getAddress())
             .dateOfBirth(request.getDateOfBirth().atStartOfDay())
             .isActive(true)

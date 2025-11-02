@@ -7,6 +7,7 @@ CREATE TABLE users (
                        username varchar(100) NOT NULL,
                        password VARCHAR(100) NOT NULL,
                        phone_number VARCHAR(10) NOT NULL,
+                       email VARCHAR(100) DEFAULT '',
                        address VARCHAR(200) DEFAULT '',
                        created_at TIMESTAMP,
                        updated_at TIMESTAMP,
