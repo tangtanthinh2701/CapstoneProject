@@ -26,24 +26,22 @@ export default function SignUpPage() {
         },
         body: JSON.stringify(formData),
       });
-
       if (!res.ok) {
-        // Nếu backend trả lỗi (400, 409,...)
         throw new Error(`HTTP error! Status: ${res.status}`);
       }
 
       const data = await res.json();
       console.log('Register success:', data);
-
-      // ✅ Nếu backend trả token, lưu lại (tùy API của bạn)
       if (data.token) {
         localStorage.setItem('token', data.token);
       }
-
-      // ✅ Chuyển hướng sang trang home (hoặc login)
       navigate('/home');
     } catch (error) {
-      console.error('Error during registration:', error.message);
+      if (error instanceof Error) {
+        console.error('Error during registration:', error.message);
+      } else {
+        console.error('Error during registration:', error);
+      }
     }
   };
 
@@ -51,7 +49,9 @@ export default function SignUpPage() {
     <div className='flex min-h-screen'>
       {/* Left side - Sign Up form */}
       <div className='w-full md:w-1/2 flex flex-col justify-center px-10 lg:px-20 bg-white'>
-        <h1 className='text-3xl font-bold text-green-700 mb-2'>Join Unite!</h1>
+        <h1 className='text-3xl font-bold text-green-700 mb-2'>
+          Join Treeverse!
+        </h1>
         <p className='text-gray-600 mb-8'>Create your account.</p>
 
         <form className='space-y-5'>
@@ -124,7 +124,11 @@ export default function SignUpPage() {
 
         <p className='text-center text-gray-600 mt-6'>
           Already have an account?{' '}
-          <a href='#' className='text-green-700 font-semibold hover:underline'>
+          <a
+            href='#'
+            onClick={() => navigate('/login')}
+            className='text-green-700 font-semibold hover:underline'
+          >
             Log In
           </a>
         </p>
