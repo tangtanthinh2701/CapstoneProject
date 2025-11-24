@@ -14,4 +14,6 @@ public interface AuthService {
   User createUser(RegisterRequest request);
 
   void resetPassword(ResetPasswordRequest request);
+
+  void logout(String token);
 }

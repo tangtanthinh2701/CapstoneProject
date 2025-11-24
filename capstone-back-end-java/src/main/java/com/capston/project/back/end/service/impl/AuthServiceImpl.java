@@ -121,6 +121,16 @@ public class AuthServiceImpl implements AuthService {
     revokeAllUserTokens(user);
   }
 
+  @Transactional
+  public void logout(String token) {
+    Token storedToken = tokenRepository.findByToken(token)
+                                       .orElseThrow(() -> new RuntimeException("Token does not exist"));
+
+    storedToken.setExpired(true);
+    storedToken.setRevoked(true);
+    tokenRepository.save(storedToken);
+  }
+
   private void saveUserToken(User user, String jwtToken) {
     Token token =
         Token.builder()
