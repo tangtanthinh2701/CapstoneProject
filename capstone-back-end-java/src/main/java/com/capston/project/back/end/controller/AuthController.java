@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -40,5 +41,15 @@ public class AuthController {
   public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
     authService.resetPassword(request);
     return ResponseEntity.ok("Password reset successful.");
+  }
+
+  @PostMapping("/logout")
+  public ResponseEntity<String> logout(@RequestHeader("Authorization")  String authHeader) {
+    if (authHeader != null && authHeader.startsWith("Bearer ")) {
+      String token = authHeader.substring(7);
+      authService.logout(token);
+      return ResponseEntity.ok("Logout successful");
+    }
+    throw new RuntimeException("Token is invalid");
   }
 }
