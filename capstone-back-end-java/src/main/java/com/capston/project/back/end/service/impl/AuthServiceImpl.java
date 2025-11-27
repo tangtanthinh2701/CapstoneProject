@@ -40,6 +40,7 @@ public class AuthServiceImpl implements AuthService {
             .email(request.getEmail())
             .address(request.getAddress())
             .dateOfBirth(request.getDateOfBirth().atStartOfDay())
+            .sex(request.getSex())
             .isActive(true)
             .build();
 
@@ -97,6 +98,7 @@ public class AuthServiceImpl implements AuthService {
             .phoneNumber(request.getPhoneNumber())
             .email(request.getEmail())
             .address(request.getAddress())
+            .sex(request.getSex())
             .dateOfBirth(request.getDateOfBirth().atStartOfDay())
             .isActive(true)
             .build();

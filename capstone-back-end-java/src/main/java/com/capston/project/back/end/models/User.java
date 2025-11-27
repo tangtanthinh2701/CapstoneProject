@@ -62,6 +62,9 @@ public class User {
   @Column(name = "date_of_birth")
   private LocalDateTime dateOfBirth;
 
+  @Column(name = "sex")
+  private Boolean sex;
+
   @Column(name = "facebook_account_id", nullable = false)
   private int facebookAccountId = 0;
 
