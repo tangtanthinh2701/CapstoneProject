@@ -58,6 +58,7 @@ CREATE TABLE users (
                        phone_number VARCHAR(10) NOT NULL,
                        email VARCHAR(100) DEFAULT '',
                        address VARCHAR(200) DEFAULT '',
+                       sex BOOLEAN DEFAULT FALSE,
                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                        is_active BOOLEAN DEFAULT TRUE,
