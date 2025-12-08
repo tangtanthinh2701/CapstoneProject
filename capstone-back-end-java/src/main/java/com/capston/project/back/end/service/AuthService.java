@@ -1,10 +1,10 @@
 package com.capston.project.back.end.service;
 
-import com.capston.project.back.end.dtos.AuthResponse;
-import com.capston.project.back.end.dtos.LoginRequest;
-import com.capston.project.back.end.dtos.RegisterRequest;
-import com.capston.project.back.end.dtos.ResetPasswordRequest;
-import com.capston.project.back.end.models.User;
+import com.capston.project.back.end.response.AuthResponse;
+import com.capston.project.back.end.request.LoginRequest;
+import com.capston.project.back.end.request.RegisterRequest;
+import com.capston.project.back.end.request.ResetPasswordRequest;
+import com.capston.project.back.end.entity.User;
 
 public interface AuthService {
   AuthResponse register(RegisterRequest request);

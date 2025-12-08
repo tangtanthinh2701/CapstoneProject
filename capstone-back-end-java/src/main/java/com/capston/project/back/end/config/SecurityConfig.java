@@ -10,6 +10,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -32,9 +33,10 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
-				.csrf(csrf -> csrf.disable())
+				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+				.csrf(AbstractHttpConfigurer::disable)
 				.authorizeHttpRequests(auth -> auth
-						                       .requestMatchers("/api/auth/**", "/error").permitAll()  // THÊM /error
+						                       .requestMatchers("/api/auth/**", "/error").permitAll()
 						                       .anyRequest().authenticated()
 				                      )
 				.sessionManagement(session -> session
@@ -65,20 +67,10 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
-
-		// ✅ Cho phép origin của frontend (ví dụ localhost:5173)
 		config.setAllowedOrigins(List.of("http://localhost:5173"));
-
-		// ✅ Các method HTTP được phép
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-		// ✅ Các header được phép gửi lên
 		config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
-
-		// ✅ Cho phép gửi cookie/token kèm request
 		config.setAllowCredentials(true);
-
-		// Áp dụng cho tất cả endpoint
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", config);
 

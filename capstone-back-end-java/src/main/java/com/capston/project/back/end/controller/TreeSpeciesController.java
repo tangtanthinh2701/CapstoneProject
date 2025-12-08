@@ -1,6 +1,6 @@
 package com.capston.project.back.end.controller;
 
-import com.capston.project.back.end.dtos.TreeSpeciesDTO;
+import com.capston.project.back.end.request.TreeSpeciesRequest;
 import com.capston.project.back.end.service.TreeSpeciesService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,46 +16,47 @@ public class TreeSpeciesController {
 	private final TreeSpeciesService treeSpeciesService;
 
 	@PostMapping("/create-treeSpecies")
-	public ResponseEntity<TreeSpeciesDTO> createTreeSpecies(@Valid @RequestBody TreeSpeciesDTO dto) {
-		TreeSpeciesDTO result = treeSpeciesService.createTreeSpecies(dto);
+	public ResponseEntity<TreeSpeciesRequest> createTreeSpecies(@Valid @RequestBody TreeSpeciesRequest dto) {
+		TreeSpeciesRequest result = treeSpeciesService.createTreeSpecies(dto);
 		return ResponseEntity.ok(result);
 	}
 
 	@PostMapping("/batch")
-	public ResponseEntity<List<TreeSpeciesDTO>> batchCreateTreeSpecies(@Valid @RequestBody List<TreeSpeciesDTO> dtoList) {
-		List<TreeSpeciesDTO> results = treeSpeciesService.batchCreateTreeSpecies(dtoList);
+	public ResponseEntity<List<TreeSpeciesRequest>> batchCreateTreeSpecies(@Valid @RequestBody List<TreeSpeciesRequest> dtoList) {
+		List<TreeSpeciesRequest> results = treeSpeciesService.batchCreateTreeSpecies(dtoList);
 		return ResponseEntity.ok(results);
 	}
 
 	@GetMapping("/all-treeSpecies")
-	public ResponseEntity<List<TreeSpeciesDTO>> getAllTreeSpecies() {
-		List<TreeSpeciesDTO> results = treeSpeciesService.getAllTreeSpecies();
+	public ResponseEntity<List<TreeSpeciesRequest>> getAllTreeSpecies() {
+		List<TreeSpeciesRequest> results = treeSpeciesService.getAllTreeSpecies();
 		return ResponseEntity.ok(results);
 	}
 
 	@GetMapping("/active")
-	public ResponseEntity<List<TreeSpeciesDTO>> getActiveTreeSpecies() {
-		List<TreeSpeciesDTO> results = treeSpeciesService.getActiveTreeSpecies();
+	public ResponseEntity<List<TreeSpeciesRequest>> getActiveTreeSpecies() {
+		List<TreeSpeciesRequest> results = treeSpeciesService.getActiveTreeSpecies();
 		return ResponseEntity.ok(results);
 	}
 
 	@GetMapping("/{id}")
-	public ResponseEntity<TreeSpeciesDTO> getTreeSpeciesById(@PathVariable Integer id) {
-		TreeSpeciesDTO result = treeSpeciesService.getTreeSpeciesById(id);
+	public ResponseEntity<TreeSpeciesRequest> getTreeSpeciesById(@PathVariable Integer id) {
+		TreeSpeciesRequest result = treeSpeciesService.getTreeSpeciesById(id);
 		return ResponseEntity.ok(result);
 	}
 
 	@GetMapping("/paginated")
-	public ResponseEntity<Page<TreeSpeciesDTO>> getTreeSpeciesPaginated(@RequestParam(defaultValue = "0") int page,
-	                                                                    @RequestParam(defaultValue = "20") int size,
-	                                                                    @RequestParam(defaultValue = "name") String sortBy) {
-		Page<TreeSpeciesDTO> results = treeSpeciesService.getTreeSpeciesPaginated(page, size, sortBy);
+	public ResponseEntity<Page<TreeSpeciesRequest>> getTreeSpeciesPaginated(@RequestParam(defaultValue = "0") int page,
+	                                                                        @RequestParam(defaultValue = "20") int size,
+	                                                                        @RequestParam(defaultValue = "name") String sortBy) {
+		Page<TreeSpeciesRequest> results = treeSpeciesService.getTreeSpeciesPaginated(page, size, sortBy);
 		return ResponseEntity.ok(results);
 	}
 
 	@PutMapping("/{id}")
-	public ResponseEntity<TreeSpeciesDTO> updateTreeSpecies(@PathVariable Integer id, @Valid @RequestBody TreeSpeciesDTO dto) {
-		TreeSpeciesDTO result = treeSpeciesService.updateTreeSpecies(id, dto);
+	public ResponseEntity<TreeSpeciesRequest> updateTreeSpecies(@PathVariable Integer id, @Valid @RequestBody
+	TreeSpeciesRequest dto) {
+		TreeSpeciesRequest result = treeSpeciesService.updateTreeSpecies(id, dto);
 		return ResponseEntity.ok(result);
 	}
 
@@ -81,20 +82,20 @@ public class TreeSpeciesController {
 	// Search với ScientificName
 	// /search-scientificName/search?keyword=''
 	@GetMapping("/search-scientificName")
-	public ResponseEntity<List<TreeSpeciesDTO>> searchByName(@RequestParam String keyword) {
-		List<TreeSpeciesDTO> results = treeSpeciesService.searchByName(keyword);
+	public ResponseEntity<List<TreeSpeciesRequest>> searchByName(@RequestParam String keyword) {
+		List<TreeSpeciesRequest> results = treeSpeciesService.searchByName(keyword);
 		return ResponseEntity.ok(results);
 	}
 
 	@PostMapping("/search")
-	public ResponseEntity<Page<TreeSpeciesDTO>> searchTreeSpecies(@RequestBody TreeSpeciesDTO searchDTO){
-		Page<TreeSpeciesDTO> results = treeSpeciesService.searchTreeSpecies(searchDTO);
+	public ResponseEntity<Page<TreeSpeciesRequest>> searchTreeSpecies(@RequestBody TreeSpeciesRequest searchDTO){
+		Page<TreeSpeciesRequest> results = treeSpeciesService.searchTreeSpecies(searchDTO);
 		return ResponseEntity.ok(results);
 	}
 
 	@GetMapping("/statistics")
-	public ResponseEntity<TreeSpeciesDTO> getStatistics() {
-		TreeSpeciesDTO result = treeSpeciesService.getStatistics();
+	public ResponseEntity<TreeSpeciesRequest> getStatistics() {
+		TreeSpeciesRequest result = treeSpeciesService.getStatistics();
 		return ResponseEntity.ok(result);
 	}
 }
