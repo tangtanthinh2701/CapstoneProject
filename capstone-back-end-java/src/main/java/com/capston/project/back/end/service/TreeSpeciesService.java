@@ -1,17 +1,23 @@
 package com.capston.project.back.end.service;
 
-import com.capston.project.back.end.dtos.TreeSpeciesDTO;
+import com.capston.project.back.end.request.TreeSpeciesRequest;
 import java.util.*;
 import org.springframework.data.domain.*;
 
 public interface TreeSpeciesService {
-	TreeSpeciesDTO createTreeSpecies(TreeSpeciesDTO dto);
-	List<TreeSpeciesDTO> batchCreateTreeSpecies(List<TreeSpeciesDTO> dtoList);
-	TreeSpeciesDTO getTreeSpeciesById(Integer id);
-	List<TreeSpeciesDTO> getAllTreeSpecies();
-	List<TreeSpeciesDTO> getActiveTreeSpecies();
-	Page<TreeSpeciesDTO> getTreeSpeciesPaginated(int page, int size, String sortBy);
-	TreeSpeciesDTO updateTreeSpecies(Integer id, TreeSpeciesDTO dto);
+	TreeSpeciesRequest createTreeSpecies(TreeSpeciesRequest dto);
+
+	List<TreeSpeciesRequest> batchCreateTreeSpecies(List<TreeSpeciesRequest> dtoList);
+
+	TreeSpeciesRequest getTreeSpeciesById(Integer id);
+
+	List<TreeSpeciesRequest> getAllTreeSpecies();
+
+	List<TreeSpeciesRequest> getActiveTreeSpecies();
+
+	Page<TreeSpeciesRequest> getTreeSpeciesPaginated(int page, int size, String sortBy);
+
+	TreeSpeciesRequest updateTreeSpecies(Integer id, TreeSpeciesRequest dto);
 	/**
 	 * Soft delete
 	 */
@@ -20,7 +26,7 @@ public interface TreeSpeciesService {
 	 * Hard delete
 	 */
 	void permanentDeleteTreeSpecies(Integer id);
-	Page<TreeSpeciesDTO> searchTreeSpecies(TreeSpeciesDTO searchDTO);
-	List<TreeSpeciesDTO> searchByName(String keyword);
-	TreeSpeciesDTO getStatistics();
+	Page<TreeSpeciesRequest> searchTreeSpecies(TreeSpeciesRequest searchDTO);
+	List<TreeSpeciesRequest> searchByName(String keyword);
+	TreeSpeciesRequest getStatistics();
 }

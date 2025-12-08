@@ -1,6 +1,6 @@
 package com.capston.project.back.end.repository;
 
-import com.capston.project.back.end.models.Token;
+import com.capston.project.back.end.entity.Token;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import java.util.List;

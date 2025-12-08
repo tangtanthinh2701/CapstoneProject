@@ -3,6 +3,7 @@ import SignUpPage from '../pages/SignupPage/SignupPage';
 import LoginPage from '../pages/LoginPage/LoginPage';
 import HomePage from '../pages/HomePage';
 import ProjectPage from '../pages/ProjectPage/ProjectPage';
+import ProjectDetailPage from '../pages/ProjectDetailPage/ProjectDetailPage';
 
 const router = createBrowserRouter([
   {
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
   {
     path: '/projects',
     element: <ProjectPage />,
+  },
+  {
+    path: '/projects/:id',
+    element: <ProjectDetailPage />,
   },
 ]);
 

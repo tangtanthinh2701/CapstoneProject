@@ -1,12 +1,12 @@
 package com.capston.project.back.end.service.impl;
 
-import com.capston.project.back.end.dtos.AuthResponse;
-import com.capston.project.back.end.dtos.LoginRequest;
-import com.capston.project.back.end.dtos.RegisterRequest;
+import com.capston.project.back.end.response.AuthResponse;
+import com.capston.project.back.end.request.LoginRequest;
+import com.capston.project.back.end.request.RegisterRequest;
 
-import com.capston.project.back.end.dtos.ResetPasswordRequest;
-import com.capston.project.back.end.models.Token;
-import com.capston.project.back.end.models.User;
+import com.capston.project.back.end.request.ResetPasswordRequest;
+import com.capston.project.back.end.entity.Token;
+import com.capston.project.back.end.entity.User;
 import com.capston.project.back.end.service.AuthService;
 import com.capston.project.back.end.service.JwtService;
 import org.springframework.stereotype.Service;
