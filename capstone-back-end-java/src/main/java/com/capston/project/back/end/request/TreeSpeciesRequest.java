@@ -11,7 +11,6 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 import jakarta.validation.constraints.Pattern;
 
@@ -71,63 +70,8 @@ public class TreeSpeciesRequest {
 	private Boolean hasCommercialValue = false;
 
 	private Boolean isActive = true;
+
 	private LocalDateTime createdAt;
+
 	private LocalDateTime updatedAt;
-
-	//  SEARCH/FILTER FIELDS (Dùng khi gọi API Search)
-	private String keyword; // Tìm theo tên hoặc tên khoa học
-
-	// Range filters
-	private BigDecimal minCarbonRate;
-	private BigDecimal maxCarbonRate;
-	private Integer minLifespan;
-	private Integer maxLifespan;
-
-	// Pagination
-	@Builder.Default
-	private Integer page = 0;
-
-	@Builder.Default
-	private Integer size = 20;
-
-	@Builder.Default
-	private String sortBy = "name";
-
-	@Builder.Default
-	private String sortDirection = "ASC";
-
-	// STATISTICS FIELDS (Dùng khi gọi API Statistics)
-	@NotNull(message = "Expected quantity must not be empty")
-	@Min(value = 1, message = "Quantity must be greater than 0")
-	private Integer quantityPlanned;
-	private Integer quantityActual;
-	private Integer quantityDied;
-	private BigDecimal costPerTree;
-	private BigDecimal plantingCost;
-	private BigDecimal maintenanceCostYearly;
-	private String notes;
-
-	// Counts
-	private Long totalSpecies;
-	private Long activeSpecies;
-	private Long inactiveSpecies;
-	private Long commercialSpecies;
-
-	// Carbon statistics
-	private BigDecimal avgCarbonAbsorptionRate;
-	private BigDecimal maxCarbonAbsorptionRate;
-	private BigDecimal minCarbonAbsorptionRate;
-
-	// Growth rate distribution
-	private Map<String, Long> growthRateDistribution;
-	// {"SLOW": 10, "MEDIUM": 20, "FAST": 15}
-
-	// Economic statistics
-	private BigDecimal totalWoodValue;
-	private BigDecimal avgWoodValue;
-	private BigDecimal totalFruitValue;
-	private BigDecimal avgFruitValue;
-
-	public interface Create {}
-	public interface Update {}
 }
