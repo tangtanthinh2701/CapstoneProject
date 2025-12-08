@@ -1,5 +1,6 @@
 package com.capston.project.back.end.response;
 
+import com.capston.project.back.end.common.ProjectStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,7 +31,7 @@ public class ProjectResponse {
 	private Integer totalTreesPlanned;
 	private Integer totalTreesActual;
 	private BigDecimal plantingDensity;
-	private String projectStatus;
+	private ProjectStatus projectStatus;
 	private UUID managerId;
 	private List<String> partnerOrganizations;
 	private Boolean isPublic;

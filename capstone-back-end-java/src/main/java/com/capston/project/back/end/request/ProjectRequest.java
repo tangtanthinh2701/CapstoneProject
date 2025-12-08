@@ -61,7 +61,7 @@ public class ProjectRequest {
 
 	private BigDecimal plantingDensity;
 
-	private ProjectStatus status;
+	private ProjectStatus projectStatus;
 
 	private UUID managerId;
 

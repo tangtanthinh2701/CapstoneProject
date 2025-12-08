@@ -1,5 +1,6 @@
 package com.capston.project.back.end.service.impl;
 
+import com.capston.project.back.end.common.ProjectStatus;
 import com.capston.project.back.end.request.ProjectRequest;
 import com.capston.project.back.end.request.TreeSpeciesOnPhaseRequest;
 import com.capston.project.back.end.exception.ResourceNotFoundException;
@@ -53,7 +54,9 @@ public class ProjectServiceImpl implements ProjectService {
 		                         .totalTreesPlanned(request.getTotalTreesPlanned())
 		                         .totalTreesActual(0)
 		                         .plantingDensity(request.getPlantingDensity())
-		                         .projectStatus(request.getStatus())
+		                         .projectStatus(request.getProjectStatus() != null ?
+		                                        request.getProjectStatus() :
+		                                        ProjectStatus.PLANNING)
 		                         .managerId(managerId)
 		                         .partnerOrganizations(request.getPartnerOrganizations())
 		                         .isPublic(request.getIsPublic())
@@ -104,10 +107,10 @@ public class ProjectServiceImpl implements ProjectService {
 				                         .maintenanceCostYearly(tsReq.getMaintenanceCostYearly())
 				                         .notes(tsReq.getNotes())
 				                         .build();
-			}).collect(Collectors.toList());
+			}).toList();
 			phase.getTreeSpeciesOnPhases().addAll(tsOnPhaseList);
 			return phase;
-		}).collect(Collectors.toList());
+		}).toList();
 
 		project.getPhases().addAll(phases);
 
@@ -116,8 +119,7 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
-	public PageResponse<ProjectListResponse> getAllProjects(String name, String status, LocalDate fromDate,
-	                                                        LocalDate toDate, int page, int size) {
+	public PageResponse<ProjectListResponse> getAllProjects(String name, String status, LocalDate fromDate, LocalDate toDate, int page, int size) {
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
 		Specification<Project> spec = (root, query, cb) -> cb.conjunction();
@@ -140,11 +142,17 @@ public class ProjectServiceImpl implements ProjectService {
 
 		Page<Project> projectPage = projectRepository.findAll(spec, pageable);
 
-		return PageResponse.<ProjectListResponse>builder().content(
-				                   projectPage.getContent().stream().map(this::convertToListResponse).collect(Collectors.toList()))
-		                   .pageNumber(projectPage.getNumber()).pageSize(projectPage.getSize()).totalElements(
-						projectPage.getTotalElements()).totalPages(projectPage.getTotalPages()).last(
-						projectPage.isLast()).build();
+		return PageResponse.<ProjectListResponse>builder()
+		                   .content(projectPage.getContent()
+		                                       .stream()
+		                                       .map(this::convertToListResponse)
+		                                       .collect(Collectors.toList()))
+		                   .pageNumber(projectPage.getNumber())
+		                   .pageSize(projectPage.getSize())
+		                   .totalElements(projectPage.getTotalElements())
+		                   .totalPages(projectPage.getTotalPages())
+		                   .last(projectPage.isLast())
+		                   .build();
 	}
 
 	@Override
@@ -152,26 +160,32 @@ public class ProjectServiceImpl implements ProjectService {
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 		Page<Project> projectPage = projectRepository.findAllPublicProjects(pageable);
 
-		return PageResponse.<ProjectListResponse>builder().content(
-				                   projectPage.getContent().stream().map(this::convertToListResponse).collect(Collectors.toList()))
-		                   .pageNumber(projectPage.getNumber()).pageSize(projectPage.getSize()).totalElements(
-						projectPage.getTotalElements()).totalPages(projectPage.getTotalPages()).last(
-						projectPage.isLast()).build();
+		return PageResponse.<ProjectListResponse>builder()
+		                   .content(projectPage.getContent()
+		                                       .stream()
+		                                       .map(this::convertToListResponse)
+		                                       .collect(Collectors.toList()))
+		                   .pageNumber(projectPage.getNumber())
+		                   .pageSize(projectPage.getSize())
+		                   .totalElements(projectPage.getTotalElements())
+		                   .totalPages(projectPage.getTotalPages())
+		                   .last(projectPage.isLast())
+		                   .build();
 	}
 
 
 	@Override
 	public ProjectResponse getProjectById(Integer id) {
-		Project project = projectRepository.findById(id).orElseThrow(
-				() -> new ResourceNotFoundException("Project not found with id: " + id));
+		Project project = projectRepository.findById(id)
+		                                   .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
 
 		return convertToResponse(project);
 	}
 
 	@Override
 	public ProjectResponse updateProject(Integer id, ProjectRequest request) {
-		Project project = projectRepository.findById(id).orElseThrow(
-				() -> new ResourceNotFoundException("Project not found with id: " + id));
+		Project project = projectRepository.findById(id)
+		                                   .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
 		project.setName(request.getName());
 		project.setDescription(request.getDescription());
 		project.setLocationText(request.getLocationText());
@@ -183,7 +197,9 @@ public class ProjectServiceImpl implements ProjectService {
 		project.setPlantingDate(request.getPlantingDate());
 		project.setTotalTreesPlanned(request.getTotalTreesPlanned());
 		project.setPlantingDensity(request.getPlantingDensity());
-		project.setProjectStatus(request.getStatus());
+		project.setProjectStatus(request.getProjectStatus() != null ?
+		                         request.getProjectStatus() :
+		                         project.getProjectStatus());
 		project.setPartnerOrganizations(request.getPartnerOrganizations());
 		project.setIsPublic(request.getIsPublic());
 
@@ -196,7 +212,6 @@ public class ProjectServiceImpl implements ProjectService {
 		if (!projectRepository.existsById(id)) {
 			throw new ResourceNotFoundException("Project not found with ID: " + id);
 		}
-
 		projectRepository.deleteById(id);
 	}
 
@@ -215,8 +230,10 @@ public class ProjectServiceImpl implements ProjectService {
 	private ProjectResponse convertToResponse(Project project) {
 		ProjectResponse response = modelMapper.map(project, ProjectResponse.class);
 		if (project.getPhases() != null && !project.getPhases().isEmpty()) {
-			response.setPhases(
-					project.getPhases().stream().map(this::convertPhaseToResponse).collect(Collectors.toList()));
+			response.setPhases(project.getPhases()
+			                          .stream()
+			                          .map(this::convertPhaseToResponse)
+			                          .collect(Collectors.toList()));
 		}
 		return response;
 	}
@@ -225,18 +242,17 @@ public class ProjectServiceImpl implements ProjectService {
 		ProjectPhaseResponse response = modelMapper.map(phase, ProjectPhaseResponse.class);
 
 		if (phase.getTreeSpeciesOnPhases() != null && !phase.getTreeSpeciesOnPhases().isEmpty()) {
-			response.setTreeSpecies(
-					phase.getTreeSpeciesOnPhases().stream().map(this::convertTreeSpeciesOnPhaseToResponse)
-					     .collect(Collectors.toList()));
+			response.setTreeSpecies(phase.getTreeSpeciesOnPhases()
+			                             .stream()
+			                             .map(this::convertTreeSpeciesOnPhaseToResponse)
+			                             .collect(Collectors.toList()));
 		}
-
 		return response;
 	}
 
 	private TreeSpeciesOnPhaseResponse convertTreeSpeciesOnPhaseToResponse(TreeSpeciesOnPhase ts) {
 		TreeSpeciesOnPhaseResponse response = modelMapper.map(ts, TreeSpeciesOnPhaseResponse.class);
-		TreeSpeciesSimpleResponse treeSpeciesResponse = modelMapper.map(ts.getTreeSpecies(),
-		                                                                TreeSpeciesSimpleResponse.class);
+		TreeSpeciesSimpleResponse treeSpeciesResponse = modelMapper.map(ts.getTreeSpecies(), TreeSpeciesSimpleResponse.class);
 		response.setTreeSpecies(treeSpeciesResponse);
 		return response;
 	}
