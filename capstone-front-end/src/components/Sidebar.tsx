@@ -32,9 +32,10 @@ export default function Sidebar() {
   const menu = [
     { label: 'Tổng quan', path: '/dashboard', icon: 'dashboard' },
     { label: 'Dự án', path: '/projects', icon: 'inventory_2' },
-    { label: 'Khách hàng', path: '/customers', icon: 'groups' },
-    { label: 'Báo cáo', path: '/reports', icon: 'bar_chart' },
-    { label: 'Cài đặt', path: '/settings', icon: 'settings' },
+    { label: 'Loại cây', path: '/treespecies', icon: 'forest' },
+    { label: 'Báo cáo', path: '/contracts', icon: 'summarize' },
+    { label: 'Tín chỉ Carbon', path: '/carbonCredits', icon: 'co2' },
+    { label: 'Giao dịch', path: '/payments', icon: 'payment' },
   ];
 
   return (
@@ -82,7 +83,7 @@ export default function Sidebar() {
 
         <button
           onClick={handleLogout}
-          className='flex w-full gap-3 px-4 py-2 text-gray-300 hover:bg-[#0E2219] rounded-lg text-left'
+          className='flex w-full gap-3 px-4 py-2 text-red-300 hover:bg-[#0E2219] rounded-lg text-left'
         >
           <span className='material-icons'>logout</span>
           Đăng xuất

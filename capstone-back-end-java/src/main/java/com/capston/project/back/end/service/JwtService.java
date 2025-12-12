@@ -1,6 +1,8 @@
 package com.capston.project.back.end.service;
 
 import io.jsonwebtoken.*;
+import org.springframework.security.core.userdetails.UserDetails;
+
 import java.util.Date;
 
 public interface JwtService {
@@ -14,5 +16,5 @@ public interface JwtService {
 
   Boolean isTokenExpired(String token);
 
-  Boolean validateToken(String token, String username);
+  Boolean validateToken(String token, UserDetails userDetails);
 }

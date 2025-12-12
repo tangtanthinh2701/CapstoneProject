@@ -14,7 +14,7 @@ import java.util.*;
 @AllArgsConstructor
 @Builder
 public class PhaseRequest {
-	@NotNull(message = "Số thứ tự giai đoạn không được để trống")
+
 	private Integer phaseNumber;
 
 	private String phaseName;

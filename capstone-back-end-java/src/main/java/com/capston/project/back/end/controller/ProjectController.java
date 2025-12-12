@@ -1,5 +1,6 @@
 package com.capston.project.back.end.controller;
 
+import com.capston.project.back.end.common.ProjectStatus;
 import com.capston.project.back.end.entity.User;
 import com.capston.project.back.end.repository.UserRepository;
 import com.capston.project.back.end.request.ProjectRequest;
@@ -36,7 +37,7 @@ public class ProjectController {
 
 	@GetMapping("/get-projects")
 	public ResponseEntity<ApiResponse<PageResponse<ProjectListResponse>>>
-	getAllProjects(@RequestParam(required = false) String name, @RequestParam(required = false) String status,
+	getAllProjects(@RequestParam(required = false) String name, @RequestParam(required = false) ProjectStatus status,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
 			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {

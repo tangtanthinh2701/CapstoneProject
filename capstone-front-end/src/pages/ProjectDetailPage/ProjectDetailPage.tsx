@@ -69,7 +69,7 @@ export default function ProjectDetailPage() {
         if (!res.ok) throw new Error('Failed to load project');
 
         const json = await res.json();
-        setProject(json);
+        setProject(json.data);
       } catch (err) {
         console.error('Error loading project:', err);
       } finally {
@@ -147,7 +147,7 @@ export default function ProjectDetailPage() {
           <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
             <p className='text-gray-400'>Diện tích sử dụng</p>
             <p className='text-3xl font-bold'>
-              {project.usableArea.toLocaleString()} {project.areaUnit}
+              {project?.usableArea?.toLocaleString() ?? '0'} {project.areaUnit}
             </p>
           </div>
         </div>
@@ -209,14 +209,15 @@ export default function ProjectDetailPage() {
                 <div>
                   <p className='text-gray-400'>Diện tích</p>
                   <p>
-                    {project.area.toLocaleString()} {project.areaUnit}
+                    {project.area?.toLocaleString() ?? '0'} {project.areaUnit}
                   </p>
                 </div>
 
                 <div>
                   <p className='text-gray-400'>Diện tích sử dụng</p>
                   <p>
-                    {project.usableArea.toLocaleString()} {project.areaUnit}
+                    {project.usableArea?.toLocaleString() ?? '0'}{' '}
+                    {project.areaUnit}
                   </p>
                 </div>
 
@@ -262,7 +263,8 @@ export default function ProjectDetailPage() {
                           Số lượng dự kiến: {t.quantityPlanned}
                         </p>
                         <p className='text-sm'>
-                          Chi phí mỗi cây: {t.costPerTree.toLocaleString()} VND
+                          Chi phí mỗi cây:{' '}
+                          {t.costPerTree?.toLocaleString() ?? '0'} VND
                         </p>
                         {t.notes && (
                           <p className='text-sm text-gray-300 mt-1'>

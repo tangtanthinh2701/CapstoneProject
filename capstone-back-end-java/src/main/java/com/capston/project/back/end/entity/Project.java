@@ -80,7 +80,7 @@ public class Project {
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "project_status", length = 20)
-	private ProjectStatus projectStatus;
+	private ProjectStatus projectStatus = ProjectStatus.PLANNING;
 
 	@Column(name = "manager_id")
 	private UUID managerId;
