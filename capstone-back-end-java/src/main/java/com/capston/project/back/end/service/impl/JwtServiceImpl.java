@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
@@ -70,8 +71,8 @@ public class JwtServiceImpl implements JwtService {
   }
 
   @Override
-  public Boolean validateToken(String token, String username) {
-    final String tokenUsername = extractUsername(token);
-    return (tokenUsername.equals(username) && !isTokenExpired(token));
+  public Boolean validateToken(String token, UserDetails userDetails) {
+    final String username = extractUsername(token);
+    return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
   }
 }

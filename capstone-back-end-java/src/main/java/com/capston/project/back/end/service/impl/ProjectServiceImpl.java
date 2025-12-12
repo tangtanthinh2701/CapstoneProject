@@ -24,6 +24,8 @@ import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -53,7 +55,7 @@ public class ProjectServiceImpl implements ProjectService {
 		                         .plantingDate(request.getPlantingDate())
 		                         .totalTreesPlanned(request.getTotalTreesPlanned())
 		                         .totalTreesActual(0)
-		                         .plantingDensity(request.getPlantingDensity())
+		                         .plantingDensity(BigDecimal.valueOf(0.0))
 		                         .projectStatus(request.getProjectStatus() != null ?
 		                                        request.getProjectStatus() :
 		                                        ProjectStatus.PLANNING)
@@ -114,12 +116,32 @@ public class ProjectServiceImpl implements ProjectService {
 
 		project.getPhases().addAll(phases);
 
+		int totalTreesActual = project.getPhases()
+		                              .stream()
+		                              .flatMap(p -> p.getTreeSpeciesOnPhases().stream())
+		                              .mapToInt(ts -> ts.getQuantityActual() - ts.getQuantityDied())
+		                              .sum();
+		project.setTotalTreesActual(totalTreesActual);
+
+		BigDecimal usableAreaHa = project.getUsableArea();
+		if (project.getAreaUnit() != null) {
+			if (project.getAreaUnit().equalsIgnoreCase("m2")) {
+				usableAreaHa = usableAreaHa.divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
+			}
+		}
+		BigDecimal plantingDensity = BigDecimal.ZERO;
+		if (usableAreaHa.compareTo(BigDecimal.ZERO) > 0) {
+			plantingDensity = BigDecimal.valueOf(totalTreesActual)
+			                            .divide(usableAreaHa, 6, RoundingMode.HALF_UP);
+		}
+		project.setPlantingDensity(plantingDensity);
+
 		Project savedProject = projectRepository.save(project);
 		return convertToResponse(savedProject);
 	}
 
 	@Override
-	public PageResponse<ProjectListResponse> getAllProjects(String name, String status, LocalDate fromDate, LocalDate toDate, int page, int size) {
+	public PageResponse<ProjectListResponse> getAllProjects(String name, ProjectStatus status, LocalDate fromDate, LocalDate toDate, int page, int size) {
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
 		Specification<Project> spec = (root, query, cb) -> cb.conjunction();
@@ -128,7 +150,7 @@ public class ProjectServiceImpl implements ProjectService {
 			spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%"));
 		}
 
-		if (status != null && !status.isEmpty()) {
+		if (status != null) {
 			spec = spec.and((root, query, cb) -> cb.equal(root.get("projectStatus"), status));
 		}
 

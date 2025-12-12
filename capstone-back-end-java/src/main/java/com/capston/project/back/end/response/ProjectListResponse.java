@@ -1,5 +1,6 @@
 package com.capston.project.back.end.response;
 
+import com.capston.project.back.end.common.ProjectStatus;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,7 +18,7 @@ public class ProjectListResponse {
 	private String areaUnit;
 	private Integer totalTreesPlanned;
 	private Integer totalTreesActual;
-	private String projectStatus;
+	private ProjectStatus projectStatus;
 	private LocalDate plantingDate;
 	private Boolean isPublic;
 }

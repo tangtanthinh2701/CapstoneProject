@@ -4,6 +4,9 @@ import LoginPage from '../pages/LoginPage/LoginPage';
 import HomePage from '../pages/HomePage';
 import ProjectPage from '../pages/ProjectPage/ProjectPage';
 import ProjectDetailPage from '../pages/ProjectDetailPage/ProjectDetailPage';
+import ProjectFormPage from '../pages/ProjectFormPage/ProjectFormPage';
+import TreeSpeciesPage from '../pages/TreeSpeciesPage/TreeSpeciesPage';
+import TreeSpeciesFormPage from '../pages/TreeSpeciesFormPage/TreeSpeciesFormPage';
 
 const router = createBrowserRouter([
   {
@@ -30,6 +33,26 @@ const router = createBrowserRouter([
     path: '/projects/:id',
     element: <ProjectDetailPage />,
   },
+  {
+    path: '/projects/new',
+    element: <ProjectFormPage />,
+  },
+  {
+    path: '/projects/:id/edit',
+    element: <ProjectFormPage />,
+  },
+  {
+    path: '/treespecies',
+    element: <TreeSpeciesPage />,
+  },
+  {
+    path: '/tree-species/new',
+    element: <TreeSpeciesFormPage />,
+  },
+  {
+    path: '/tree-species/:id/edit',
+    element: <TreeSpeciesFormPage />,
+  }
 ]);
 
 export default router;

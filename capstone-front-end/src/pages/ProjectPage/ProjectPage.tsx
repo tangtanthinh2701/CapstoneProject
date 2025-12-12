@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
 import { useNavigate } from 'react-router-dom';
+import { deleteProject } from '../../models/project.api';
+
 interface PageableSort {
   empty: boolean;
   sorted: boolean;
@@ -27,7 +29,7 @@ interface Project {
   plantingDate: string;
   totalTreesPlanned: number;
   totalTreesActual: number;
-  status: string;
+  projectStatus: string;
   numberOfPhases: number;
   numberOfTreeSpecies: number;
 }
@@ -43,16 +45,20 @@ interface ApiResponse {
   totalElements: number;
   totalPages: number;
 }
-const statusBadgeClass = (status: string) => {
-  switch (status) {
+const statusBadgeClass = (projectStatus: string) => {
+  switch (projectStatus) {
     case 'PLANNING':
       return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
-    case 'ACTIVE':
+    case 'PLANTING':
       return 'bg-blue-100 text-blue-800 border border-blue-300';
-    case 'COMPLETED':
+    case 'GROWING':
       return 'bg-green-100 text-green-800 border border-green-300';
-    case 'CANCELLED':
+    case 'MATURE':
       return 'bg-red-100 text-red-800 border border-red-300';
+    case 'HARVESTING':
+      return 'bg-purple-100 text-purple-800 border border-purple-300';
+    case 'COMPLETED':
+      return 'bg-orange-100 text-gray-800 border border-gray-300';
     default:
       return 'bg-gray-200 text-gray-700';
   }
@@ -61,10 +67,26 @@ const statusBadgeClass = (status: string) => {
 export default function ProjectListPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 20;
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa dự án này?')) return;
+
+    try {
+      await deleteProject(id);
+      alert('Xóa thành công!');
+
+      // Refresh list
+      fetchProjects(page);
+    } catch (err) {
+      console.error('Delete failed:', err);
+      alert('Xóa thất bại!');
+    }
+  };
+
   useEffect(() => {
     fetchProjects(page);
   }, [page]);
@@ -85,15 +107,12 @@ export default function ProjectListPage() {
           },
         },
       );
-
-      console.log('STATUS:', res.status);
-
       if (!res.ok) {
         throw new Error(`Fail with HTTP ${res.status}`);
       }
 
-      const json: ApiResponse = await res.json();
-      setResponse(json);
+      const result = await res.json();
+      setResponse(result.data);
     } catch (err) {
       console.error('Error loading projects:', err);
     } finally {
@@ -137,9 +156,11 @@ export default function ProjectListPage() {
           <select className='px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl text-gray-100'>
             <option>Tất cả trạng thái</option>
             <option value='PLANNING'>PLANNING</option>
-            <option value='ACTIVE'>ACTIVE</option>
+            <option value='PLANTING'>PLANTING</option>
+            <option value='GROWING'>GROWING</option>
+            <option value='MATURE'>MATURE</option>
+            <option value='HARVESTING'>HARVESTING</option>
             <option value='COMPLETED'>COMPLETED</option>
-            <option value='CANCELLED'>CANCELLED</option>
           </select>
 
           <button
@@ -190,10 +211,10 @@ export default function ProjectListPage() {
                 <div>
                   <span
                     className={`px-3 py-1 text-xs rounded-full inline-block ${statusBadgeClass(
-                      p.status,
+                      p.projectStatus,
                     )}`}
                   >
-                    {p.status}
+                    {p.projectStatus}
                   </span>
                 </div>
 
@@ -214,7 +235,10 @@ export default function ProjectListPage() {
                 <div className='flex gap-4 items-center'>
                   <button
                     className='text-gray-200 hover:text-white'
-                    onClick={() => navigate(`/projects/${p.id}`)}
+                    onClick={() => {
+                      console.log('CLICK OK', p.id);
+                      navigate(`/projects/${p.id}`);
+                    }}
                   >
                     <span className='material-icons'>visibility</span>
                   </button>
@@ -226,7 +250,10 @@ export default function ProjectListPage() {
                     <span className='material-icons'>edit</span>
                   </button>
 
-                  <button className='text-red-400 hover:text-red-300'>
+                  <button
+                    className='text-red-400 hover:text-red-300'
+                    onClick={() => handleDelete(p.id)}
+                  >
                     <span className='material-icons'>delete</span>
                   </button>
                 </div>
