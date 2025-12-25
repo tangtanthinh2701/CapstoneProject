@@ -94,20 +94,9 @@ CREATE TABLE tree_species
     carbon_absorption_rate NUMERIC(10, 4) NOT NULL, -- Hệ số k_i (kg CO2/cây/năm)
     description            TEXT,
     image_url              VARCHAR(500),
-    typical_height         NUMERIC(10, 2),          -- Chiều cao điển hình (m)
-    typical_diameter       NUMERIC(10, 2),          -- Đường kính thân điển hình (cm)
-    typical_lifespan       INTEGER,                 -- Tuổi thọ (năm)
-    growth_rate            VARCHAR(50),             -- 'SLOW', 'MEDIUM', 'FAST'
-    climate_zones          TEXT[],                  -- Vùng khí hậu phù hợp
-    soil_types             TEXT[],                  -- Loại đất phù hợp
-    water_requirement      VARCHAR(50),             -- 'LOW', 'MEDIUM', 'HIGH'
-    sunlight_requirement   VARCHAR(50),             -- 'FULL_SUN', 'PARTIAL_SHADE', 'SHADE'
-    wood_value             NUMERIC(15, 2),          -- Giá trị gỗ (VNĐ/m³)
-    fruit_value            NUMERIC(15, 2),          -- Giá trị quả/lá (VNĐ/kg)
-    has_commercial_value   BOOLEAN     DEFAULT FALSE,
-    is_active              BOOLEAN     DEFAULT TRUE,
     created_at             TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at             TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    updated_at             TIMESTAMPTZ,
+    deleted_at             TIMESTAMPTZ
 );
 
 -- Bảng dự án
@@ -117,20 +106,12 @@ CREATE TABLE projects
     code                  VARCHAR(50) UNIQUE NOT NULL,                  -- Mã dự án
     name                  VARCHAR(255)       NOT NULL,
     description           TEXT,
-    location_text         TEXT,
-    latitude              NUMERIC(10, 8),
-    longitude             NUMERIC(11, 8),
-    area                  NUMERIC(12, 2)     NOT NULL CHECK (area > 0), -- Diện tích (m²)
-    area_unit             VARCHAR(10) DEFAULT 'm2',                     -- m2 hoặc ha
-    usable_area           NUMERIC(12, 2),                               -- Diện tích sử dụng thực tế
-    planting_date         DATE               NOT NULL,
-    total_trees_planned   INTEGER            NOT NULL CHECK (total_trees_planned > 0),
-    total_trees_actual    INTEGER     DEFAULT 0,
-    planting_density      NUMERIC(10, 2),                               -- Mật độ (cây/ha)
     project_status        VARCHAR(20) DEFAULT 'PLANNING',
     manager_id            UUID               REFERENCES users (id) ON DELETE SET NULL,
-    partner_organizations TEXT[],                                       -- Các tổ chức đối tác
-    is_public             BOOLEAN     DEFAULT TRUE,                     -- Dự án công khai cho doanh nghiệp mua
+    is_public             BOOLEAN     DEFAULT TRUE,                      -- Dự án công khai cho doanh nghiệp mua
+    budget                NUMERIC(15, 2),                                -- Ngân sách tổng
+    target_consumed_carbon       NUMERIC(15, 2) DEFAULT 0,               -- Lượng CO2 đã hấp thụ (kg) (tổng số target của phase)
+    current_consumed_carbon      NUMERIC(15, 2) DEFAULT 0,               -- Lượng CO2 đã hấp thụ hiện tại (kg) (tính từ cây)
     created_at            TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at            TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_planting_date CHECK (planting_date <= CURRENT_DATE),
@@ -138,11 +119,23 @@ CREATE TABLE projects
 );
 
 -- Bảng đối tác dự án
-CREATE TABLE project_partners
+CREATE TABLE partners
 (
     id           INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    project_id   INTEGER NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
-    partner_name TEXT    NOT NULL
+    partner_name TEXT NOT NULL,
+    img_url      VARCHAR(500)
+);
+
+-- Bảng liên kết dự án và đối tác
+CREATE TABLE project_partners
+(
+    id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    project_id  INTEGER NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+    partner_id  INTEGER NOT NULL REFERENCES partners (id) ON DELETE CASCADE,
+    role        VARCHAR(100), -- Vai trò của đối tác trong dự án
+    notes       TEXT,
+    created_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (project_id, partner_id)
 );
 
 -- Bảng vòng đời dự án
@@ -150,133 +143,233 @@ CREATE TABLE project_phases
 (
     id                     INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     project_id             INTEGER     NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
-    phase_number           INTEGER     NOT NULL,           -- Giai đoạn thứ mấy
+    phase_order            INTEGER     NOT NULL,           -- Giai đoạn thứ mấy
     phase_name             VARCHAR(255),
     description            TEXT,
     phase_status           VARCHAR(20) NOT NULL DEFAULT 'PLANNING',
-    start_date             DATE        NOT NULL,
-    end_date               DATE,
-    expected_duration_days INTEGER,                        -- Dự kiến bao nhiêu ngày
-    actual_duration_days   INTEGER,                        -- Thực tế bao nhiêu ngày
+    expected_start_date    DATE,
+    expected_end_date      DATE,
+    actual_start_date      DATE        NOT NULL,
+    actual_end_date        DATE,
     budget                 NUMERIC(15, 2),                 -- Ngân sách cho giai đoạn này
-    actual_cost            NUMERIC(15, 2)       DEFAULT 0, -- Chi phí thực tế
+    actual_cost            NUMERIC(15, 2)       DEFAULT 0, -- Chi phí thực tế (tính từ cây)
+    target_consumed_carbon        NUMERIC(15, 2)       DEFAULT 0, -- Lượng CO2 đã hấp thụ (kg)
+    current_consumed_carbon       NUMERIC(15, 2)       DEFAULT 0, -- Lượng CO2 đã hấp thụ hiện tại (kg) (tính từ cây)
     notes                  TEXT,
     created_by             UUID REFERENCES users (id),
     created_at             TIMESTAMPTZ          DEFAULT CURRENT_TIMESTAMP,
     updated_at             TIMESTAMPTZ          DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (project_id, phase_number)
+    UNIQUE (project_id, phase_order)
 );
 
--- Bảng liên kết dự án và loại cây (nhiều loại cây trong 1 dự án)
-CREATE TABLE tree_species_on_phases
-(
-    id                      INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    phase_id                INTEGER NOT NULL REFERENCES project_phases (id) ON DELETE CASCADE,
-    tree_species_id         INTEGER NOT NULL REFERENCES tree_species (id) ON DELETE RESTRICT,
-    quantity_planned        INTEGER NOT NULL CHECK (quantity_planned > 0),
-    quantity_actual         INTEGER     DEFAULT 0 CHECK (quantity_actual >= 0),
-    quantity_died           INTEGER     DEFAULT 0 CHECK (quantity_died >= 0),
-    cost_per_tree           NUMERIC(15, 2), -- Giá mua giống/cây
-    planting_cost           NUMERIC(15, 2), -- Chi phí trồng
-    maintenance_cost_yearly NUMERIC(15, 2), -- Chi phí chăm sóc/năm
-    notes                   TEXT,
-    created_at              TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (phase_id, tree_species_id),
-    -- Constraint: quantity_died không được lớn hơn quantity_actual
-    CONSTRAINT check_died_trees CHECK (quantity_died <= quantity_actual)
-);
-
--- Bảng hình ảnh dự án
-CREATE TABLE project_images
-(
-    id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    project_id    INTEGER      NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
-    phase_id      INTEGER      REFERENCES project_phases (id) ON DELETE SET NULL,
-    image_url     VARCHAR(500) NOT NULL,
-    thumbnail_url VARCHAR(500),
-    caption       TEXT,
-    -- Metadata
-    taken_date    DATE,
-    image_type    VARCHAR(50), -- 'BEFORE', 'DURING', 'AFTER', 'DRONE', 'GROUND'
-    is_featured   BOOLEAN     DEFAULT FALSE,
-    uploaded_by   UUID REFERENCES users (id),
-    created_at    TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
+-- -- Bảng hình ảnh dự án
+-- CREATE TABLE project_images
+-- (
+--     id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+--     project_id    INTEGER      NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+--     phase_id      INTEGER      REFERENCES project_phases (id) ON DELETE SET NULL,
+--     image_url     VARCHAR(500) NOT NULL,
+--     thumbnail_url VARCHAR(500),
+--     caption       TEXT,
+--     -- Metadata
+--     taken_date    DATE,
+--     image_type    VARCHAR(50), -- 'BEFORE', 'DURING', 'AFTER', 'DRONE', 'GROUND'
+--     is_featured   BOOLEAN     DEFAULT FALSE,
+--     uploaded_by   UUID REFERENCES users (id),
+--     created_at    TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+-- );
 
 -- Bảng dữ liệu sinh trưởng hàng năm
-CREATE TABLE annual_growth_data
+-- CREATE TABLE annual_growth_data
+-- (
+--     id                  INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+--     project_id          INTEGER NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+--     tree_species_id     INTEGER NOT NULL REFERENCES tree_species (id) ON DELETE RESTRICT,
+--     report_year         INTEGER NOT NULL,
+--     trees_alive         INTEGER NOT NULL CHECK (trees_alive >= 0),
+--     avg_height          NUMERIC(10, 2),                                                  -- cm
+--     avg_canopy_diameter NUMERIC(10, 2),                                                  -- cm
+--     avg_trunk_diameter  NUMERIC(10, 2),                                                  -- DBH - Diameter at Breast Height (cm)
+--     survival_rate       NUMERIC(5, 4) CHECK (survival_rate >= 0 AND survival_rate <= 1), -- 0.0 - 1.0
+--     health_status       VARCHAR(50),                                                     -- 'EXCELLENT', 'GOOD', 'FAIR', 'POOR'
+--     diseases            TEXT,                                                            -- Ghi chú về bệnh hại
+--     co2_absorbed        NUMERIC(15, 2),                                                  -- Tự động tính (kg)
+--     notes               TEXT,
+--     recorded_by         UUID REFERENCES users (id),
+--     created_at          TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+--     updated_at          TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+--     CONSTRAINT check_report_year CHECK (report_year >= 1900 AND report_year <= EXTRACT(YEAR FROM CURRENT_DATE)),
+--     UNIQUE (project_id, tree_species_id, report_year)
+-- );
+
+-- Bảng Farm (Khu vực trồng trong dự án)
+CREATE TABLE farms
 (
-    id                  INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    project_id          INTEGER NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
-    tree_species_id     INTEGER NOT NULL REFERENCES tree_species (id) ON DELETE RESTRICT,
-    report_year         INTEGER NOT NULL,
-    trees_alive         INTEGER NOT NULL CHECK (trees_alive >= 0),
-    avg_height          NUMERIC(10, 2),                                                  -- cm
-    avg_canopy_diameter NUMERIC(10, 2),                                                  -- cm
-    avg_trunk_diameter  NUMERIC(10, 2),                                                  -- DBH - Diameter at Breast Height (cm)
-    survival_rate       NUMERIC(5, 4) CHECK (survival_rate >= 0 AND survival_rate <= 1), -- 0.0 - 1.0
-    health_status       VARCHAR(50),                                                     -- 'EXCELLENT', 'GOOD', 'FAIR', 'POOR'
-    diseases            TEXT,                                                            -- Ghi chú về bệnh hại
-    co2_absorbed        NUMERIC(15, 2),                                                  -- Tự động tính (kg)
-    notes               TEXT,
-    recorded_by         UUID REFERENCES users (id),
-    created_at          TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at          TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT check_report_year CHECK (report_year >= 1900 AND report_year <= EXTRACT(YEAR FROM CURRENT_DATE)),
-    UNIQUE (project_id, tree_species_id, report_year)
+    id                     INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    code                   VARCHAR(50)    NOT NULL,          -- Mã khu vực (VD: FARM-001)
+    name                   VARCHAR(255)   NOT NULL,
+    description            TEXT,
+    -- Vị trí địa lý
+    location               VARCHAR(500),                     -- Địa chỉ
+    latitude               NUMERIC(10, 8),
+    longitude              NUMERIC(11, 8),
+    -- Diện tích
+    area                   NUMERIC(12, 2) NOT NULL,          -- Tổng diện tích (m²)
+    usable_area            NUMERIC(12, 2),                   -- Diện tích trồng thực tế (m²)
+    -- Thống kê cây (cron job)
+    total_trees            INTEGER        DEFAULT 0,         -- Tổng số cây trong farm (đã trồng kể cả cây sống hay chết)
+    alive_trees            INTEGER        DEFAULT 0,         -- Số cây còn sống
+    dead_trees             INTEGER        DEFAULT 0,         -- Số cây đã chết
+    -- Thông tin môi trường
+    soil_type              VARCHAR(100),                     -- Loại đất
+    climate_zone           VARCHAR(100),                     -- Vùng khí hậu
+    avg_rainfall           NUMERIC(10, 2),                   -- Lượng mưa TB (mm/năm)
+    avg_temperature        NUMERIC(5, 2),                    -- Nhiệt độ TB (°C)
+    -- Status
+    farm_status            VARCHAR(20)    DEFAULT 'ACTIVE',  -- ACTIVE, INACTIVE, CLOSED
+    planting_date          DATE,                             -- Ngày bắt đầu trồng
+    -- Tracking
+    created_by             UUID           REFERENCES users (id),
+    created_at             TIMESTAMPTZ    DEFAULT CURRENT_TIMESTAMP,
+    updated_at             TIMESTAMPTZ    DEFAULT CURRENT_TIMESTAMP,
+    deleted_at             TIMESTAMPTZ,
+    CONSTRAINT unique_farm_code_per_project UNIQUE (code),
+    CONSTRAINT check_usable_area CHECK (usable_area IS NULL OR usable_area <= area)
+);
+
+-- Bảng liên kết dự án và farm
+CREATE TABLE project_farms
+(
+    id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    project_id  INTEGER NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+    farm_id     INTEGER NOT NULL REFERENCES farms (id) ON DELETE CASCADE,
+    assigned_by UUID    REFERENCES users (id),
+    assigned_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (project_id, farm_id)
+);
+
+-- Bảng Trees (Từng đánh giá trung bình chất lượng cây trong farm)
+CREATE TABLE trees_farm
+(
+    id                     INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    farm_id                INTEGER        NOT NULL REFERENCES farms (id) ON DELETE CASCADE,
+    tree_species_id        INTEGER        NOT NULL REFERENCES tree_species (id) ON DELETE RESTRICT,
+    number_trees           INTEGER        NOT NULL DEFAULT 1, -- Số cây giống ban đầu
+    latitude               NUMERIC(10, 8),
+    longitude              NUMERIC(11, 8),
+    -- Ngày trồng
+    planting_date          DATE           NOT NULL,
+    -- Thông tin hiện tại (cập nhật từ growth_records trung bình của các cây cùng một loại)
+    current_avg_height         NUMERIC(10, 2) DEFAULT 0,         -- Chiều cao hiện tại (cm)
+    current_avg_trunk_diameter NUMERIC(10, 2) DEFAULT 0,         -- Đường kính thân (cm) - DBH
+    current_avg_canopy_diameter NUMERIC(10, 2) DEFAULT 0,        -- Đường kính tán (cm)
+    current_avg_health_status  VARCHAR(20)    DEFAULT 'HEALTHY', -- HEALTHY, DISEASED, DYING, DEAD
+    -- CO2 hấp thụ (tính toán từ công thức)
+    total_co2_absorbed     NUMERIC(15, 4) DEFAULT 0,         -- Tổng CO2 đã hấp thụ (kg)
+    -- Status
+    tree_status            VARCHAR(20)    DEFAULT 'ALIVE',   -- ALIVE, DEAD, REMOVED, TRANSPLANTED
+    -- Tracking
+    created_by             UUID           REFERENCES users (id),
+    created_at             TIMESTAMPTZ    DEFAULT CURRENT_TIMESTAMP,
+    updated_at             TIMESTAMPTZ    DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_tree_code_per_farm UNIQUE (farm_id, tree_code)
+);
+
+-- Bảng yếu tố môi trường theo từng khoảng thời gian cho farm (để tự động hóa chỉ số carbon)
+CREATE TABLE farm_environment_factors (
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    farm_id          INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+    from_date        DATE NOT NULL,
+    to_date          DATE NOT NULL,
+    rainfall_factor  NUMERIC(6,3) DEFAULT 1.0,
+    temp_factor      NUMERIC(6,3) DEFAULT 1.0,
+    soil_factor      NUMERIC(6,3) DEFAULT 1.0,
+    overall_factor   NUMERIC(6,3) DEFAULT 1.0, -- = rainfall * temp * soil
+    calculated_by    UUID REFERENCES users(id),
+    created_at       TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT check_range CHECK (to_date > from_date)
 );
 
 -- Bảng hợp đồng doanh nghiệp
-CREATE TABLE contracts
-(
+CREATE TABLE contracts (
     id                        INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     contract_code             VARCHAR(50) UNIQUE NOT NULL,
-    project_id                INTEGER            NOT NULL REFERENCES projects (id) ON DELETE RESTRICT,
-    enterprise_id             UUID               NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
-    contract_type             VARCHAR(50)        NOT NULL DEFAULT 'OWNERSHIP',
-    num_trees                 INTEGER CHECK (num_trees > 0),
-    area                      NUMERIC(12, 2) CHECK (area > 0),
-    unit_price                NUMERIC(15, 2)     NOT NULL,
-    total_amount              NUMERIC(15, 2)     NOT NULL,
-    contract_term_years       INTEGER,                                    -- Thời hạn hợp đồng (năm)
+    project_id                INTEGER NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
+    contract_category         CONTRACT_CATEGORY NOT NULL DEFAULT 'ENTERPRISE_PROJECT',
+    contract_type             VARCHAR(50) NOT NULL DEFAULT 'OWNERSHIP',
+    -- OWNERSHIP / INVESTMENT / CARBON_CREDIT_ONLY / SERVICE...
+    unit_price                NUMERIC(15, 2) NOT NULL,
+    total_amount              NUMERIC(15, 2) NOT NULL,
+    contract_term_years       INTEGER,
     start_date                DATE,
     end_date                  DATE,
     -- Cơ chế gia hạn
-    auto_renewal              BOOLEAN                     DEFAULT FALSE,  -- Tự động gia hạn
-    renewal_term_years        INTEGER,                                    -- Thời hạn gia hạn mặc định
-    renewal_notice_days       INTEGER                     DEFAULT 30,     -- Thông báo trước bao nhiêu ngày
-    max_renewals              INTEGER,                                    -- Số lần gia hạn tối đa (NULL = không giới hạn)
-    renewal_count             INTEGER                     DEFAULT 0,      -- Đã gia hạn bao nhiêu lần
-    -- Điều khoản đặc biệt
-    carbon_credit_sharing     NUMERIC(5, 2)               DEFAULT 100.00, -- % tín chỉ carbon được hưởng (0-100)
-    harvest_rights            BOOLEAN                     DEFAULT FALSE,  -- Quyền thu hoạch gỗ
-    transfer_allowed          BOOLEAN                     DEFAULT FALSE,  -- Cho phép chuyển nhượng
-    early_termination_penalty NUMERIC(15, 2),                             -- Phí phạt chấm dứt sớm
-    payment_date              DATE,
-    contract_status           VARCHAR(50)                 DEFAULT 'PENDING',
+    auto_renewal              BOOLEAN DEFAULT FALSE,
+    renewal_term_years        INTEGER,
+    renewal_notice_days       INTEGER DEFAULT 30,
+    max_renewals              INTEGER,
+    renewal_count             INTEGER DEFAULT 0,
+
+    -- Điều khoản carbon / quyền lợi
+    content                   JSONB, -- Xử lý theo factory pattern (FE)
+    harvest_rights            BOOLEAN DEFAULT FALSE,
+    transfer_allowed          BOOLEAN DEFAULT FALSE,
+
+    -- Điều khoản chấm dứt
+    early_termination_penalty NUMERIC(15, 2),
     termination_reason        TEXT,
     terminated_at             TIMESTAMPTZ,
+    contract_status           CONTRACT_STATUS DEFAULT 'PENDING',
+    payment_date              DATE,
     contract_file_url         VARCHAR(500),
-    approved_by               UUID REFERENCES users (id),
+    approved_by               UUID REFERENCES users(id),
     approved_at               TIMESTAMPTZ,
     notes                     TEXT,
-    created_at                TIMESTAMPTZ                 DEFAULT CURRENT_TIMESTAMP,
-    updated_at                TIMESTAMPTZ                 DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT check_dates CHECK (end_date > start_date),
+
+    -- Dành cho contract dịch vụ
+    service_scope             TEXT,
+    kpi_requirements          JSONB,
+
+    created_at                TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at                TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT check_dates CHECK (end_date IS NULL OR start_date IS NULL OR end_date > start_date),
     CONSTRAINT check_carbon_sharing CHECK (carbon_credit_sharing >= 0 AND carbon_credit_sharing <= 100)
 );
 
--- BẢNG QUYỀN SỞ HỮU CÂY (Tree Ownership)
-CREATE TABLE tree_ownership
+-- CREATE TABLE contract_parties (
+--                                   id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+--                                   contract_id INTEGER NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+--
+--                                   party_role  VARCHAR(50) NOT NULL,
+--     -- PROJECT_OWNER, ENTERPRISE, FARMER, PARTNER, VERIFIER...
+--
+--                                   party_type  PARTY_TYPE NOT NULL,
+--                                   user_id     UUID REFERENCES users(id) ON DELETE RESTRICT,
+--                                   partner_id  INTEGER REFERENCES partners(id) ON DELETE RESTRICT,
+--
+--                                   created_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+--
+--                                   CONSTRAINT check_party_reference CHECK (
+--                                       (party_type = 'USER' AND user_id IS NOT NULL AND partner_id IS NULL) OR
+--                                       (party_type = 'PARTNER' AND partner_id IS NOT NULL AND user_id IS NULL)
+--                                       ),
+--
+--                                   UNIQUE(contract_id, party_role)
+-- );
+--
+-- CREATE INDEX idx_contract_parties_contract ON contract_parties(contract_id);
+-- CREATE INDEX idx_contract_parties_user ON contract_parties(user_id);
+-- CREATE INDEX idx_contract_parties_partner ON contract_parties(partner_id);
+
+-- BẢNG QUYỀN SỞ Oxi(Oxi Ownership)
+CREATE TABLE oxi_ownership
 (
     id                       INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     contract_id              INTEGER NOT NULL REFERENCES contracts (id) ON DELETE RESTRICT,
     project_id               INTEGER NOT NULL REFERENCES projects (id) ON DELETE RESTRICT,
     tree_species_id          INTEGER REFERENCES tree_species (id),
     owner_id                 UUID    NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
-    -- Số lượng sở hữu
-    num_trees                INTEGER NOT NULL CHECK (num_trees > 0),
-    area                     NUMERIC(12, 2) CHECK (area > 0),
 
     -- Thời hạn sở hữu
     ownership_start_date     DATE    NOT NULL,
@@ -284,7 +377,6 @@ CREATE TABLE tree_ownership
 
     -- Quyền lợi
     carbon_credit_percentage NUMERIC(5, 2) DEFAULT 100.00, -- % tín chỉ được hưởng
-    harvest_rights           BOOLEAN       DEFAULT FALSE,
 
     -- Status
     status                   VARCHAR(20)   DEFAULT 'ACTIVE',
@@ -327,7 +419,7 @@ CREATE TABLE ownership_transfers
     from_user_id   UUID NOT NULL REFERENCES users (id),
     to_user_id     UUID NOT NULL REFERENCES users (id),
     -- Số lượng chuyển nhượng
-    num_trees      INTEGER CHECK (num_trees > 0),
+    carbon_credit NUMERIC(5, 2) DEFAULT 100.00,
     transfer_price NUMERIC(15, 2),
     -- Status
     status         VARCHAR(50) DEFAULT 'PENDING', -- PENDING, COMPLETED, REJECTED
