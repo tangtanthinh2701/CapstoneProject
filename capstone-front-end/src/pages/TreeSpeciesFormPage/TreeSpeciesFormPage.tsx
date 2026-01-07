@@ -1,300 +1,175 @@
-import Sidebar from '../../components/Sidebar';
 import { useNavigate } from 'react-router-dom';
+import Sidebar from '../../components/Sidebar';
+import Breadcrumbs from '../../components/Breadcrumbs';
 import { useTreeSpeciesFormViewModel } from '../../viewmodels/useTreeSpeciesViewModel';
-
-const CLIMATE_ZONES = ['TROPICAL', 'SUBTROPICAL', 'TEMPERATE'];
-const SOIL_TYPES = ['LOAM', 'CLAY', 'SANDY'];
-
-/* ================== DESIGN SYSTEM ================== */
-const pageBg = 'bg-[#07150D] text-white min-h-screen';
-
-const card = 'bg-[#0E2219] border border-[#1E3A2B] rounded-2xl p-6';
-
-const sectionTitle =
-  'text-xs font-semibold tracking-widest text-gray-400 uppercase mb-4';
-
-const label = 'block text-xs font-medium tracking-wide text-gray-300 mb-1';
-
-const inputBase =
-  'w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-sm text-gray-100 ' +
-  'placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/30';
-
-const checkboxBox =
-  'flex items-center gap-2 px-3 py-2 rounded-lg bg-[#071811] border border-[#1E3A2B]';
-
-const btnGreen =
-  'px-6 py-3 rounded-xl bg-green-500 text-black font-semibold hover:bg-green-400';
-
-const btnGray =
-  'px-6 py-3 rounded-xl bg-[#0E2219] border border-[#1E3A2B] text-gray-300 hover:text-white';
-
-/* =================================================== */
 
 export default function TreeSpeciesFormPage() {
   const navigate = useNavigate();
-  const { form, updateField, toggleArrayValue, save, loading, error } =
+  const { isEdit, loading, initialLoading, error, form, updateField, save } =
     useTreeSpeciesFormViewModel();
 
-  const submit = async () => {
-    await save();
-    navigate('/tree-species');
+  if (initialLoading) {
+    return (
+      <div className='flex bg-[#07150D] text-white min-h-screen items-center justify-center'>
+        <div className='text-center'>
+          <div className='inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mb-4'></div>
+          <p className='text-gray-400'>Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleSubmit = async () => {
+    try {
+      await save();
+      navigate('/tree-species');
+    } catch (err) {
+      // Error handled in viewmodel
+    }
   };
 
   return (
-    <div className={`flex ${pageBg}`}>
+    <div className='flex bg-[#07150D] text-white min-h-screen'>
       <Sidebar />
 
-      <main className='flex-1 p-10 max-w-6xl mx-auto'>
-        {/* HEADER */}
-        <h1 className='text-3xl font-bold mb-1'>Thêm Loại Cây Mới</h1>
+      <main className='flex-1 p-10 max-w-3xl mx-auto'>
+        <Breadcrumbs
+          items={[
+            { label: 'Trang chủ', href: '/' },
+            { label: 'Quản lý loài cây', href: '/tree-species' },
+            { label: isEdit ? 'Cập nhật loài cây' : 'Tạo loài cây mới' },
+          ]}
+        />
+
+        <h1 className='text-3xl font-bold mb-2'>
+          {isEdit ? 'Cập nhật Loài cây' : 'Thêm Loài cây Mới'}
+        </h1>
         <p className='text-gray-400 mb-8'>
-          Điền thông tin chi tiết để thêm hoặc cập nhật loại cây trong hệ thống.
+          Điền đầy đủ thông tin để {isEdit ? 'cập nhật' : 'tạo'} loài cây.
         </p>
 
-        <div className='space-y-8'>
-          {/* ================= BASIC INFO ================= */}
-          <section className={card}>
-            <h2 className={sectionTitle}>Thông tin cơ bản</h2>
-
-            <div className='grid grid-cols-2 gap-6'>
-              <div>
-                <label className={label}>Tên cây</label>
-                <input
-                  className={inputBase}
-                  placeholder='Ví dụ: Lim Xanh'
-                  value={form.name}
-                  onChange={(e) => updateField('name', e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className={label}>Tên khoa học</label>
-                <input
-                  className={inputBase}
-                  placeholder='Ví dụ: Erythrophleum fordii'
-                  value={form.scientificName}
-                  onChange={(e) =>
-                    updateField('scientificName', e.target.value)
-                  }
-                />
-              </div>
-            </div>
-
-            <div className='mt-4'>
-              <label className={label}>Mô tả</label>
-              <textarea
-                className={`${inputBase} min-h-[120px]`}
-                placeholder='Nhập mô tả chi tiết về loài cây...'
-                value={form.description}
-                onChange={(e) => updateField('description', e.target.value)}
-              />
-            </div>
-          </section>
-
-          {/* ================= IMAGE & CARBON ================= */}
-          <section className={card}>
-            <h2 className={sectionTitle}>Hình ảnh & Carbon</h2>
-
-            <div className='grid grid-cols-2 gap-6'>
-              <div>
-                <label className={label}>URL hình ảnh</label>
-                <input
-                  className={inputBase}
-                  placeholder='https://example.com/image.jpg'
-                  value={form.imageUrl}
-                  onChange={(e) => updateField('imageUrl', e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className={label}>Tỷ lệ hấp thụ Carbon (kg/năm)</label>
-                <input
-                  type='number'
-                  className={inputBase}
-                  value={form.carbonAbsorptionRate}
-                  onChange={(e) =>
-                    updateField('carbonAbsorptionRate', Number(e.target.value))
-                  }
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* ================= PHYSICAL ================= */}
-          <section className={card}>
-            <h2 className={sectionTitle}>Đặc điểm sinh học</h2>
-
-            <div className='grid grid-cols-3 gap-6'>
-              <div>
-                <label className={label}>Chiều cao điển hình (m)</label>
-                <input
-                  type='number'
-                  className={inputBase}
-                  value={form.typicalHeight ?? ''}
-                  onChange={(e) =>
-                    updateField('typicalHeight', Number(e.target.value))
-                  }
-                />
-              </div>
-
-              <div>
-                <label className={label}>Đường kính (cm)</label>
-                <input
-                  type='number'
-                  className={inputBase}
-                  value={form.typicalDiameter ?? ''}
-                  onChange={(e) =>
-                    updateField('typicalDiameter', Number(e.target.value))
-                  }
-                />
-              </div>
-
-              <div>
-                <label className={label}>Tuổi thọ (năm)</label>
-                <input
-                  type='number'
-                  className={inputBase}
-                  value={form.typicalLifespan ?? ''}
-                  onChange={(e) =>
-                    updateField('typicalLifespan', Number(e.target.value))
-                  }
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* ================= REQUIREMENTS ================= */}
-          <section className={card}>
-            <h2 className={sectionTitle}>Yêu cầu sinh trưởng</h2>
-
-            <div className='grid grid-cols-3 gap-6'>
-              <div>
-                <label className={label}>Tốc độ tăng trưởng</label>
-                <select
-                  className={inputBase}
-                  value={form.growthRate}
-                  onChange={(e) =>
-                    updateField('growthRate', e.target.value as any)
-                  }
-                >
-                  <option value='SLOW'>Chậm</option>
-                  <option value='MEDIUM'>Trung bình</option>
-                  <option value='FAST'>Nhanh</option>
-                </select>
-              </div>
-
-              <div>
-                <label className={label}>Yêu cầu nước</label>
-                <select
-                  className={inputBase}
-                  value={form.waterRequirement}
-                  onChange={(e) =>
-                    updateField('waterRequirement', e.target.value as any)
-                  }
-                >
-                  <option value='LOW'>Ít nước</option>
-                  <option value='MEDIUM'>Trung bình</option>
-                  <option value='HIGH'>Nhiều nước</option>
-                </select>
-              </div>
-
-              <div>
-                <label className={label}>Yêu cầu ánh sáng</label>
-                <select
-                  className={inputBase}
-                  value={form.sunlightRequirement}
-                  onChange={(e) =>
-                    updateField('sunlightRequirement', e.target.value as any)
-                  }
-                >
-                  <option value='FULL_SUN'>Toàn phần</option>
-                  <option value='PARTIAL_SHADE'>Bán phần</option>
-                  <option value='SHADE'>Bóng râm</option>
-                </select>
-              </div>
-            </div>
-          </section>
-
-          {/* ================= MULTI SELECT ================= */}
-          <section className={card}>
-            <h2 className={sectionTitle}>Môi trường sinh trưởng</h2>
-
-            <div className='grid grid-cols-2 gap-8'>
-              <div>
-                <p className={label}>Vùng khí hậu</p>
-                <div className='flex gap-3 flex-wrap'>
-                  {CLIMATE_ZONES.map((z) => (
-                    <label key={z} className={checkboxBox}>
-                      <input
-                        type='checkbox'
-                        checked={form.climateZones.includes(z)}
-                        onChange={() => toggleArrayValue('climateZones', z)}
-                      />
-                      {z}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <p className={label}>Loại đất</p>
-                <div className='flex gap-3 flex-wrap'>
-                  {SOIL_TYPES.map((s) => (
-                    <label key={s} className={checkboxBox}>
-                      <input
-                        type='checkbox'
-                        checked={form.soilTypes.includes(s)}
-                        onChange={() => toggleArrayValue('soilTypes', s)}
-                      />
-                      {s}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* ================= FLAGS ================= */}
-          <section className={card}>
-            <h2 className={sectionTitle}>Trạng thái</h2>
-
-            <div className='flex gap-6'>
-              <label className={checkboxBox}>
-                <input
-                  type='checkbox'
-                  checked={form.hasCommercialValue}
-                  onChange={(e) =>
-                    updateField('hasCommercialValue', e.target.checked)
-                  }
-                />
-                Có giá trị thương mại
-              </label>
-
-              <label className={checkboxBox}>
-                <input
-                  type='checkbox'
-                  checked={form.isActive}
-                  onChange={(e) => updateField('isActive', e.target.checked)}
-                />
-                Kích hoạt
-              </label>
-            </div>
-          </section>
-
-          {error && <div className='text-red-400'>{error}</div>}
-
-          {/* ================= ACTIONS ================= */}
-          <div className='flex justify-end gap-4'>
-            <button
-              className={btnGray}
-              onClick={() => navigate('/tree-species')}
-            >
-              Hủy
-            </button>
-            <button className={btnGreen} disabled={loading} onClick={submit}>
-              {loading ? 'Đang lưu...' : 'Lưu Loại Cây'}
-            </button>
+        {/* ERROR */}
+        {error && (
+          <div className='mb-6 bg-red-900/20 border border-red-500 text-red-200 px-4 py-3 rounded-xl flex items-center gap-2'>
+            <span className='material-icons'>error</span>
+            <span>{error}</span>
           </div>
+        )}
+
+        {/* FORM */}
+        <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B] space-y-4'>
+          {/* NAME */}
+          <div>
+            <label className='block text-sm mb-2 text-gray-300'>
+              Tên cây <span className='text-red-400'>*</span>
+            </label>
+            <input
+              className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500'
+              placeholder='Ví dụ: Cây Phi Lao'
+              value={form.name}
+              onChange={(e) => updateField('name', e.target.value)}
+            />
+          </div>
+
+          {/* SCIENTIFIC NAME */}
+          <div>
+            <label className='block text-sm mb-2 text-gray-300'>
+              Tên khoa học <span className='text-red-400'>*</span>
+            </label>
+            <input
+              className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus: ring-2 focus:ring-green-500'
+              placeholder='Ví dụ:  Casuarina equisetifolia'
+              value={form.scientificName}
+              onChange={(e) => updateField('scientificName', e.target.value)}
+            />
+          </div>
+
+          {/* CARBON ABSORPTION RATE */}
+          <div>
+            <label className='block text-sm mb-2 text-gray-300'>
+              Tỷ lệ hấp thụ CO₂ (tấn/năm){' '}
+              <span className='text-red-400'>*</span>
+            </label>
+            <input
+              type='number'
+              step='0.1'
+              min='0'
+              className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500'
+              placeholder='Ví dụ: 15.8'
+              value={form.carbonAbsorptionRate}
+              onChange={(e) =>
+                updateField(
+                  'carbonAbsorptionRate',
+                  parseFloat(e.target.value) || 0,
+                )
+              }
+            />
+          </div>
+
+          {/* DESCRIPTION */}
+          <div>
+            <label className='block text-sm mb-2 text-gray-300'>Mô tả</label>
+            <textarea
+              rows={4}
+              className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500'
+              placeholder='Mô tả đặc điểm, môi trường sống, ứng dụng.. .'
+              value={form.description}
+              onChange={(e) => updateField('description', e.target.value)}
+            />
+          </div>
+
+          {/* IMAGE URL */}
+          <div>
+            <label className='block text-sm mb-2 text-gray-300'>
+              URL hình ảnh
+            </label>
+            <input
+              type='url'
+              className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus: ring-green-500'
+              placeholder='https://example.com/image.jpg'
+              value={form.imageUrl}
+              onChange={(e) => updateField('imageUrl', e.target.value)}
+            />
+            {form.imageUrl && (
+              <img
+                src={form.imageUrl}
+                alt='Preview'
+                className='mt-2 w-32 h-32 object-cover rounded-lg'
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* BUTTONS */}
+        <div className='flex justify-end gap-3 mt-6'>
+          <button
+            className='px-6 py-3 rounded-xl bg-[#0E2219] border border-[#1E3A2B] text-gray-300 hover:bg-[#13271F] transition'
+            onClick={() => navigate('/tree-species')}
+            disabled={loading}
+          >
+            Hủy
+          </button>
+
+          <button
+            className='px-6 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-black font-semibold flex items-center gap-2 transition disabled:opacity-50'
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <div className='inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-black'></div>
+                Đang lưu...
+              </>
+            ) : (
+              <>
+                <span className='material-icons'>save</span>
+                {isEdit ? 'Cập nhật' : 'Tạo mới'}
+              </>
+            )}
+          </button>
         </div>
       </main>
     </div>

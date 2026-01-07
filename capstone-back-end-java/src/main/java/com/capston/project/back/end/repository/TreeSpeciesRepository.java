@@ -4,38 +4,31 @@ import com.capston.project.back.end.entity.TreeSpecies;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface TreeSpeciesRepository extends JpaRepository<TreeSpecies, Integer>, JpaSpecificationExecutor<TreeSpecies> {
-	@Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END " +
-	       "FROM TreeSpecies t WHERE LOWER(t.name) = LOWER(:name)")
-	Boolean existsByNameIgnoreCase(@Param("name") String name);
+public interface TreeSpeciesRepository extends JpaRepository<TreeSpecies, Integer> {
+	Optional<TreeSpecies> findByNameIgnoreCase(String name);
 
-	@Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END " +
-	       "FROM TreeSpecies t WHERE LOWER(t.scientificName) = LOWER(:scientificName)")
-	Boolean existsByScientificNameIgnoreCase(@Param("scientificName") String scientificName);
+	boolean existsByNameIgnoreCase(String name);
 
-	@Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END " +
-	       "FROM TreeSpecies t WHERE LOWER(t.name) = LOWER(:name) AND t.id != :id")
-	Boolean existsByNameIgnoreCaseAndIdNot(@Param("name") String name, @Param("id") Integer id);
-
-	@Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END " +
-	       "FROM TreeSpecies t WHERE LOWER(t.scientificName) = LOWER(:scientificName) AND t.id != :id")
-	Boolean existsByScientificNameIgnoreCaseAndIdNot(
-			@Param("scientificName") String scientificName, @Param("id") Integer id);
-
-	@Query("SELECT t FROM TreeSpecies t WHERE LOWER(t.name) = LOWER(:name)")
-	Optional<TreeSpecies> findByNameIgnoreCase(@Param("name") String name);
-
-	@Query("SELECT t FROM TreeSpecies t WHERE t.isActive = true")
+	@Query("SELECT ts FROM TreeSpecies ts WHERE ts.deletedAt IS NULL")
 	Page<TreeSpecies> findAllActive(Pageable pageable);
 
-	@Query("SELECT t FROM TreeSpecies t WHERE LOWER(t.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-	Page<TreeSpecies> searchByName(@Param("keyword") String keyword, Pageable pageable);
+	@Query("SELECT ts FROM TreeSpecies ts WHERE ts.deletedAt IS NULL")
+	List<TreeSpecies> findAllActive();
+
+	@Query("SELECT ts FROM TreeSpecies ts WHERE ts. deletedAt IS NULL " +
+	       "AND (LOWER(ts.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+	       "OR LOWER(ts.scientificName) LIKE LOWER(CONCAT('%', : keyword, '%')))")
+	Page<TreeSpecies> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+	@Query("SELECT ts FROM TreeSpecies ts WHERE ts.deletedAt IS NULL " +
+	       "ORDER BY ts.carbonAbsorptionRate DESC")
+	List<TreeSpecies> findTopByCarbonAbsorption(Pageable pageable);
 }

@@ -4,47 +4,47 @@ import Breadcrumbs from '../../components/Breadcrumbs';
 import { useNavigate } from 'react-router-dom';
 import { deleteProject } from '../../models/project.api';
 
-interface PageableSort {
-  empty: boolean;
-  sorted: boolean;
-  unsorted: boolean;
-}
-interface Pageable {
-  offset: number;
-  pageNumber: number;
-  pageSize: number;
-  paged: boolean;
-  unpaged: boolean;
-  sort: PageableSort;
-}
-
 interface Project {
   id: number;
   code: string;
   name: string;
   description: string | null;
-  locationText: string | null;
-  area: number;
-  areaUnit: string;
-  plantingDate: string;
-  totalTreesPlanned: number;
-  totalTreesActual: number;
   projectStatus: string;
-  numberOfPhases: number;
-  numberOfTreeSpecies: number;
+  managerId: string;
+  isPublic: boolean;
+  budget: number;
+  targetConsumedCarbon: number;
+  currentConsumedCarbon: number;
+  createdAt: string;
+  updatedAt: string;
+  phases: any[] | null;
+  totalPhases: number | null;
+  completedPhases: number | null;
 }
-interface ApiResponse {
-  content: Project[];
-  empty: boolean;
-  first: boolean;
-  last: boolean;
-  number: number;
-  numberOfElements: number;
-  pageable: Pageable;
+
+interface PageInfo {
+  page: number;
   size: number;
   totalElements: number;
   totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
+
+interface ApiResponse {
+  success: boolean;
+  message: string;
+  data: Project[];
+  errors: any | null;
+  timestamp: string;
+  pageInfo: PageInfo;
+}
+
+// ========== CONFIG ==========
+const API_BASE_URL = 'http://localhost:8088/api/projects';
+const PAGE_SIZE = 20;
+
+// ========== HELPERS ==========
 const statusBadgeClass = (projectStatus: string) => {
   switch (projectStatus) {
     case 'PLANNING':
@@ -64,75 +64,106 @@ const statusBadgeClass = (projectStatus: string) => {
   }
 };
 
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(amount);
+};
+
+const formatCarbon = (amount: number) => {
+  return `${amount.toLocaleString('vi-VN')} tấn CO₂`;
+};
+
+// ========== COMPONENT ==========
 export default function ProjectListPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
-  const PAGE_SIZE = 20;
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
+  // ========== FETCH ==========
+  const fetchProjects = async (pageNumber: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Không tìm thấy token.  Vui lòng đăng nhập lại.');
+      }
+
+      const url = `${API_BASE_URL}?page=${pageNumber}&size=${PAGE_SIZE}`;
+
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
+        }
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const result: ApiResponse = await res.json();
+
+      // ✅ Kiểm tra API trả về success
+      if (!result.success) {
+        throw new Error(result.message || 'API trả về lỗi');
+      }
+
+      setResponse(result);
+    } catch (err: any) {
+      console.error('Error loading projects:', err);
+      setError(err.message || 'Có lỗi xảy ra khi tải dữ liệu.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ========== DELETE ==========
   const handleDelete = async (id: number) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa dự án này?')) return;
 
     try {
       await deleteProject(id);
       alert('Xóa thành công!');
-
-      // Refresh list
       fetchProjects(page);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Delete failed:', err);
-      alert('Xóa thất bại!');
+      alert(`Xóa thất bại:  ${err.message || 'Lỗi không xác định'}`);
     }
   };
 
+  // ========== EFFECTS ==========
   useEffect(() => {
     fetchProjects(page);
   }, [page]);
-  const fetchProjects = async (pageNumber: number) => {
-    try {
-      setLoading(true);
 
-      const token = localStorage.getItem('token');
-      console.log('TOKEN FE:', token);
+  // ========== FILTER ==========
+  const projects = response?.data ?? [];
+  const filteredProjects = projects.filter((p) => {
+    const matchSearch = p.name?.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = statusFilter ? p.projectStatus === statusFilter : true;
+    return matchSearch && matchStatus;
+  });
 
-      const res = await fetch(
-        `http://localhost:8088/api/projects/get-projects?page=${pageNumber}&size=${PAGE_SIZE}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      );
-      if (!res.ok) {
-        throw new Error(`Fail with HTTP ${res.status}`);
-      }
-
-      const result = await res.json();
-      setResponse(result.data);
-    } catch (err) {
-      console.error('Error loading projects:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const projects = response?.content ?? [];
-
-  // Search
-  const filteredProjects = projects.filter((p) =>
-    p.name?.toLowerCase().includes(search.toLowerCase()),
-  );
-
+  // ========== RENDER ==========
   return (
     <div className='flex bg-[#07150D] text-white min-h-screen'>
       <Sidebar />
 
       <main className='flex-1 p-8'>
-        {/* Breadcrumbs */}
         <Breadcrumbs
           items={[
             { label: 'Trang chủ', href: '/' },
@@ -141,7 +172,7 @@ export default function ProjectListPage() {
         />
 
         <h1 className='text-3xl font-bold mb-2'>Quản lý Dự án</h1>
-        <p className='text-gray-400 mb-6'>Danh sách các dự án trồng rừng.</p>
+        <p className='text-gray-400 mb-6'>Danh sách các dự án trồng rừng. </p>
 
         {/* SEARCH + FILTER */}
         <div className='flex flex-wrap items-center gap-4 mb-6'>
@@ -150,11 +181,15 @@ export default function ProjectListPage() {
             placeholder='Tìm kiếm theo tên dự án...'
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className='flex-1 px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl text-gray-100'
+            className='flex-1 min-w-[250px] px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500'
           />
 
-          <select className='px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl text-gray-100'>
-            <option>Tất cả trạng thái</option>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className='px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl text-gray-100 focus:outline-none focus: ring-2 focus:ring-green-500'
+          >
+            <option value=''>Tất cả trạng thái</option>
             <option value='PLANNING'>PLANNING</option>
             <option value='PLANTING'>PLANTING</option>
             <option value='GROWING'>GROWING</option>
@@ -165,140 +200,208 @@ export default function ProjectListPage() {
 
           <button
             onClick={() => navigate('/projects/new')}
-            className='bg-green-500 hover:bg-green-600 text-black px-5 py-3 rounded-xl font-semibold flex items-center gap-1'
+            className='bg-green-500 hover:bg-green-600 text-black px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition'
           >
-            <span className='material-icons'>add</span>
+            <span className='material-icons text-lg'>add</span>
             Thêm mới dự án
           </button>
         </div>
 
+        {/* ERROR */}
+        {error && (
+          <div className='bg-red-900/20 border border-red-500 text-red-200 px-4 py-3 rounded-xl mb-6'>
+            ⚠️ {error}
+          </div>
+        )}
+
         {/* TABLE */}
-        <div className='bg-[#0E2219] rounded-xl border border-[#1E3A2B] overflow-x-auto'>
+        <div className='bg-[#0E2219] rounded-xl border border-[#1E3A2B] overflow-hidden'>
           {/* HEADERS */}
-          <div className='grid grid-cols-8 px-6 py-4 text-sm text-gray-300 border-b border-[#1E3A2B]'>
-            <span className='col-span-3'>TÊN & MÃ DỰ ÁN</span>
+          <div className='grid grid-cols-8 gap-4 px-6 py-4 text-sm font-semibold text-gray-300 border-b border-[#1E3A2B] bg-[#0A1812]'>
+            <span className='col-span-2'>TÊN & MÃ DỰ ÁN</span>
             <span>TRẠNG THÁI</span>
-            <span>ĐỊA ĐIỂM</span>
-            <span>DIỆN TÍCH</span>
-            <span>TỔNG CÂY</span>
-            <span>HÀNH ĐỘNG</span>
+            <span>NGÂN SÁCH</span>
+            <span>MỤC TIÊU CO₂</span>
+            <span>HIỆN TẠI CO₂</span>
+            <span>TIẾN ĐỘ</span>
+            <span className='text-center'>HÀNH ĐỘNG</span>
           </div>
 
           {/* LOADING */}
           {loading && (
-            <div className='px-6 py-6 text-gray-400'>Đang tải dữ liệu...</div>
+            <div className='px-6 py-12 text-center text-gray-400'>
+              <div className='inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mb-2'></div>
+              <p>Đang tải dữ liệu...</p>
+            </div>
           )}
 
           {/* EMPTY */}
           {!loading && filteredProjects.length === 0 && (
-            <div className='px-6 py-6 text-gray-400'>Không tìm thấy dự án.</div>
+            <div className='px-6 py-12 text-center text-gray-400'>
+              <span className='material-icons text-5xl mb-2 opacity-50'>
+                inbox
+              </span>
+              <p>Không tìm thấy dự án phù hợp.</p>
+            </div>
           )}
 
           {/* ROWS */}
           {!loading &&
-            filteredProjects.map((p) => (
-              <div
-                key={p.id}
-                className='grid grid-cols-8 px-6 py-4 border-b border-[#1E3A2B] hover:bg-[#13271F] transition'
-              >
-                {/* Tên + mã */}
-                <div className='col-span-3'>
-                  <div className='font-semibold'>{p.name}</div>
-                  <div className='text-xs text-gray-400'>{p.code}</div>
-                </div>
+            filteredProjects.map((p) => {
+              const carbonProgress =
+                p.targetConsumedCarbon > 0
+                  ? (p.currentConsumedCarbon / p.targetConsumedCarbon) * 100
+                  : 0;
 
-                {/* Status */}
-                <div>
-                  <span
-                    className={`px-3 py-1 text-xs rounded-full inline-block ${statusBadgeClass(
-                      p.projectStatus,
-                    )}`}
+              return (
+                <div
+                  key={p.id}
+                  className='grid grid-cols-8 gap-4 items-center px-6 py-4 border-b border-[#1E3A2B] hover:bg-[#13271F] transition cursor-pointer'
+                  onClick={() => navigate(`/projects/${p.id}`)}
+                >
+                  {/* Tên + mã */}
+                  <div className='col-span-2'>
+                    <div className='font-semibold text-gray-100'>{p.name}</div>
+                    <div className='text-xs text-gray-400 font-mono'>
+                      {p.code}
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    <span
+                      className={`px-3 py-1 text-xs font-medium rounded-full inline-block ${statusBadgeClass(
+                        p.projectStatus,
+                      )}`}
+                    >
+                      {p.projectStatus}
+                    </span>
+                  </div>
+
+                  {/* Budget */}
+                  <div className='text-sm text-gray-300'>
+                    {formatCurrency(p.budget)}
+                  </div>
+
+                  {/* Target CO2 */}
+                  <div className='text-sm text-gray-300'>
+                    {formatCarbon(p.targetConsumedCarbon)}
+                  </div>
+
+                  {/* Current CO2 */}
+                  <div className='text-sm text-green-400 font-semibold'>
+                    {formatCarbon(p.currentConsumedCarbon)}
+                  </div>
+
+                  {/* Progress */}
+                  <div className='flex flex-col gap-1'>
+                    <div className='text-xs text-gray-400'>
+                      {carbonProgress.toFixed(1)}%
+                    </div>
+                    <div className='w-full bg-gray-700 rounded-full h-2'>
+                      <div
+                        className='bg-green-500 h-2 rounded-full transition-all'
+                        style={{ width: `${Math.min(carbonProgress, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* ACTIONS */}
+                  <div
+                    className='flex gap-3 items-center justify-center'
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    {p.projectStatus}
-                  </span>
+                    <button
+                      className='text-gray-400 hover:text-white transition'
+                      onClick={() => navigate(`/projects/${p.id}`)}
+                      title='Xem chi tiết'
+                    >
+                      <span className='material-icons text-xl'>visibility</span>
+                    </button>
+
+                    <button
+                      className='text-green-400 hover:text-green-300 transition'
+                      onClick={() => navigate(`/projects/${p.id}/edit`)}
+                      title='Chỉnh sửa'
+                    >
+                      <span className='material-icons text-xl'>edit</span>
+                    </button>
+
+                    <button
+                      className='text-red-400 hover:text-red-300 transition'
+                      onClick={() => handleDelete(p.id)}
+                      title='Xóa'
+                    >
+                      <span className='material-icons text-xl'>delete</span>
+                    </button>
+                  </div>
                 </div>
-
-                {/* Location */}
-                <div className='text-sm'>{p.locationText ?? '—'}</div>
-
-                {/* Area */}
-                <div className='text-sm'>
-                  {p.area.toLocaleString()} {p.areaUnit}
-                </div>
-
-                {/* Trees */}
-                <div className='text-sm'>
-                  {p.totalTreesActual}/{p.totalTreesPlanned}
-                </div>
-
-                {/* ACTIONS */}
-                <div className='flex gap-4 items-center'>
-                  <button
-                    className='text-gray-200 hover:text-white'
-                    onClick={() => {
-                      console.log('CLICK OK', p.id);
-                      navigate(`/projects/${p.id}`);
-                    }}
-                  >
-                    <span className='material-icons'>visibility</span>
-                  </button>
-
-                  <button
-                    className='text-green-400 hover:text-green-300'
-                    onClick={() => navigate(`/projects/${p.id}/edit`)}
-                  >
-                    <span className='material-icons'>edit</span>
-                  </button>
-
-                  <button
-                    className='text-red-400 hover:text-red-300'
-                    onClick={() => handleDelete(p.id)}
-                  >
-                    <span className='material-icons'>delete</span>
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
         </div>
 
         {/* PAGINATION */}
-        <div className='flex justify-between items-center mt-6 text-gray-300 text-sm'>
-          <span>
-            Hiển thị {projects.length} / {response?.totalElements ?? 0}
-          </span>
+        {response?.pageInfo && response.pageInfo.totalPages > 0 && (
+          <div className='flex justify-between items-center mt-6 text-gray-300 text-sm'>
+            <span>
+              Hiển thị <strong>{filteredProjects.length}</strong> /{' '}
+              <strong>{response.pageInfo.totalElements}</strong> dự án
+            </span>
 
-          <div className='flex items-center gap-2'>
-            <button
-              disabled={page === 0}
-              onClick={() => setPage(page - 1)}
-              className='px-3 py-1 rounded-xl bg-[#0E2219] border border-[#1E3A2B] disabled:opacity-30'
-            >
-              Previous
-            </button>
-
-            {Array.from({ length: response?.totalPages ?? 1 }).map((_, idx) => (
+            <div className='flex items-center gap-2'>
               <button
-                key={idx}
-                onClick={() => setPage(idx)}
-                className={`px-3 py-1 rounded-xl border ${
-                  idx === page
-                    ? 'bg-green-600 border-green-500'
-                    : 'bg-[#0E2219] border-[#1E3A2B]'
-                }`}
+                disabled={!response.pageInfo.hasPrevious}
+                onClick={() => setPage(page - 1)}
+                className='px-4 py-2 rounded-xl bg-[#0E2219] border border-[#1E3A2B] hover:bg-[#13271F] disabled:opacity-40 disabled:cursor-not-allowed transition'
               >
-                {idx + 1}
+                « Trước
               </button>
-            ))}
 
-            <button
-              disabled={page === (response?.totalPages ?? 1) - 1}
-              onClick={() => setPage(page + 1)}
-              className='px-3 py-1 rounded-xl bg-[#0E2219] border border-[#1E3A2B] disabled:opacity-30'
-            >
-              Next
-            </button>
+              {/* Page Numbers */}
+              <div className='flex gap-1'>
+                {Array.from({ length: response.pageInfo.totalPages }).map(
+                  (_, idx) => {
+                    // Hiển thị tối đa 5 trang xung quanh trang hiện tại
+                    if (
+                      idx === 0 ||
+                      idx === response.pageInfo.totalPages - 1 ||
+                      (idx >= page - 2 && idx <= page + 2)
+                    ) {
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setPage(idx)}
+                          className={`px-3 py-2 rounded-xl border transition ${
+                            idx === page
+                              ? 'bg-green-600 border-green-500 text-white font-semibold'
+                              : 'bg-[#0E2219] border-[#1E3A2B] hover:bg-[#13271F]'
+                          }`}
+                        >
+                          {idx + 1}
+                        </button>
+                      );
+                    } else if (idx === page - 3 || idx === page + 3) {
+                      return (
+                        <span key={idx} className='px-2 py-2 text-gray-500'>
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  },
+                )}
+              </div>
+
+              <button
+                disabled={!response.pageInfo.hasNext}
+                onClick={() => setPage(page + 1)}
+                className='px-4 py-2 rounded-xl bg-[#0E2219] border border-[#1E3A2B] hover:bg-[#13271F] disabled:opacity-40 disabled:cursor-not-allowed transition'
+              >
+                Sau »
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );

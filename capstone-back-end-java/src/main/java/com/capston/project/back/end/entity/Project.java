@@ -11,18 +11,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -36,102 +36,86 @@ import java.util.UUID;
 @Builder
 public class Project {
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType. IDENTITY)
 	private Integer id;
 
-	@Column(unique = true, nullable = false, length = 50)
+	@Column(name = "code", unique = true, nullable = false, length = 50)
 	private String code;
 
-	@Column(nullable = false)
+	@Column(name = "name", nullable = false)
 	private String name;
 
-	@Column(columnDefinition = "TEXT")
+	@Column(name = "description", columnDefinition = "TEXT")
 	private String description;
-
-	@Column(name = "location_text", columnDefinition = "TEXT")
-	private String locationText;
-
-	@Column(precision = 10, scale = 8)
-	private BigDecimal latitude;
-
-	@Column(precision = 11, scale = 8)
-	private BigDecimal longitude;
-
-	@Column(nullable = false, precision = 12, scale = 2)
-	private BigDecimal area;
-
-	@Column(name = "area_unit", length = 10)
-	private String areaUnit = "m2";
-
-	@Column(name = "usable_area", precision = 12, scale = 2)
-	private BigDecimal usableArea;
-
-	@Column(name = "planting_date", nullable = false)
-	private LocalDate plantingDate;
-
-	@Column(name = "total_trees_planned", nullable = false)
-	private Integer totalTreesPlanned;
-
-	@Column(name = "total_trees_actual")
-	private Integer totalTreesActual = 0;
-
-	@Column(name = "planting_density", precision = 10, scale = 2)
-	private BigDecimal plantingDensity;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "project_status", length = 20)
+	@Builder.Default
 	private ProjectStatus projectStatus = ProjectStatus.PLANNING;
 
 	@Column(name = "manager_id")
 	private UUID managerId;
 
-	@Column(name = "partner_organizations", columnDefinition = "TEXT[]")
-	private List<String> partnerOrganizations = new ArrayList<>();
-
 	@Column(name = "is_public")
+	@Builder.Default
 	private Boolean isPublic = true;
 
-	@Column(name = "created_at")
+	// Các trường được tính toán tự động
+	@Column(name = "budget", precision = 15, scale = 2)
+	@Builder.Default
+	private BigDecimal budget = BigDecimal. ZERO;
+
+	@Column(name = "target_consumed_carbon", precision = 15, scale = 2)
+	@Builder.Default
+	private BigDecimal targetConsumedCarbon = BigDecimal.ZERO;
+
+	@Column(name = "current_consumed_carbon", precision = 15, scale = 2)
+	@Builder.Default
+	private BigDecimal currentConsumedCarbon = BigDecimal. ZERO;
+
+	@CreationTimestamp
+	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;
 
+	@UpdateTimestamp
 	@Column(name = "updated_at")
 	private LocalDateTime updatedAt;
 
+	// Relationship với Phases - sử dụng LAZY để tránh N+1
 	@OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
 	@Builder.Default
 	private List<ProjectPhase> phases = new ArrayList<>();
 
-	@OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-	@Builder.Default
-	private List<ProjectImage> images = new ArrayList<>();
-
-	@OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
-	@Builder.Default
-	private List<AnnualGrowthData> annualGrowthData = new ArrayList<>();
-
-	@PrePersist
-	protected void onCreate() {
-		createdAt = LocalDateTime.now();
-		updatedAt = LocalDateTime.now();
-		if (code == null || code.isEmpty()) {
-			code = generateProjectCode();
-		}
-	}
-
-	@PreUpdate
-	protected void onUpdate() {
-		updatedAt = LocalDateTime.now();
-	}
-
-	private String generateProjectCode() {
-		return "PRJ-" + System.currentTimeMillis();
-	}
-
+	// Helper methods để quản lý relationship
 	public void addPhase(ProjectPhase phase) {
-		if (phases == null) {
-			phases = new ArrayList<>();
-		}
 		phases.add(phase);
 		phase.setProject(this);
+	}
+
+	public void removePhase(ProjectPhase phase) {
+		phases.remove(phase);
+		phase.setProject(null);
+	}
+
+	// Tính toán lại các trường từ phases
+	public void recalculateFromPhases() {
+		if (phases == null || phases.isEmpty()) {
+			this.budget = BigDecimal.ZERO;
+			this.targetConsumedCarbon = BigDecimal.ZERO;
+			this. currentConsumedCarbon = BigDecimal.ZERO;
+			return;
+		}
+
+		this.budget = phases.stream()
+		                    .map(p -> p.getBudget() != null ? p.getBudget() : BigDecimal.ZERO)
+		                    .reduce(BigDecimal. ZERO, BigDecimal::add);
+
+		this.targetConsumedCarbon = phases.stream()
+		                                  .map(p -> p.getTargetConsumedCarbon() != null ? p.getTargetConsumedCarbon() : BigDecimal.ZERO)
+		                                  .reduce(BigDecimal.ZERO, BigDecimal:: add);
+
+		this.currentConsumedCarbon = phases.stream()
+		                                   .map(p -> p.getCurrentConsumedCarbon() != null ? p.getCurrentConsumedCarbon() : BigDecimal.ZERO)
+		                                   .reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 }

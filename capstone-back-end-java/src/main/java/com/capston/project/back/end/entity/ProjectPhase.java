@@ -1,21 +1,25 @@
 package com.capston.project.back.end.entity;
 
 import com.capston.project.back.end.common.PhaseStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.*;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
-@Table(name = "project_phases")
+@Entity
+@Table(name = "project_phases",
+       uniqueConstraints = @UniqueConstraint(columnNames = {"project_id", "phase_order"}))
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Entity
 public class ProjectPhase {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,38 +27,51 @@ public class ProjectPhase {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "project_id", nullable = false)
+	@JsonIgnore
 	private Project project;
 
-	@Column(name = "phase_number", nullable = false)
-	private Integer phaseNumber;
+	@Column(name = "phase_order", nullable = false)
+	private Integer phaseOrder;
 
 	@Column(name = "phase_name")
 	private String phaseName;
 
-	@Column(columnDefinition = "TEXT")
+	@Column(name = "description", columnDefinition = "TEXT")
 	private String description;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "phase_status", nullable = false, length = 20)
+	@Builder.Default
 	private PhaseStatus phaseStatus = PhaseStatus.PLANNING;
 
-	@Column(name = "start_date", nullable = false)
-	private LocalDate startDate;
+	@Column(name = "expected_start_date")
+	private LocalDate expectedStartDate;
 
-	@Column(name = "end_date")
-	private LocalDate endDate;
+	@Column(name = "expected_end_date")
+	private LocalDate expectedEndDate;
 
-	@Column(name = "expected_duration_days")
-	private Integer expectedDurationDays;
+	@Column(name = "actual_start_date", nullable = false)
+	private LocalDate actualStartDate;
 
-	@Column(name = "actual_duration_days")
-	private Integer actualDurationDays;
+	@Column(name = "actual_end_date")
+	private LocalDate actualEndDate;
 
 	@Column(name = "budget", precision = 15, scale = 2)
 	private BigDecimal budget;
 
+	// Trường được tính toán từ cây trong farm
 	@Column(name = "actual_cost", precision = 15, scale = 2)
+	@Builder.Default
 	private BigDecimal actualCost = BigDecimal.ZERO;
+
+	@Column(name = "target_consumed_carbon", precision = 15, scale = 2)
+	@Builder.Default
+	private BigDecimal targetConsumedCarbon = BigDecimal.ZERO;
+
+	// Trường được tính toán từ cây trong farm
+	@Column(name = "current_consumed_carbon", precision = 15, scale = 2)
+	@Builder.Default
+	private BigDecimal currentConsumedCarbon = BigDecimal.ZERO;
 
 	@Column(name = "notes", columnDefinition = "TEXT")
 	private String notes;
@@ -62,34 +79,16 @@ public class ProjectPhase {
 	@Column(name = "created_by")
 	private UUID createdBy;
 
-	@Column(name = "created_at")
-	private LocalDateTime createdAt;
+	@CreationTimestamp
+	@Column(name = "created_at", updatable = false)
+	private OffsetDateTime createdAt;
 
+	@UpdateTimestamp
 	@Column(name = "updated_at")
-	private LocalDateTime updatedAt;
+	private OffsetDateTime updatedAt;
 
-	@OneToMany(mappedBy = "phase", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-	private List<TreeSpeciesOnPhase> treeSpeciesOnPhases = new ArrayList<>();
-
-	@PrePersist
-	protected void onCreate() {
-		createdAt = LocalDateTime.now();
-		updatedAt = LocalDateTime.now();
-		if (treeSpeciesOnPhases == null) {
-			treeSpeciesOnPhases = new ArrayList<>();
-		}
+	// Helper method để lấy project ID mà không load toàn bộ project
+	public Integer getProjectId() {
+		return project != null ? project.getId() : null;
 	}
-
-	@PreUpdate
-	protected void onUpdate() {
-		updatedAt = LocalDateTime.now();
-	}
-
-//	public void addTreeSpecies(TreeSpeciesOnPhase tsop) {
-//		if (treeSpeciesOnPhases == null) {
-//			treeSpeciesOnPhases = new ArrayList<>();
-//		}
-//		treeSpeciesOnPhases.add(tsop);
-//		tsop.setPhase(this);
-//	}
 }

@@ -6,8 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
+import java.time.OffsetDateTime;
 
 @Data
 @NoArgsConstructor
@@ -20,18 +19,11 @@ public class TreeSpeciesResponse {
 	private BigDecimal carbonAbsorptionRate;
 	private String description;
 	private String imageUrl;
-	private BigDecimal typicalHeight;
-	private BigDecimal typicalDiameter;
-	private Integer typicalLifespan;
-	private String growthRate;
-	private List<String> climateZones;
-	private List<String> soilTypes;
-	private String waterRequirement;
-	private String sunlightRequirement;
-	private BigDecimal woodValue;
-	private BigDecimal fruitValue;
-	private Boolean hasCommercialValue;
-	private Boolean isActive;
-	private LocalDateTime createdAt;
-	private LocalDateTime updatedAt;
+	private OffsetDateTime createdAt;
+	private OffsetDateTime updatedAt;
+
+	// Computed
+	private BigDecimal estimatedCarbonPerYear; // = carbonAbsorptionRate
+	private BigDecimal estimatedCarbon5Years;
+	private BigDecimal estimatedCarbon10Years;
 }
