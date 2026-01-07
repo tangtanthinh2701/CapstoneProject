@@ -1,10 +1,19 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
+import Breadcrumbs from '../../components/Breadcrumbs';
 import {
   useProjectFormViewModel,
   type PhaseForm,
-  type TreeSpeciesOnPhaseForm,
 } from '../../viewmodels/useProjectFormViewModel';
+
+const statusOptions = [
+  { value: 'PLANNING', label: 'Lập kế hoạch', color: 'yellow' },
+  { value: 'PLANTING', label: 'Đang trồng', color: 'blue' },
+  { value: 'GROWING', label: 'Sinh trưởng', color: 'green' },
+  { value: 'MATURE', label: 'Trưởng thành', color: 'red' },
+  { value: 'HARVESTING', label: 'Thu hoạch', color: 'purple' },
+  { value: 'COMPLETED', label: 'Hoàn thành', color: 'gray' },
+];
 
 export default function ProjectFormPage() {
   const { id } = useParams();
@@ -16,51 +25,82 @@ export default function ProjectFormPage() {
     saving,
     error,
     form,
-    treeSpeciesList,
     updateField,
     addPhase,
     removePhase,
     updatePhaseField,
-    addTreeSpeciesToPhase,
-    removeTreeSpeciesFromPhase,
-    updatePhaseTreeSpeciesField,
     save,
   } = useProjectFormViewModel(id);
 
-  if (loading)
-    return <div className='text-white p-10'>Đang tải dữ liệu...</div>;
+  if (loading) {
+    return (
+      <div className='flex bg-[#07150D] text-white min-h-screen items-center justify-center'>
+        <div className='text-center'>
+          <div className='inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mb-4'></div>
+          <p className='text-gray-400'>Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
-    await save();
-    navigate('/projects');
+    try {
+      await save();
+      navigate('/projects');
+    } catch (err) {
+      // Error already handled in viewmodel
+    }
   };
-
-  const partnerString = form.partnerOrganizations.join(', ');
 
   return (
     <div className='flex bg-[#07150D] text-white min-h-screen'>
       <Sidebar />
 
       <main className='flex-1 p-10 max-w-5xl mx-auto'>
-        <h1 className='text-3xl font-bold mb-2'>
-          {isEdit ? 'Cập nhật Dự án' : 'Thêm Dự án Mới'}
-        </h1>
-        <p className='text-gray-400 mb-8'>
-          Điền đầy đủ thông tin để tạo / cập nhật dự án.
-        </p>
+        {/* Breadcrumbs */}
+        <Breadcrumbs
+          items={[
+            { label: 'Trang chủ', href: '/' },
+            { label: 'Danh sách dự án', href: '/projects' },
+            { label: isEdit ? 'Cập nhật dự án' : 'Tạo dự án mới' },
+          ]}
+        />
+
+        {/* Header */}
+        <div className='mb-8'>
+          <h1 className='text-3xl font-bold mb-2'>
+            {isEdit ? 'Cập nhật Dự án' : 'Tạo Dự án Mới'}
+          </h1>
+          <p className='text-gray-400'>
+            Điền đầy đủ thông tin để {isEdit ? 'cập nhật' : 'tạo'} dự án trồng
+            rừng carbon.
+          </p>
+        </div>
+
+        {/* Error Alert */}
+        {error && (
+          <div className='mb-6 bg-red-900/20 border border-red-500 text-red-200 px-4 py-3 rounded-xl flex items-center gap-2'>
+            <span className='material-icons'>error</span>
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* ======================= BASIC INFO ======================= */}
-        <section className='mb-8'>
-          <h2 className='text-sm font-semibold tracking-widest text-gray-300 uppercase mb-4'>
+        <section className='mb-8 bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
+          <h2 className='text-lg font-semibold mb-4 flex items-center gap-2'>
+            <span className='material-icons text-green-500'>info</span>
             Thông tin cơ bản
           </h2>
 
           <div className='space-y-4'>
             {/* NAME */}
             <div>
-              <label className='block text-sm mb-1'>Tên dự án</label>
+              <label className='block text-sm mb-2 text-gray-300'>
+                Tên dự án <span className='text-red-400'>*</span>
+              </label>
               <input
-                className='w-full px-4 py-3 rounded-xl bg-[#0E2219] border border-[#1E3A2B]'
+                className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-gray-100 placeholder-gray-500 focus:outline-none focus: ring-2 focus:ring-green-500'
+                placeholder='Ví dụ: Dự án Carbon Xanh Mekong Delta'
                 value={form.name}
                 onChange={(e) => updateField('name', e.target.value)}
               />
@@ -68,394 +108,310 @@ export default function ProjectFormPage() {
 
             {/* DESCRIPTION */}
             <div>
-              <label className='block text-sm mb-1'>Mô tả dự án</label>
+              <label className='block text-sm mb-2 text-gray-300'>
+                Mô tả dự án
+              </label>
               <textarea
-                className='w-full px-4 py-3 rounded-xl bg-[#0E2219] border border-[#1E3A2B]'
+                rows={4}
+                className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500'
+                placeholder='Mô tả chi tiết về mục tiêu, phạm vi và ý nghĩa của dự án...'
                 value={form.description}
                 onChange={(e) => updateField('description', e.target.value)}
               />
             </div>
 
-            {/* PARTNERS */}
-            <div>
-              <label className='block text-sm mb-1'>Tổ chức đối tác</label>
-              <input
-                className='w-full px-4 py-3 rounded-xl bg-[#0E2219] border border-[#1E3A2B]'
-                value={partnerString}
-                onChange={(e) =>
-                  updateField(
-                    'partnerOrganizations',
-                    e.target.value
-                      .split(',')
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  )
-                }
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* ======================= LOCATION ======================= */}
-        <section className='mb-8'>
-          <h2 className='text-sm text-gray-300 uppercase mb-4'>
-            Vị trí & Quy mô
-          </h2>
-
-          <div className='space-y-4'>
-            {/* LOCATION TEXT */}
-            <div>
-              <label className='block mb-1 text-sm'>Địa điểm</label>
-              <input
-                className='w-full px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl'
-                value={form.locationText}
-                onChange={(e) => updateField('locationText', e.target.value)}
-              />
-            </div>
-
-            {/* LAT - LNG */}
-            <div className='grid grid-cols-2 gap-4'>
+            {/* STATUS & PUBLIC */}
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block mb-1 text-sm'>Vĩ độ</label>
-                <input
-                  className='w-full px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl'
-                  value={form.latitude}
-                  onChange={(e) => updateField('latitude', e.target.value)}
-                />
+                <label className='block text-sm mb-2 text-gray-300'>
+                  Trạng thái dự án
+                </label>
+                <select
+                  className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500'
+                  value={form.projectStatus}
+                  onChange={(e) => updateField('projectStatus', e.target.value)}
+                >
+                  {statusOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className='block mb-1 text-sm'>Kinh độ</label>
-                <input
-                  className='w-full px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl'
-                  value={form.longitude}
-                  onChange={(e) => updateField('longitude', e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* AREA */}
-            <div className='grid grid-cols-2 gap-4'>
-              <div>
-                <label className='block mb-1 text-sm'>Diện tích</label>
-                <div className='flex gap-2'>
-                  <input
-                    className='flex-1 px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl'
-                    value={form.area}
-                    onChange={(e) => updateField('area', e.target.value)}
-                  />
-
-                  <select
-                    className='px-3 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl'
-                    value={form.areaUnit}
-                    onChange={(e) => updateField('areaUnit', e.target.value)}
-                  >
-                    <option value='m2'>m²</option>
-                    <option value='ha'>ha</option>
-                  </select>
+                <label className='block text-sm mb-2 text-gray-300'>
+                  Quyền truy cập
+                </label>
+                <div className='flex items-center gap-4 h-12'>
+                  <label className='flex items-center gap-2 cursor-pointer'>
+                    <input
+                      type='radio'
+                      name='isPublic'
+                      checked={form.isPublic === true}
+                      onChange={() => updateField('isPublic', true)}
+                      className='w-4 h-4 text-green-500 focus:ring-green-500'
+                    />
+                    <span className='text-sm'>🌐 Công khai</span>
+                  </label>
+                  <label className='flex items-center gap-2 cursor-pointer'>
+                    <input
+                      type='radio'
+                      name='isPublic'
+                      checked={form.isPublic === false}
+                      onChange={() => updateField('isPublic', false)}
+                      className='w-4 h-4 text-green-500 focus:ring-green-500'
+                    />
+                    <span className='text-sm'>🔒 Riêng tư</span>
+                  </label>
                 </div>
               </div>
-
-              {/* USABLE AREA */}
-              <div>
-                <label className='block mb-1 text-sm'>Diện tích sử dụng</label>
-                <input
-                  className='w-full px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl'
-                  value={form.usableArea}
-                  onChange={(e) => updateField('usableArea', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ======================= PLANTING PLAN ======================= */}
-        <section className='mb-8'>
-          <h2 className='text-sm mb-4 uppercase text-gray-300'>
-            Kế hoạch trồng cây
-          </h2>
-
-          <div className='grid grid-cols-2 gap-4'>
-            <div>
-              <label className='block mb-1 text-sm'>Ngày trồng</label>
-              <input
-                type='date'
-                className='w-full px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl'
-                value={form.plantingDate}
-                onChange={(e) => updateField('plantingDate', e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className='block mb-1 text-sm'>Trạng thái</label>
-              <select
-                className='w-full px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl'
-                value={form.projectStatus}
-                onChange={(e) => updateField('projectStatus', e.target.value)}
-              >
-                <option value='PLANNING'>PLANNING</option>
-                <option value='PLANTING'>PLANTING</option>
-                <option value='GROWING'>GROWING</option>
-                <option value='MATURE'>MATURE</option>
-                <option value='HARVESTING'>HARVESTING</option>
-                <option value='COMPLETED'>COMPLETED</option>
-              </select>
-            </div>
-
-            <div>
-              <label className='block mb-1 text-sm'>Tổng cây dự kiến</label>
-              <input
-                className='w-full px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl'
-                value={form.totalTreesPlanned}
-                onChange={(e) =>
-                  updateField('totalTreesPlanned', e.target.value)
-                }
-              />
-            </div>
-
-            <div>
-              <label className='block mb-1 text-sm'>Mật độ</label>
-              <input
-                className='w-full px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl'
-                value={form.plantingDensity}
-                onChange={(e) => updateField('plantingDensity', e.target.value)}
-              />
             </div>
           </div>
         </section>
 
         {/* ======================= PHASES ======================= */}
         <section className='mb-10'>
-          <div className='flex justify-between items-center mb-3'>
-            <h2 className='text-sm font-semibold uppercase text-gray-300'>
-              Các giai đoạn triển khai
+          <div className='flex justify-between items-center mb-4'>
+            <h2 className='text-lg font-semibold flex items-center gap-2'>
+              <span className='material-icons text-blue-500'>timeline</span>
+              Các giai đoạn triển khai ({form.phases.length})
             </h2>
 
             <button
-              className='px-4 py-2 bg-green-500 text-black rounded-lg'
+              className='px-4 py-2 bg-green-500 hover:bg-green-600 text-black rounded-lg font-semibold flex items-center gap-2 transition'
               onClick={addPhase}
             >
-              + Thêm Giai đoạn
+              <span className='material-icons text-lg'>add</span>
+              Thêm giai đoạn
             </button>
           </div>
 
-          {form.phases.map((phase: PhaseForm, index: number) => (
-            <div
-              key={index}
-              className='bg-[#0E2219] border border-[#1E3A2B] p-4 rounded-xl mb-4'
-            >
-              <div className='flex justify-between items-center mb-3'>
-                <input
-                  className='flex-1 bg-[#071811] border border-[#1E3A2B] rounded-lg px-4 py-2 mr-3'
-                  placeholder='Tên giai đoạn'
-                  value={phase.phaseName}
-                  onChange={(e) =>
-                    updatePhaseField(index, 'phaseName', e.target.value)
-                  }
-                />
-
-                <button
-                  className='text-red-400 text-xs'
-                  onClick={() => removePhase(index)}
-                >
-                  Xóa
-                </button>
-              </div>
-
-              {/* START + END DATE */}
-              <div className='grid grid-cols-2 gap-4 mb-3'>
-                <div>
-                  <label className='text-sm block mb-1'>Ngày bắt đầu</label>
-                  <input
-                    type='date'
-                    className='w-full px-4 py-2 bg-[#0E2219] border border-[#1E3A2B] rounded-lg'
-                    value={phase.startDate}
-                    onChange={(e) =>
-                      updatePhaseField(index, 'startDate', e.target.value)
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label className='text-sm block mb-1'>Ngày kết thúc</label>
-                  <input
-                    type='date'
-                    className='w-full px-4 py-2 bg-[#0E2219] border border-[#1E3A2B] rounded-lg'
-                    value={phase.endDate}
-                    onChange={(e) =>
-                      updatePhaseField(index, 'endDate', e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* TREE SPECIES LIST */}
-              {phase.treeSpecies.map(
-                (ts: TreeSpeciesOnPhaseForm, i: number) => (
-                  <>
-                    <div
-                      key={i}
-                      className='border border-[#1E3A2B] p-3 rounded-lg mb-3'
-                    >
-                      <div className='grid grid-cols-3 gap-4'>
-                        <div>
-                          <label className='text-xs block mb-1'>Loài cây</label>
-                          <select
-                            className='w-full px-3 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg'
-                            value={ts.treeSpeciesId ?? ''}
-                            onChange={(e) =>
-                              updatePhaseTreeSpeciesField(
-                                index,
-                                i,
-                                'treeSpeciesId',
-                                Number(e.target.value),
-                              )
-                            }
-                          >
-                            <option value=''>Chọn loại cây</option>
-                            {treeSpeciesList.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.name} ({s.scientificName})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className='text-xs block mb-1'>
-                            Số lượng dự kiến
-                          </label>
-                          <input
-                            type='number'
-                            className='w-full px-3 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg'
-                            value={ts.quantityPlanned ?? ''}
-                            onChange={(e) =>
-                              updatePhaseTreeSpeciesField(
-                                index,
-                                i,
-                                'quantityPlanned',
-                                parseInt(e.target.value),
-                              )
-                            }
-                          />
-                        </div>
-
-                        <div>
-                          <label className='text-xs block mb-1'>
-                            Chi phí mỗi cây
-                          </label>
-                          <input
-                            type='number'
-                            className='w-full px-3 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg'
-                            value={ts.costPerTree ?? ''}
-                            onChange={(e) =>
-                              updatePhaseTreeSpeciesField(
-                                index,
-                                i,
-                                'costPerTree',
-                                parseInt(e.target.value),
-                              )
-                            }
-                          />
-                        </div>
-
-                        <div>
-                          <label className='text-xs block mb-1'>
-                            Chi phí chăm sóc
-                          </label>
-                          <input
-                            type='number'
-                            className='w-full px-3 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg'
-                            value={ts.maintenanceCostYearly ?? ''}
-                            onChange={(e) =>
-                              updatePhaseTreeSpeciesField(
-                                index,
-                                i,
-                                'maintenanceCostYearly',
-                                parseInt(e.target.value),
-                              )
-                            }
-                          />
-                        </div>
-
-                        <div>
-                          <label className='text-xs block mb-1'>
-                            Chi phí trồng
-                          </label>
-                          <input
-                            type='number'
-                            className='w-full px-3 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg'
-                            value={ts.plantingCost ?? ''}
-                            onChange={(e) =>
-                              updatePhaseTreeSpeciesField(
-                                index,
-                                i,
-                                'plantingCost',
-                                parseInt(e.target.value),
-                              )
-                            }
-                          />
-                        </div>
-                      </div>
-
-                      {/* NOTES */}
-                      <div className='mt-2'>
-                        <label className='text-xs block mb-1'>Ghi chú</label>
-                        <textarea
-                          className='w-full px-3 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg'
-                          value={ts.notes ?? ''}
-                          onChange={(e) =>
-                            updatePhaseTreeSpeciesField(
-                              index,
-                              i,
-                              'notes',
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
-                    <div className='text-right mb-2'>
-                      <button
-                        className='text-red-400 hover:text-red-300 text-xs'
-                        onClick={() => removeTreeSpeciesFromPhase(index, i)}
-                      >
-                        Xóa
-                      </button>
-                    </div>
-                  </>
-                ),
-              )}
-
-              <button
-                className='px-3 py-1 text-green-500 bg-[#143024] rounded-lg'
-                onClick={() => addTreeSpeciesToPhase(index)}
-              >
-                + Thêm loài cây
-              </button>
+          {form.phases.length === 0 ? (
+            <div className='bg-[#0E2219] border border-[#1E3A2B] rounded-xl p-12 text-center text-gray-400'>
+              <span className='material-icons text-5xl mb-2 opacity-30'>
+                event_busy
+              </span>
+              <p>Chưa có giai đoạn nào. Nhấn "Thêm giai đoạn" để bắt đầu.</p>
             </div>
-          ))}
+          ) : (
+            <div className='space-y-4'>
+              {form.phases.map((phase: PhaseForm, index: number) => (
+                <div
+                  key={index}
+                  className='bg-[#0E2219] border border-[#1E3A2B] p-5 rounded-xl'
+                >
+                  {/* HEADER */}
+                  <div className='flex justify-between items-center mb-4'>
+                    <div className='flex items-center gap-3'>
+                      <span className='px-3 py-1 bg-green-500/20 text-green-400 text-sm font-bold rounded'>
+                        #{phase.phaseOrder}
+                      </span>
+                      <input
+                        className='flex-1 bg-[#071811] border border-[#1E3A2B] rounded-lg px-4 py-2 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-green-500'
+                        placeholder='Tên giai đoạn'
+                        value={phase.phaseName}
+                        onChange={(e) =>
+                          updatePhaseField(index, 'phaseName', e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <button
+                      className='text-red-400 hover:text-red-300 px-3 py-1 rounded-lg hover:bg-red-500/10 transition flex items-center gap-1'
+                      onClick={() => removePhase(index)}
+                    >
+                      <span className='material-icons text-lg'>delete</span>
+                      Xóa
+                    </button>
+                  </div>
+
+                  {/* DESCRIPTION */}
+                  <div className='mb-4'>
+                    <label className='block text-sm mb-1 text-gray-400'>
+                      Mô tả giai đoạn
+                    </label>
+                    <textarea
+                      rows={2}
+                      className='w-full px-4 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus: ring-green-500'
+                      placeholder='Mô tả chi tiết hoạt động trong giai đoạn này...'
+                      value={phase.description}
+                      onChange={(e) =>
+                        updatePhaseField(index, 'description', e.target.value)
+                      }
+                    />
+                  </div>
+
+                  {/* DATES */}
+                  <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-4'>
+                    <div>
+                      <label className='block text-sm mb-1 text-gray-400'>
+                        Dự kiến bắt đầu
+                      </label>
+                      <input
+                        type='date'
+                        className='w-full px-4 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500'
+                        value={phase.expectedStartDate}
+                        onChange={(e) =>
+                          updatePhaseField(
+                            index,
+                            'expectedStartDate',
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className='block text-sm mb-1 text-gray-400'>
+                        Dự kiến kết thúc
+                      </label>
+                      <input
+                        type='date'
+                        className='w-full px-4 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500'
+                        value={phase.expectedEndDate}
+                        onChange={(e) =>
+                          updatePhaseField(
+                            index,
+                            'expectedEndDate',
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className='block text-sm mb-1 text-gray-400'>
+                        Thực tế bắt đầu
+                      </label>
+                      <input
+                        type='date'
+                        className='w-full px-4 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500'
+                        value={phase.actualStartDate}
+                        onChange={(e) =>
+                          updatePhaseField(
+                            index,
+                            'actualStartDate',
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* STATUS, BUDGET, CARBON */}
+                  <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-4'>
+                    <div>
+                      <label className='block text-sm mb-1 text-gray-400'>
+                        Trạng thái giai đoạn
+                      </label>
+                      <select
+                        className='w-full px-4 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg focus: outline-none focus:ring-2 focus:ring-green-500'
+                        value={phase.phaseStatus}
+                        onChange={(e) =>
+                          updatePhaseField(index, 'phaseStatus', e.target.value)
+                        }
+                      >
+                        {statusOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className='block text-sm mb-1 text-gray-400'>
+                        Ngân sách (VND)
+                      </label>
+                      <input
+                        type='number'
+                        min='0'
+                        step='1000000'
+                        className='w-full px-4 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg focus:outline-none focus: ring-2 focus:ring-green-500'
+                        placeholder='0'
+                        value={phase.budget ?? ''}
+                        onChange={(e) =>
+                          updatePhaseField(
+                            index,
+                            'budget',
+                            e.target.value ? parseFloat(e.target.value) : null,
+                          )
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className='block text-sm mb-1 text-gray-400'>
+                        CO₂ mục tiêu (tấn)
+                      </label>
+                      <input
+                        type='number'
+                        min='0'
+                        step='0.01'
+                        className='w-full px-4 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500'
+                        placeholder='0'
+                        value={phase.targetConsumedCarbon ?? ''}
+                        onChange={(e) =>
+                          updatePhaseField(
+                            index,
+                            'targetConsumedCarbon',
+                            e.target.value ? parseFloat(e.target.value) : null,
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* NOTES */}
+                  <div>
+                    <label className='block text-sm mb-1 text-gray-400'>
+                      Ghi chú
+                    </label>
+                    <textarea
+                      rows={2}
+                      className='w-full px-4 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus: ring-green-500'
+                      placeholder='Ghi chú thêm về giai đoạn...'
+                      value={phase.notes}
+                      onChange={(e) =>
+                        updatePhaseField(index, 'notes', e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* ======================= BUTTONS ======================= */}
-        <div className='flex justify-end gap-3'>
+        <div className='flex justify-end gap-3 pt-6 border-t border-[#1E3A2B]'>
           <button
-            className='px-5 py-2 rounded-xl bg-[#0E2219] border border-[#1E3A2B] text-red-400'
+            className='px-6 py-3 rounded-xl bg-[#0E2219] border border-[#1E3A2B] text-gray-300 hover:bg-[#13271F] transition'
             onClick={() => navigate('/projects')}
+            disabled={saving}
           >
             Hủy
           </button>
 
           <button
-            className='px-5 py-2 rounded-xl bg-green-500 text-black font-semibold'
+            className='px-6 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-black font-semibold flex items-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed'
             onClick={handleSubmit}
             disabled={saving}
           >
-            {isEdit ? 'Cập nhật' : 'Tạo Dự án'}
+            {saving ? (
+              <>
+                <div className='inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-black'></div>
+                Đang lưu...
+              </>
+            ) : (
+              <>
+                <span className='material-icons text-lg'>save</span>
+                {isEdit ? 'Cập nhật dự án' : 'Tạo dự án'}
+              </>
+            )}
           </button>
         </div>
-
-        {error && <p className='text-red-400 mt-4'>{error}</p>}
       </main>
     </div>
   );

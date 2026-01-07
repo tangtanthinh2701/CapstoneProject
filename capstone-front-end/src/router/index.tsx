@@ -7,6 +7,12 @@ import ProjectDetailPage from '../pages/ProjectDetailPage/ProjectDetailPage';
 import ProjectFormPage from '../pages/ProjectFormPage/ProjectFormPage';
 import TreeSpeciesPage from '../pages/TreeSpeciesPage/TreeSpeciesPage';
 import TreeSpeciesFormPage from '../pages/TreeSpeciesFormPage/TreeSpeciesFormPage';
+import CarbonCreditPage from '../pages/CarbonCreditPage/CarbonCreditPage';
+import TransactionPage from '../pages/TransactionPage/TransactionPage';
+import TreeSpeciesDetailPage from '../pages/TreeSpeciesDetailPage/TreeSpeciesDetailPage';
+import FarmPage from '../pages/FarmPage/FarmPage';
+import FarmFormPage from '../pages/FarmFormPage/FarmFormPage';
+import FarmDetailPage from '../pages/FarmDetailPage/FarmDetailPage';
 
 const router = createBrowserRouter([
   {
@@ -42,8 +48,12 @@ const router = createBrowserRouter([
     element: <ProjectFormPage />,
   },
   {
-    path: '/treespecies',
+    path: '/tree-species',
     element: <TreeSpeciesPage />,
+  },
+  {
+    path: '/tree-species/:id',
+    element: <TreeSpeciesDetailPage />,
   },
   {
     path: '/tree-species/new',
@@ -52,7 +62,31 @@ const router = createBrowserRouter([
   {
     path: '/tree-species/:id/edit',
     element: <TreeSpeciesFormPage />,
-  }
+  },
+  {
+    path: '/farms',
+    element: <FarmPage />,
+  },
+  {
+    path: '/farms/new',
+    element: <FarmFormPage />,
+  },
+  {
+    path: '/farms/:id/edit',
+    element: <FarmFormPage />,
+  },
+  {
+    path: '/farms/:id',
+    element: <FarmDetailPage />,
+  },
+  {
+    path: '/credits',
+    element: <CarbonCreditPage />,
+  },
+  {
+    path: '/payments',
+    element: <TransactionPage />,
+  },
 ]);
 
 export default router;

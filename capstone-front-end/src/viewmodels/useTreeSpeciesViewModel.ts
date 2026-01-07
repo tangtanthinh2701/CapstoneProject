@@ -6,12 +6,11 @@ import {
   getTreeSpeciesById,
   getTreeSpeciesList,
   deleteTreeSpecies,
-} from '../models/treeSpecies.api';
-import type {
-  TreeSpecies,
-  TreeSpeciesPayload,
+  type TreeSpecies,
+  type TreeSpeciesPayload,
 } from '../models/treeSpecies.api';
 
+// ========== FORM VIEWMODEL ==========
 export const useTreeSpeciesFormViewModel = () => {
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -26,50 +25,50 @@ export const useTreeSpeciesFormViewModel = () => {
     carbonAbsorptionRate: 0,
     description: '',
     imageUrl: '',
-    typicalHeight: undefined,
-    typicalDiameter: undefined,
-    typicalLifespan: undefined,
-    growthRate: 'MEDIUM',
-    climateZones: [],
-    soilTypes: [],
-    waterRequirement: 'MEDIUM',
-    sunlightRequirement: 'FULL_SUN',
-    woodValue: 0,
-    fruitValue: 0,
-    hasCommercialValue: false,
-    isActive: true,
   });
 
-  /** LOAD DATA WHEN UPDATE */
+  /** LOAD DATA FOR EDIT */
   useEffect(() => {
-    if (!isEdit) return;
+    if (!isEdit) {
+      setInitialLoading(false);
+      return;
+    }
 
-    getTreeSpeciesById(Number(id))
-      .then((res) => {
-        const data = res.data ?? res;
+    const loadData = async () => {
+      try {
+        setInitialLoading(true);
+        setError(null);
+
+        console.log('🔵 Loading tree species ID:', id);
+
+        const response = await getTreeSpeciesById(Number(id));
+
+        console.log('✅ API Response:', response);
+
+        if (!response.success || !response.data) {
+          throw new Error('Không tải được dữ liệu loài cây');
+        }
+
+        const data = response.data;
 
         setForm({
           name: data.name,
           scientificName: data.scientificName,
           carbonAbsorptionRate: data.carbonAbsorptionRate,
-          description: data.description ?? '',
-          imageUrl: data.imageUrl ?? '',
-          typicalHeight: data.typicalHeight,
-          typicalDiameter: data.typicalDiameter,
-          typicalLifespan: data.typicalLifespan,
-          growthRate: data.growthRate,
-          climateZones: data.climateZones ?? [],
-          soilTypes: data.soilTypes ?? [],
-          waterRequirement: data.waterRequirement,
-          sunlightRequirement: data.sunlightRequirement,
-          woodValue: data.woodValue ?? 0,
-          fruitValue: data.fruitValue ?? 0,
-          hasCommercialValue: data.hasCommercialValue,
-          isActive: data.isActive,
+          description: data.description || '',
+          imageUrl: data.imageUrl || '',
         });
-      })
-      .catch(() => setError('Không tải được dữ liệu loài cây'))
-      .finally(() => setInitialLoading(false));
+
+        console.log('✅ Form loaded successfully');
+      } catch (err: any) {
+        console.error('❌ Error loading tree species:', err);
+        setError(err.message || 'Không tải được dữ liệu loài cây');
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadData();
   }, [id, isEdit]);
 
   /** UPDATE FIELD */
@@ -80,30 +79,52 @@ export const useTreeSpeciesFormViewModel = () => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  /** TOGGLE ARRAY FIELD */
-  const toggleArrayValue = (
-    key: 'climateZones' | 'soilTypes',
-    value: string,
-  ) => {
-    setForm((prev) => ({
-      ...prev,
-      [key]: prev[key].includes(value)
-        ? prev[key].filter((v) => v !== value)
-        : [...prev[key], value],
-    }));
+  /** VALIDATE */
+  const validate = (): boolean => {
+    if (!form.name.trim()) {
+      setError('Tên cây không được để trống');
+      return false;
+    }
+    if (!form.scientificName.trim()) {
+      setError('Tên khoa học không được để trống');
+      return false;
+    }
+    if (form.carbonAbsorptionRate <= 0) {
+      setError('Tỷ lệ hấp thụ carbon phải lớn hơn 0');
+      return false;
+    }
+    return true;
   };
 
   /** SAVE */
   const save = async () => {
+    if (!validate()) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
+      const payload: TreeSpeciesPayload = {
+        name: form.name.trim(),
+        scientificName: form.scientificName.trim(),
+        carbonAbsorptionRate: form.carbonAbsorptionRate,
+        description: form.description?.trim() || undefined,
+        imageUrl: form.imageUrl?.trim() || undefined,
+      };
+
       if (isEdit) {
-        return await updateTreeSpecies(Number(id), form);
+        const response = await updateTreeSpecies(Number(id), payload);
+        console.log('✅ Update success:', response);
+        return response;
+      } else {
+        const response = await createTreeSpecies(payload);
+        console.log('✅ Create success:', response);
+        return response;
       }
-      return await createTreeSpecies(form);
     } catch (e: any) {
+      console.error('❌ Save failed:', e);
       setError(e.message || 'Lưu loài cây thất bại');
       throw e;
     } finally {
@@ -118,23 +139,36 @@ export const useTreeSpeciesFormViewModel = () => {
     error,
     form,
     updateField,
-    toggleArrayValue,
     save,
   };
 };
 
+// ========== LIST VIEWMODEL ==========
 export const useTreeSpeciesViewModel = () => {
   const [data, setData] = useState<TreeSpecies[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [pageInfo, setPageInfo] = useState<any>(null);
 
   const load = async () => {
     try {
       setLoading(true);
-      setData(await getTreeSpeciesList());
+      setError(null);
+
+      const response = await getTreeSpeciesList();
+
+      console.log('✅ Tree species list loaded:', response);
+
+      if (response.success && response.data) {
+        setData(response.data);
+        setPageInfo(response.pageInfo);
+      } else {
+        throw new Error('Không tải được danh sách loài cây');
+      }
     } catch (e: any) {
-      setError(e.message);
+      console.error('❌ Error loading tree species list:', e);
+      setError(e.message || 'Không tải được danh sách loài cây');
     } finally {
       setLoading(false);
     }
@@ -145,9 +179,14 @@ export const useTreeSpeciesViewModel = () => {
   }, []);
 
   const remove = async (id: number) => {
-    if (!confirm('Bạn có chắc muốn xóa loại cây này?')) return;
-    await deleteTreeSpecies(id);
-    load();
+    if (!confirm('Bạn có chắc muốn xóa loài cây này?')) return;
+
+    try {
+      await deleteTreeSpecies(id);
+      await load(); // Reload list
+    } catch (e: any) {
+      alert(e.message || 'Xóa thất bại');
+    }
   };
 
   const filtered = data.filter(
@@ -162,6 +201,8 @@ export const useTreeSpeciesViewModel = () => {
     search,
     setSearch,
     data: filtered,
+    pageInfo,
     remove,
+    reload: load,
   };
 };

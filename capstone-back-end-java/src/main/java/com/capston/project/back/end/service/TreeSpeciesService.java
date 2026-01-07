@@ -2,16 +2,26 @@ package com.capston.project.back.end.service;
 
 import com.capston.project.back.end.request.TreeSpeciesRequest;
 
-import com.capston.project.back.end.response.TreeSpeciesListResponse;
 import com.capston.project.back.end.response.TreeSpeciesResponse;
-import com.capston.project.back.end.response.generic.PageResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 public interface TreeSpeciesService {
-	TreeSpeciesResponse createTreeSpecies(TreeSpeciesRequest request);
-	TreeSpeciesResponse updateTreeSpecies(Integer id, TreeSpeciesRequest request);
-	TreeSpeciesResponse getTreeSpeciesById(Integer id);
-	PageResponse<TreeSpeciesListResponse> getAllTreeSpecies(String name, String growthRate, Boolean isActive, int page, int size);
-	PageResponse<TreeSpeciesListResponse> getActiveTreeSpecies(int page, int size);
-	void deleteTreeSpecies(Integer id);
-	void hardDeleteTreeSpecies(Integer id);
+	TreeSpeciesResponse create(TreeSpeciesRequest request);
+
+	TreeSpeciesResponse getById(Integer id);
+
+	TreeSpeciesResponse update(Integer id, TreeSpeciesRequest request);
+
+	void delete(Integer id);
+
+	Page<TreeSpeciesResponse> getAll(Pageable pageable);
+
+	Page<TreeSpeciesResponse> search(String keyword, Pageable pageable);
+
+	List<TreeSpeciesResponse> getAllActive();
+
+	List<TreeSpeciesResponse> getTopByCarbonAbsorption(int limit);
 }

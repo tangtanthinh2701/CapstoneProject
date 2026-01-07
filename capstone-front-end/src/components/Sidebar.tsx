@@ -32,14 +32,15 @@ export default function Sidebar() {
   const menu = [
     { label: 'Tổng quan', path: '/dashboard', icon: 'dashboard' },
     { label: 'Dự án', path: '/projects', icon: 'inventory_2' },
-    { label: 'Loại cây', path: '/treespecies', icon: 'forest' },
+    { label: 'Vườn ươm', path: '/farms', icon: 'local_florist' },
+    { label: 'Loại cây', path: '/tree-species', icon: 'forest' },
     { label: 'Báo cáo', path: '/contracts', icon: 'summarize' },
-    { label: 'Tín chỉ Carbon', path: '/carbonCredits', icon: 'co2' },
+    { label: 'Tín chỉ Carbon', path: '/credits', icon: 'co2' },
     { label: 'Giao dịch', path: '/payments', icon: 'payment' },
   ];
 
   return (
-    <aside className='w-64 h-screen bg-[#07150D] border-r border-[#0E2219] flex flex-col p-6'>
+    <aside className='w-64 bg-[#07150D] border-r border-[#0E2219] flex flex-col p-6'>
       {/* USER */}
       <div className='flex items-center gap-3 mb-10'>
         <img

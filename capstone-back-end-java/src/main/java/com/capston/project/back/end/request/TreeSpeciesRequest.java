@@ -1,7 +1,6 @@
 package com.capston.project.back.end.request;
 
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -9,19 +8,13 @@ import lombok.Data;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-
-import jakarta.validation.constraints.Pattern;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class TreeSpeciesRequest {
-	private Integer id;
-
-	@NotBlank(message = "Tree name is required")
+	@NotBlank(message = "Tree species name is required")
 	@Size(max = 255, message = "Name must not exceed 255 characters")
 	private String name;
 
@@ -32,46 +25,8 @@ public class TreeSpeciesRequest {
 	@DecimalMin(value = "0.0001", message = "Carbon absorption rate must be positive")
 	private BigDecimal carbonAbsorptionRate;
 
-	@Size(max = 5000, message = "Description is too long")
 	private String description;
 
-	@Size(max = 500, message = "Image URL is too long")
+	@Size(max = 500, message = "Image URL must not exceed 500 characters")
 	private String imageUrl;
-
-	@DecimalMin(value = "0.0", message = "Height must be positive")
-	private BigDecimal typicalHeight;
-
-	@DecimalMin(value = "0.0", message = "Diameter must be positive")
-	private BigDecimal typicalDiameter;
-
-	@Min(value = 1, message = "Lifespan must be at least 1 year")
-	private Integer typicalLifespan;
-
-	@Pattern(regexp = "SLOW|MEDIUM|FAST", message = "Growth rate must be SLOW, MEDIUM, or FAST")
-	private String growthRate;
-
-	private List<String> climateZones;
-
-	private List<String> soilTypes;
-
-	@Pattern(regexp = "LOW|MEDIUM|HIGH", message = "Water requirement must be LOW, MEDIUM, or HIGH")
-	private String waterRequirement;
-
-	@Pattern(regexp = "FULL_SUN|PARTIAL_SHADE|SHADE",
-	         message = "Sunlight requirement must be FULL_SUN, PARTIAL_SHADE, or SHADE")
-	private String sunlightRequirement;
-
-	@DecimalMin(value = "0.0", message = "Wood value must be positive")
-	private BigDecimal woodValue;
-
-	@DecimalMin(value = "0.0", message = "Fruit value must be positive")
-	private BigDecimal fruitValue;
-
-	private Boolean hasCommercialValue = false;
-
-	private Boolean isActive = true;
-
-	private LocalDateTime createdAt;
-
-	private LocalDateTime updatedAt;
 }
