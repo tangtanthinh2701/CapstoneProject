@@ -1,0 +1,43 @@
+package com.capston.project.back.end.request;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class CarbonCreditRequest {
+	@NotNull(message = "Project ID is required")
+	private Integer projectId;
+
+	@NotNull(message = "Report year is required")
+	@Min(value = 2000, message = "Report year must be at least 2000")
+	private Integer reportYear;
+
+	@NotNull(message = "Total CO2 tons is required")
+	@DecimalMin(value = "0.01", message = "Total CO2 must be positive")
+	private BigDecimal totalCo2Tons;
+
+	@NotNull(message = "Credits issued is required")
+	@Min(value = 1, message = "Credits issued must be at least 1")
+	private Integer creditsIssued;
+
+	@DecimalMin(value = "0.01", message = "Price per credit must be positive")
+	private BigDecimal pricePerCredit;
+
+	private String verificationStandard;
+
+	private String certificateUrl;
+
+	private UUID issuedBy;
+
+	private OffsetDateTime expiresAt;
+}

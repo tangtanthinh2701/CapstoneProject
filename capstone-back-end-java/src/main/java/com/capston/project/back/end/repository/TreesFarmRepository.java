@@ -87,4 +87,25 @@ public interface TreesFarmRepository extends JpaRepository<TreesFarm, Integer> {
 	       "tf. updatedAt = CURRENT_TIMESTAMP " +
 	       "WHERE tf.id = :id")
 	void updateCarbonAbsorbed(@Param("id") Integer id, @Param("carbon") BigDecimal carbon);
+
+	@Query("SELECT COALESCE(SUM(tf.totalCo2Absorbed), 0) FROM TreesFarm tf")
+	BigDecimal sumTotalCo2Absorbed();
+
+	@Query("SELECT SUM(tf.numberTrees), SUM(CASE WHEN tf.treeStatus = 'ALIVE' THEN tf.numberTrees ELSE 0 END) FROM TreesFarm tf")
+	List<Object[]> getTreeStats();
+
+	@Query("SELECT COALESCE(SUM(tf.totalCo2Absorbed), 0) FROM TreesFarm tf " +
+	       "WHERE EXTRACT(YEAR FROM tf.createdAt) = :year AND EXTRACT(MONTH FROM tf.createdAt) = :month")
+	BigDecimal sumCo2AbsorbedByMonth(@Param("year") Integer year, @Param("month") Integer month);
+
+	@Query("SELECT COALESCE(SUM(tf.numberTrees), 0) FROM TreesFarm tf " +
+	       "JOIN ProjectFarm pf ON tf.farm.id = pf.farm. id " +
+	       "WHERE pf.project.id = :projectId")
+	Long countTreesByProjectId(@Param("projectId") Integer projectId);
+
+	@Query("SELECT COALESCE(SUM(tf.totalCo2Absorbed), 0) FROM TreesFarm tf WHERE tf.treeSpecies. id = :speciesId")
+	BigDecimal sumCo2AbsorbedBySpeciesId(@Param("speciesId") Integer speciesId);
+
+	@Query("SELECT COALESCE(SUM(tf.numberTrees), 0) FROM TreesFarm tf WHERE tf.treeSpecies.id = :speciesId")
+	Long countTreesBySpeciesId(@Param("speciesId") Integer speciesId);
 }

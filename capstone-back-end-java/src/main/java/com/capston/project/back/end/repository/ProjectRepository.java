@@ -70,4 +70,16 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
 	// Lấy tất cả project IDs để batch update
 	@Query("SELECT p.id FROM Project p")
 	List<Integer> findAllProjectIds();
+
+	@Query("SELECT COUNT(p) FROM Project p WHERE p.projectStatus = :status")
+	Long countByProjectStatus(@Param("status") ProjectStatus status);
+
+	@Query("SELECT COALESCE(SUM(p. targetConsumedCarbon), 0) FROM Project p")
+	BigDecimal sumTargetConsumedCarbon();
+
+	@Query("SELECT p FROM Project p ORDER BY p.currentConsumedCarbon DESC LIMIT : limit")
+	List<Project> findTopProjectsByCo2(@Param("limit") int limit);
+
+	@Query("SELECT COUNT(p) FROM Project p WHERE p.projectStatus IN :statuses")
+	Long countByProjectStatusIn(@Param("statuses") List<ProjectStatus> statuses);
 }

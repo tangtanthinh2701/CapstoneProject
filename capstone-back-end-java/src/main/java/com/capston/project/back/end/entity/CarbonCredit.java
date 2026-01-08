@@ -1,12 +1,13 @@
 package com.capston.project.back.end.entity;
 
+import com.capston.project.back.end.common.CreditStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -19,7 +20,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class CarbonCredit {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
@@ -34,7 +34,7 @@ public class CarbonCredit {
 	@Column(name = "report_year", nullable = false)
 	private Integer reportYear;
 
-	@Column(name = "total_co2_tons", precision = 15, scale = 2, nullable = false)
+	@Column(name = "total_co2_tons", nullable = false, precision = 15, scale = 2)
 	private BigDecimal totalCo2Tons;
 
 	@Column(name = "credits_issued", nullable = false)
@@ -54,12 +54,13 @@ public class CarbonCredit {
 	@Column(name = "price_per_credit", precision = 15, scale = 2)
 	private BigDecimal pricePerCredit;
 
+	@Enumerated(EnumType.STRING)
 	@Column(name = "credits_status", length = 50)
 	@Builder.Default
-	private String creditsStatus = "AVAILABLE";
+	private CreditStatus creditsStatus = CreditStatus. PENDING;
 
 	@Column(name = "verification_standard", length = 100)
-	private String verificationStandard;
+	private String verificationStandard; // VCS, Gold Standard, etc.
 
 	@Column(name = "certificate_url", length = 500)
 	private String certificateUrl;
@@ -68,41 +69,44 @@ public class CarbonCredit {
 	private UUID issuedBy;
 
 	@Column(name = "issued_at")
-	@Builder.Default
-	private LocalDateTime issuedAt = LocalDateTime.now();
+	private OffsetDateTime issuedAt;
 
 	@Column(name = "expires_at")
-	private LocalDateTime expiresAt;
+	private OffsetDateTime expiresAt;
 
 	@CreationTimestamp
 	@Column(name = "created_at", updatable = false)
-	private LocalDateTime createdAt;
+	private OffsetDateTime createdAt;
 
 	@UpdateTimestamp
 	@Column(name = "updated_at")
-	private LocalDateTime updatedAt;
+	private OffsetDateTime updatedAt;
 
-	@OneToMany(mappedBy = "credit", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	// Relationships
+	@OneToMany(mappedBy = "carbonCredit", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	@Builder.Default
 	private List<CarbonCreditAllocation> allocations = new ArrayList<>();
 
-	@OneToMany(mappedBy = "credit", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@OneToMany(mappedBy = "carbonCredit", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	@Builder.Default
 	private List<CreditTransaction> transactions = new ArrayList<>();
 
-	@PrePersist
-	protected void onCreate() {
-		if (issuedAt == null) {
-			issuedAt = LocalDateTime.now();
-		}
-		if (creditsAvailable == null) {
-			creditsAvailable = creditsIssued;
-		}
+	// Helper methods
+	public Integer getProjectId() {
+		return project != null ? project.getId() : null;
+	}
+
+	public boolean hasAvailableCredits() {
+		return creditsAvailable != null && creditsAvailable > 0;
+	}
+
+	public boolean canSell(int quantity) {
+		return hasAvailableCredits() && creditsAvailable >= quantity;
 	}
 
 	public void sellCredits(int quantity) {
-		if (quantity > creditsAvailable) {
-			throw new IllegalArgumentException("Not enough credits available");
+		if (! canSell(quantity)) {
+			throw new IllegalStateException("Not enough credits available");
 		}
 		this.creditsSold += quantity;
 		this.creditsAvailable -= quantity;
@@ -110,8 +114,8 @@ public class CarbonCredit {
 	}
 
 	public void retireCredits(int quantity) {
-		if (quantity > creditsAvailable) {
-			throw new IllegalArgumentException("Not enough credits available");
+		if (!canSell(quantity)) {
+			throw new IllegalStateException("Not enough credits available");
 		}
 		this.creditsRetired += quantity;
 		this.creditsAvailable -= quantity;
@@ -120,24 +124,13 @@ public class CarbonCredit {
 
 	private void updateStatus() {
 		if (creditsAvailable <= 0) {
-			this.creditsStatus = "SOLD_OUT";
-		} else {
-			this.creditsStatus = "AVAILABLE";
+			this.creditsStatus = CreditStatus.SOLD_OUT;
+		} else if (creditsSold > 0 || creditsRetired > 0) {
+			this.creditsStatus = CreditStatus.PARTIALLY_SOLD;
 		}
-	}
-
-	public boolean isAvailable() {
-		return "AVAILABLE".equals(creditsStatus) && creditsAvailable > 0;
 	}
 
 	public boolean isExpired() {
-		return expiresAt != null && LocalDateTime.now().isAfter(expiresAt);
-	}
-
-	public BigDecimal getTotalValue() {
-		if (pricePerCredit == null) {
-			return BigDecimal.ZERO;
-		}
-		return pricePerCredit.multiply(BigDecimal.valueOf(creditsAvailable));
+		return expiresAt != null && expiresAt.isBefore(OffsetDateTime. now());
 	}
 }

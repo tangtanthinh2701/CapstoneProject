@@ -1,11 +1,14 @@
 package com.capston.project.back.end.entity;
 
+import com.capston.project.back.end.common.RenewalStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java. util.UUID;
 
 @Entity
@@ -16,13 +19,13 @@ import java. util.UUID;
 @AllArgsConstructor
 @Builder
 public class ContractRenewal {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "original_contract_id", nullable = false)
+	@JsonIgnore
 	private Contract originalContract;
 
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -47,48 +50,33 @@ public class ContractRenewal {
 	@Column(name = "renewal_amount", precision = 15, scale = 2)
 	private BigDecimal renewalAmount;
 
+	@Enumerated(EnumType.STRING)
 	@Column(name = "status", length = 50)
-	private String status = "PENDING"; // PENDING, APPROVED, REJECTED
+	@Builder.Default
+	private RenewalStatus status = RenewalStatus.PENDING;
 
 	@Column(name = "requested_by")
 	private UUID requestedBy;
 
+	@CreationTimestamp
 	@Column(name = "requested_at")
-	private LocalDateTime requestedAt = LocalDateTime.now();
+	private OffsetDateTime requestedAt;
 
 	@Column(name = "approved_by")
 	private UUID approvedBy;
 
 	@Column(name = "approved_at")
-	private LocalDateTime approvedAt;
+	private OffsetDateTime approvedAt;
 
 	@Column(name = "notes", columnDefinition = "TEXT")
 	private String notes;
 
-	@Column(name = "created_at")
-	private LocalDateTime createdAt = LocalDateTime.now();
+	@CreationTimestamp
+	@Column(name = "created_at", updatable = false)
+	private OffsetDateTime createdAt;
 
-	@PrePersist
-	protected void onCreate() {
-		if (createdAt == null) {
-			createdAt = LocalDateTime.now();
-		}
-		if (requestedAt == null) {
-			requestedAt = LocalDateTime.now();
-		}
-	}
-
-	public void approve(UUID approver) {
-		this.status = "APPROVED";
-		this.approvedBy = approver;
-		this.approvedAt = LocalDateTime.now();
-	}
-
-	public void reject() {
-		this.status = "REJECTED";
-	}
-
-	public boolean isPending() {
-		return "PENDING".equals(status);
+	// Helper
+	public Integer getOriginalContractId() {
+		return originalContract != null ?  originalContract.getId() : null;
 	}
 }

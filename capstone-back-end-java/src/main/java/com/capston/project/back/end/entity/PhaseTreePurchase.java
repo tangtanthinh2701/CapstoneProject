@@ -101,7 +101,7 @@ public class PhaseTreePurchase {
 	@PreUpdate
 	public void calculateTotals() {
 		if (quantity != null && unitPrice != null) {
-			this.totalPrice = unitPrice.multiply(BigDecimal. valueOf(quantity));
+			this.totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
 		}
 		if (quantity != null && estimatedCarbonPerTree != null) {
 			this.totalEstimatedCarbon = estimatedCarbonPerTree.multiply(BigDecimal.valueOf(quantity));

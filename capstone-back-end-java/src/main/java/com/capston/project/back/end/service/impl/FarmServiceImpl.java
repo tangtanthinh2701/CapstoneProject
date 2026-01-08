@@ -415,7 +415,9 @@ public class FarmServiceImpl implements FarmService {
 			for (TreesFarm tf : farm.getTreesFarms()) {
 				treesFarmResponses.add(mapToTreesFarmResponse(tf));
 				totalEstimatedCarbon = totalEstimatedCarbon.add(tf.getTotalEstimatedCarbon());
-				totalAbsorbedCarbon = totalAbsorbedCarbon.add(tf.getTotalCo2Absorbed() != null ? tf.getTotalCo2Absorbed() : BigDecimal.ZERO);
+				totalAbsorbedCarbon = totalAbsorbedCarbon.add(tf.getTotalCo2Absorbed() != null
+				                                              ? tf.getTotalCo2Absorbed()
+				                                              : BigDecimal.ZERO);
 				availableForSale += tf.getAvailableTrees() != null ? tf.getAvailableTrees() : 0;
 				if (tf.getTreeSpecies() != null) {
 					speciesIds.add(tf.getTreeSpecies().getId());
