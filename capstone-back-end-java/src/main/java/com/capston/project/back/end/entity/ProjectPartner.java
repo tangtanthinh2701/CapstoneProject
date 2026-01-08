@@ -1,25 +1,28 @@
 package com.capston.project.back.end.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "project_partners")
+@Table(name = "project_partners",
+       uniqueConstraints = @UniqueConstraint(columnNames = {"project_id", "partner_id"}))
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class ProjectPartner {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "project_id", nullable = false)
+	@JsonIgnore
 	private Project project;
 
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -32,13 +35,16 @@ public class ProjectPartner {
 	@Column(name = "notes", columnDefinition = "TEXT")
 	private String notes;
 
-	@Column(name = "created_at")
-	private LocalDateTime createdAt = LocalDateTime.now();
+	@CreationTimestamp
+	@Column(name = "created_at", updatable = false)
+	private OffsetDateTime createdAt;
 
-	@PrePersist
-	protected void onCreate() {
-		if (createdAt == null) {
-			createdAt = LocalDateTime.now();
-		}
+	// Helper methods
+	public Integer getProjectId() {
+		return project != null ? project.getId() : null;
+	}
+
+	public Integer getPartnerId() {
+		return partner != null ? partner.getId() : null;
 	}
 }

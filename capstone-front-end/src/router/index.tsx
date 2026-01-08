@@ -13,6 +13,7 @@ import TreeSpeciesDetailPage from '../pages/TreeSpeciesDetailPage/TreeSpeciesDet
 import FarmPage from '../pages/FarmPage/FarmPage';
 import FarmFormPage from '../pages/FarmFormPage/FarmFormPage';
 import FarmDetailPage from '../pages/FarmDetailPage/FarmDetailPage';
+import ProjectCarbonReservePage from '../pages/ProjectCarbonReservePage/ProjectCarbonReservePage';
 
 const router = createBrowserRouter([
   {
@@ -46,6 +47,10 @@ const router = createBrowserRouter([
   {
     path: '/projects/:id/edit',
     element: <ProjectFormPage />,
+  },
+  {
+    path: '/projects/:id/carbon-reserve',
+    element: <ProjectCarbonReservePage />,
   },
   {
     path: '/tree-species',

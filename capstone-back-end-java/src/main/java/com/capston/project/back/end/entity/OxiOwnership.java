@@ -1,5 +1,6 @@
 package com.capston.project.back.end.entity;
 
+import com.capston.project.back.end.common.OwnershipStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -7,9 +8,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "oxi_ownership")
@@ -19,9 +21,8 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class OxiOwnership {
-
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType. IDENTITY)
 	private Integer id;
 
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -36,9 +37,8 @@ public class OxiOwnership {
 	@JoinColumn(name = "tree_species_id")
 	private TreeSpecies treeSpecies;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "owner_id", nullable = false)
-	private User owner;
+	@Column(name = "owner_id", nullable = false)
+	private UUID ownerId;
 
 	@Column(name = "ownership_start_date", nullable = false)
 	private LocalDate ownershipStartDate;
@@ -48,49 +48,50 @@ public class OxiOwnership {
 
 	@Column(name = "carbon_credit_percentage", precision = 5, scale = 2)
 	@Builder.Default
-	private BigDecimal carbonCreditPercentage = BigDecimal.valueOf(100.00);
+	private BigDecimal carbonCreditPercentage = new BigDecimal("100.00");
 
+	@Enumerated(EnumType.STRING)
 	@Column(name = "status", length = 20)
 	@Builder.Default
-	private String status = "ACTIVE";
+	private OwnershipStatus status = OwnershipStatus.PENDING;
 
 	@CreationTimestamp
 	@Column(name = "created_at", updatable = false)
-	private LocalDateTime createdAt;
+	private OffsetDateTime createdAt;
 
 	@UpdateTimestamp
 	@Column(name = "updated_at")
-	private LocalDateTime updatedAt;
+	private OffsetDateTime updatedAt;
 
-	@OneToMany(mappedBy = "ownership", fetch = FetchType.LAZY)
+	// Relationships
+	@OneToMany(mappedBy = "ownership", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	@Builder.Default
 	private List<OwnershipTransfer> transfers = new ArrayList<>();
 
-	@OneToMany(mappedBy = "ownership", fetch = FetchType.LAZY)
+	@OneToMany(mappedBy = "ownership", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	@Builder.Default
 	private List<CarbonCreditAllocation> creditAllocations = new ArrayList<>();
 
+	// Helper methods
+	public Integer getContractId() {
+		return contract != null ? contract.getId() : null;
+	}
+
+	public Integer getProjectId() {
+		return project != null ? project.getId() : null;
+	}
+
 	public boolean isActive() {
-		return "ACTIVE".equals(status) && LocalDate.now().isBefore(ownershipEndDate);
+		return status == OwnershipStatus.ACTIVE;
 	}
 
 	public boolean isExpired() {
-		return LocalDate.now().isAfter(ownershipEndDate);
+		return ownershipEndDate != null && ownershipEndDate.isBefore(LocalDate.now());
 	}
 
-	public long getRemainingDays() {
-		return java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), ownershipEndDate);
-	}
-
-	public void expire() {
-		this.status = "EXPIRED";
-	}
-
-	public void transfer() {
-		this.status = "TRANSFERRED";
-	}
-
-	public void terminate() {
-		this.status = "TERMINATED";
+	public boolean isExpiringSoon(int days) {
+		if (ownershipEndDate == null) return false;
+		LocalDate warningDate = LocalDate.now().plusDays(days);
+		return ownershipEndDate.isBefore(warningDate) && ownershipEndDate.isAfter(LocalDate.now());
 	}
 }

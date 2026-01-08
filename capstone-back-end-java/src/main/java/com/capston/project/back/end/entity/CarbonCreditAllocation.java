@@ -1,12 +1,14 @@
 package com.capston.project.back.end.entity;
 
+import com.capston.project.back.end.common.AllocationStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "carbon_credit_allocations")
@@ -16,65 +18,50 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class CarbonCreditAllocation {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne(fetch = FetchType. LAZY)
 	@JoinColumn(name = "credit_id", nullable = false)
-	private CarbonCredit credit;
+	@JsonIgnore
+	private CarbonCredit carbonCredit;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "ownership_id", nullable = false)
+	@JsonIgnore
 	private OxiOwnership ownership;
 
 	@Column(name = "allocated_credits", nullable = false)
 	private Integer allocatedCredits;
 
-	@Column(name = "percentage", precision = 5, scale = 2, nullable = false)
+	@Column(name = "percentage", nullable = false, precision = 5, scale = 2)
 	private BigDecimal percentage;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "owner_id", nullable = false)
-	private User owner;
+	@Column(name = "owner_id", nullable = false)
+	private UUID ownerId;
 
+	@Enumerated(EnumType.STRING)
 	@Column(name = "status", length = 50)
 	@Builder.Default
-	private String status = "ALLOCATED";
+	private AllocationStatus status = AllocationStatus.ALLOCATED;
 
 	@Column(name = "claimed_at")
-	private LocalDateTime claimedAt;
+	private OffsetDateTime claimedAt;
 
 	@Column(name = "notes", columnDefinition = "TEXT")
 	private String notes;
 
 	@CreationTimestamp
 	@Column(name = "created_at", updatable = false)
-	private LocalDateTime createdAt;
+	private OffsetDateTime createdAt;
 
-	@UpdateTimestamp
-	@Column(name = "updated_at")
-	private LocalDateTime updatedAt;
-
-	public void claim() {
-		this.status = "CLAIMED";
-		this.claimedAt = LocalDateTime.now();
+	// Helper methods
+	public Integer getCreditId() {
+		return carbonCredit != null ? carbonCredit.getId() : null;
 	}
 
-	public void sell() {
-		this.status = "SOLD";
-	}
-
-	public void retire() {
-		this.status = "RETIRED";
-	}
-
-	public boolean isClaimed() {
-		return "CLAIMED".equals(status);
-	}
-
-	public boolean isAvailable() {
-		return "ALLOCATED".equals(status);
+	public Integer getOwnershipId() {
+		return ownership != null ? ownership.getId() : null;
 	}
 }

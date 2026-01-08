@@ -61,4 +61,14 @@ public interface FarmRepository extends JpaRepository<Farm, Integer> {
 
 	@Query("SELECT f. id FROM Farm f WHERE f.deletedAt IS NULL")
 	List<Integer> findAllActiveIdsForBatch();
+
+	Long countByDeletedAtIsNull();
+
+	Long countByFarmStatusAndDeletedAtIsNull(FarmStatus status);
+
+	@Query("SELECT f FROM Farm f WHERE f.deletedAt IS NULL")
+	List<Farm> findAllActive();
+
+	@Query("SELECT COUNT(pf. farm) FROM ProjectFarm pf WHERE pf. project.id = :projectId")
+	Long countFarmsByProjectId(@Param("projectId") Integer projectId);
 }

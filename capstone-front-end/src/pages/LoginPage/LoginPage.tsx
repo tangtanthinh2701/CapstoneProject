@@ -37,6 +37,16 @@ export default function LoginPage() {
         );
         return;
       }
+
+      // ✅ Lưu token
+      localStorage.setItem('token', data.token);
+
+      // ✅ LƯU USER ID RIÊNG (QUAN TRỌNG!)
+      if (data.userId) {
+        localStorage.setItem('userId', data.userId);
+      }
+
+      // ✅ Lưu user object (optional)
       localStorage.setItem(
         'user',
         JSON.stringify({
@@ -46,15 +56,19 @@ export default function LoginPage() {
           token: data.token,
         }),
       );
-      localStorage.setItem('token', data.token);
+
+      // Remember me logic
       if (rememberMe) {
-        localStorage.setItem('token', data.token);
         localStorage.setItem('username', formData.username);
       } else {
         sessionStorage.setItem('token', data.token);
       }
+
+      console.log('✅ Login successful, userId:', data.userId); // Debug log
+
       navigate('/home');
-    } catch {
+    } catch (error) {
+      console.error('❌ Login error:', error);
       setErrorMessage('Something went wrong');
     }
   };

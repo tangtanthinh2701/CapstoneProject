@@ -1,5 +1,8 @@
 package com.capston.project.back.end.common;
 
 public enum AllocationStatus {
-	ALLOCATED, CLAIMED, SOLD, RETIRED
+	ALLOCATED,  // Đã phân bổ
+	CLAIMED,    // Đã nhận
+	SOLD,       // Đã bán
+	RETIRED     // Đã retire
 }

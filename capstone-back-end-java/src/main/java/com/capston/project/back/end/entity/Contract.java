@@ -1,5 +1,8 @@
 package com.capston.project.back.end.entity;
 
+import com.capston.project.back.end.common.ContractCategory;
+import com.capston.project.back.end.common.ContractStatus;
+import com.capston.project.back.end.common.ContractType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -9,7 +12,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,9 +26,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class Contract {
-
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType. IDENTITY)
 	private Integer id;
 
 	@Column(name = "contract_code", unique = true, nullable = false, length = 50)
@@ -35,18 +37,20 @@ public class Contract {
 	@JoinColumn(name = "project_id", nullable = false)
 	private Project project;
 
-	@Column(name = "contract_category", length = 50, nullable = false)
+	@Enumerated(EnumType.STRING)
+	@Column(name = "contract_category", nullable = false)
 	@Builder.Default
-	private String contractCategory = "ENTERPRISE_PROJECT";
+	private ContractCategory contractCategory = ContractCategory.ENTERPRISE_PROJECT;
 
-	@Column(name = "contract_type", length = 50, nullable = false)
+	@Enumerated(EnumType.STRING)
+	@Column(name = "contract_type", nullable = false, length = 50)
 	@Builder.Default
-	private String contractType = "OWNERSHIP";
+	private ContractType contractType = ContractType.OWNERSHIP;
 
-	@Column(name = "unit_price", precision = 15, scale = 2, nullable = false)
+	@Column(name = "unit_price", nullable = false, precision = 15, scale = 2)
 	private BigDecimal unitPrice;
 
-	@Column(name = "total_amount", precision = 15, scale = 2, nullable = false)
+	@Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
 	private BigDecimal totalAmount;
 
 	@Column(name = "contract_term_years")
@@ -58,6 +62,7 @@ public class Contract {
 	@Column(name = "end_date")
 	private LocalDate endDate;
 
+	// Cơ chế gia hạn
 	@Column(name = "auto_renewal")
 	@Builder.Default
 	private Boolean autoRenewal = false;
@@ -76,6 +81,7 @@ public class Contract {
 	@Builder.Default
 	private Integer renewalCount = 0;
 
+	// Điều khoản carbon / quyền lợi
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "content", columnDefinition = "jsonb")
 	private Map<String, Object> content;
@@ -88,6 +94,7 @@ public class Contract {
 	@Builder.Default
 	private Boolean transferAllowed = false;
 
+	// Điều khoản chấm dứt
 	@Column(name = "early_termination_penalty", precision = 15, scale = 2)
 	private BigDecimal earlyTerminationPenalty;
 
@@ -95,11 +102,12 @@ public class Contract {
 	private String terminationReason;
 
 	@Column(name = "terminated_at")
-	private LocalDateTime terminatedAt;
+	private OffsetDateTime terminatedAt;
 
-	@Column(name = "contract_status", length = 50)
+	@Enumerated(EnumType.STRING)
+	@Column(name = "contract_status")
 	@Builder.Default
-	private String contractStatus = "PENDING";
+	private ContractStatus contractStatus = ContractStatus.DRAFT;
 
 	@Column(name = "payment_date")
 	private LocalDate paymentDate;
@@ -111,11 +119,12 @@ public class Contract {
 	private UUID approvedBy;
 
 	@Column(name = "approved_at")
-	private LocalDateTime approvedAt;
+	private OffsetDateTime approvedAt;
 
 	@Column(name = "notes", columnDefinition = "TEXT")
 	private String notes;
 
+	// Dành cho contract dịch vụ
 	@Column(name = "service_scope", columnDefinition = "TEXT")
 	private String serviceScope;
 
@@ -125,60 +134,39 @@ public class Contract {
 
 	@CreationTimestamp
 	@Column(name = "created_at", updatable = false)
-	private LocalDateTime createdAt;
+	private OffsetDateTime createdAt;
 
 	@UpdateTimestamp
 	@Column(name = "updated_at")
-	private LocalDateTime updatedAt;
+	private OffsetDateTime updatedAt;
 
-	@OneToMany(mappedBy = "contract", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+	// Relationships
+	@OneToMany(mappedBy = "contract", cascade = CascadeType.ALL, fetch = FetchType. LAZY)
 	@Builder.Default
 	private List<OxiOwnership> ownerships = new ArrayList<>();
 
-	@OneToMany(mappedBy = "originalContract", fetch = FetchType.LAZY)
+	@OneToMany(mappedBy = "originalContract", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	@Builder.Default
 	private List<ContractRenewal> renewals = new ArrayList<>();
 
-	@OneToMany(mappedBy = "contract", fetch = FetchType.LAZY)
-	@Builder.Default
-	private List<OwnershipTransfer> transfers = new ArrayList<>();
-
-	@OneToMany(mappedBy = "contract", fetch = FetchType.LAZY)
-	@Builder.Default
-	private List<Payment> payments = new ArrayList<>();
-
-	public boolean isActive() {
-		return "ACTIVE".equals(contractStatus);
+	// Helper methods
+	public Integer getProjectId() {
+		return project != null ? project.getId() : null;
 	}
 
 	public boolean isExpiringSoon() {
 		if (endDate == null) return false;
-		LocalDate noticeDate = endDate.minusDays(renewalNoticeDays != null ? renewalNoticeDays : 30);
-		return LocalDate.now().isAfter(noticeDate) && LocalDate.now().isBefore(endDate);
+		LocalDate warningDate = LocalDate.now().plusDays(renewalNoticeDays != null ? renewalNoticeDays : 30);
+		return endDate.isBefore(warningDate) && endDate.isAfter(LocalDate.now());
+	}
+
+	public boolean isExpired() {
+		if (endDate == null) return false;
+		return endDate.isBefore(LocalDate.now());
 	}
 
 	public boolean canRenew() {
-		return autoRenewal && (maxRenewals == null || renewalCount < maxRenewals);
-	}
-
-	public void incrementRenewalCount() {
-		this.renewalCount = (this.renewalCount != null ? this.renewalCount : 0) + 1;
-	}
-
-	public void terminate(String reason) {
-		this.contractStatus = "TERMINATED";
-		this.terminationReason = reason;
-		this.terminatedAt = LocalDateTime.now();
-	}
-
-	public void approve(UUID approver) {
-		this.contractStatus = "ACTIVE";
-		this.approvedBy = approver;
-		this.approvedAt = LocalDateTime.now();
-	}
-
-	public long getRemainingDays() {
-		if (endDate == null) return 0;
-		return java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), endDate);
+		if (maxRenewals == null) return true;
+		return renewalCount < maxRenewals;
 	}
 }
