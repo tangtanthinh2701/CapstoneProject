@@ -368,7 +368,7 @@ CREATE TABLE contracts
     id                        INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     contract_code             VARCHAR(50) UNIQUE NOT NULL,
     project_id                INTEGER            NOT NULL REFERENCES projects (id) ON DELETE RESTRICT,
-    contract_category         CONTRACT_CATEGORY  NOT NULL DEFAULT 'ENTERPRISE_PROJECT',
+    contract_category         VARCHAR(50)        NOT NULL DEFAULT 'ENTERPRISE_PROJECT',
     contract_type             VARCHAR(50)        NOT NULL DEFAULT 'OWNERSHIP',
     -- OWNERSHIP / INVESTMENT / CARBON_CREDIT_ONLY / SERVICE...
     unit_price                NUMERIC(15, 2)     NOT NULL,
@@ -392,7 +392,7 @@ CREATE TABLE contracts
     early_termination_penalty NUMERIC(15, 2),
     termination_reason        TEXT,
     terminated_at             TIMESTAMPTZ,
-    contract_status           CONTRACT_STATUS             DEFAULT 'PENDING',
+    contract_status           VARCHAR(50)             DEFAULT 'PENDING',
     payment_date              DATE,
     contract_file_url         VARCHAR(500),
     approved_by               UUID REFERENCES users (id),

@@ -34,7 +34,12 @@ export default function Sidebar() {
     { label: 'Dự án', path: '/projects', icon: 'inventory_2' },
     { label: 'Vườn ươm', path: '/farms', icon: 'local_florist' },
     { label: 'Loại cây', path: '/tree-species', icon: 'forest' },
-    { label: 'Báo cáo', path: '/contracts', icon: 'summarize' },
+    { label: 'Hợp đồng', path: '/contracts', icon: 'description' },
+    {
+      label: 'Quy trình Hợp Đồng',
+      path: '/contracts/workflow',
+      icon: 'assignment',
+    },
     { label: 'Tín chỉ Carbon', path: '/credits', icon: 'co2' },
     { label: 'Giao dịch', path: '/payments', icon: 'payment' },
   ];

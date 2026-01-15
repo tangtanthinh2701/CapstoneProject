@@ -25,7 +25,7 @@ public interface ContractRenewalRepository extends JpaRepository<ContractRenewal
 
 	Page<ContractRenewal> findByStatus(RenewalStatus status, Pageable pageable);
 
-	@Query("SELECT MAX(cr.renewalNumber) FROM ContractRenewal cr WHERE cr.originalContract.id = : contractId")
+	@Query("SELECT MAX(cr.renewalNumber) FROM ContractRenewal cr WHERE cr.originalContract.id = :contractId")
 	Optional<Integer> findMaxRenewalNumber(@Param("contractId") Integer contractId);
 
 	@Query("SELECT cr FROM ContractRenewal cr " +

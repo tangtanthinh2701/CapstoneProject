@@ -36,7 +36,8 @@ public interface OxiOwnershipRepository extends JpaRepository<OxiOwnership, Inte
 	Optional<OxiOwnership> findByIdWithAllDetails(@Param("id") Integer id);
 
 	// Find by contract
-	List<OxiOwnership> findByContractId(Integer contractId);
+	@Query("SELECT o FROM OxiOwnership o WHERE o.contract.id = :contractId")
+	List<OxiOwnership> findByContractId(@Param("contractId") Integer contractId);
 
 	@Query("SELECT o FROM OxiOwnership o " +
 	       "LEFT JOIN FETCH o.project " +
@@ -45,7 +46,8 @@ public interface OxiOwnershipRepository extends JpaRepository<OxiOwnership, Inte
 	List<OxiOwnership> findByContractIdWithDetails(@Param("contractId") Integer contractId);
 
 	// Find by project
-	List<OxiOwnership> findByProjectId(Integer projectId);
+	@Query("SELECT o FROM OxiOwnership o WHERE o. project.id = :projectId")
+	Page<OxiOwnership> findByProjectId(@Param("projectId") Integer projectId, Pageable pageable);
 
 	@Query("SELECT o FROM OxiOwnership o " +
 	       "LEFT JOIN FETCH o.contract " +
@@ -54,7 +56,8 @@ public interface OxiOwnershipRepository extends JpaRepository<OxiOwnership, Inte
 	List<OxiOwnership> findByProjectIdWithDetails(@Param("projectId") Integer projectId);
 
 	// Find by owner
-	List<OxiOwnership> findByOwnerId(UUID ownerId);
+	@Query("SELECT o FROM OxiOwnership o WHERE o. ownerId = :ownerId")
+	List<OxiOwnership> findByOwnerId(@Param("ownerId") UUID ownerId);
 
 	@Query("SELECT o FROM OxiOwnership o " +
 	       "LEFT JOIN FETCH o.contract " +
@@ -86,7 +89,8 @@ public interface OxiOwnershipRepository extends JpaRepository<OxiOwnership, Inte
 	List<OxiOwnership> findExpired(@Param("today") LocalDate today);
 
 	// Count
-	Long countByContractId(Integer contractId);
+	@Query("SELECT COUNT(o) FROM OxiOwnership o WHERE o.contract.id = :contractId")
+	Long countByContractId(@Param("contractId") Integer contractId);
 
 	Long countByProjectId(Integer projectId);
 
@@ -122,4 +126,42 @@ public interface OxiOwnershipRepository extends JpaRepository<OxiOwnership, Inte
 	       "LEFT JOIN FETCH o.treeSpecies " +
 	       "WHERE o.id IN :ids")
 	List<OxiOwnership> findAllWithDetailsByIds(@Param("ids") List<Integer> ids);
+
+	@Query("SELECT o FROM OxiOwnership o WHERE o.treeSpecies.id = :treeSpeciesId")
+	List<OxiOwnership> findByTreeSpeciesId(@Param("treeSpeciesId") Integer treeSpeciesId);
+
+	@Query("SELECT o FROM OxiOwnership o " +
+	       "WHERE o.status = 'ACTIVE' " +
+	       "AND o.ownershipEndDate BETWEEN :startDate AND :endDate")
+	List<OxiOwnership> findExpiringSoonOwnerships(
+			@Param("startDate") LocalDate startDate,
+			@Param("endDate") LocalDate endDate);
+
+	// ✅ Query expired ownerships
+	@Query("SELECT o FROM OxiOwnership o " +
+	       "WHERE o.status = 'ACTIVE' " +
+	       "AND o.ownershipEndDate < : date")
+	List<OxiOwnership> findExpiredOwnerships(@Param("date") LocalDate date);
+
+	// ✅ Query with multiple conditions
+	@Query("SELECT o FROM OxiOwnership o " +
+	       "WHERE o.contract.id = :contractId " +
+	       "AND o.status = : status")
+	List<OxiOwnership> findByContractIdAndStatus(
+			@Param("contractId") Integer contractId,
+			@Param("status") OwnershipStatus status);
+
+	// ✅ Count by owner and status
+	@Query("SELECT COUNT(o) FROM OxiOwnership o " +
+	       "WHERE o.ownerId = : ownerId " +
+	       "AND o.status = :status")
+	Long countByOwnerIdAndStatus(
+			@Param("ownerId") UUID ownerId,
+			@Param("status") OwnershipStatus status);
+
+	// ✅ Get total carbon credit percentage by contract
+	@Query("SELECT SUM(o.carbonCreditPercentage) FROM OxiOwnership o " +
+	       "WHERE o.contract.id = :contractId " +
+	       "AND o.status = 'ACTIVE'")
+	Double getTotalCarbonCreditPercentageByContract(@Param("contractId") Integer contractId);
 }
