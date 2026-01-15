@@ -39,6 +39,9 @@ public interface ContractRepository extends JpaRepository<Contract, Integer> {
 	// Find by project
 	List<Contract> findByProjectId(Integer projectId);
 
+	@Query("SELECT c FROM Contract c WHERE c.project.id = :projectId")
+	Page<Contract> findByProjectId(@Param("projectId") Integer projectId, Pageable pageable);
+
 	@Query("SELECT c FROM Contract c " +
 	       "LEFT JOIN FETCH c.project " +
 	       "WHERE c.project.id = :projectId")
@@ -65,7 +68,7 @@ public interface ContractRepository extends JpaRepository<Contract, Integer> {
 	Page<Contract> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 	// Statistics
-	@Query("SELECT COUNT(c) FROM Contract c WHERE c.contractStatus = : status")
+	@Query("SELECT COUNT(c) FROM Contract c WHERE c.contractStatus = :status")
 	Long countByStatus(@Param("status") ContractStatus status);
 
 	@Query("SELECT COALESCE(SUM(c. totalAmount), 0) FROM Contract c WHERE c.contractStatus = :status")

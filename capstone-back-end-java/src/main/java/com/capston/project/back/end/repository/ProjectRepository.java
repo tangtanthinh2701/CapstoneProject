@@ -77,9 +77,47 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
 	@Query("SELECT COALESCE(SUM(p. targetConsumedCarbon), 0) FROM Project p")
 	BigDecimal sumTargetConsumedCarbon();
 
-	@Query("SELECT p FROM Project p ORDER BY p.currentConsumedCarbon DESC LIMIT : limit")
+	@Query("SELECT p FROM Project p ORDER BY p.currentConsumedCarbon DESC LIMIT :limit")
 	List<Project> findTopProjectsByCo2(@Param("limit") int limit);
+
+//	@Query("SELECT p FROM Project p ORDER BY p.totalCo2Absorbed DESC")
+//	List<Project> findTopProjectsByCo2Ordered();
 
 	@Query("SELECT COUNT(p) FROM Project p WHERE p.projectStatus IN :statuses")
 	Long countByProjectStatusIn(@Param("statuses") List<ProjectStatus> statuses);
+
+	// ✅ Count active projects (not PLANNING, not COMPLETED)
+	@Query("SELECT COUNT(p) FROM Project p " +
+	       "WHERE p.projectStatus NOT IN ('PLANNING', 'COMPLETED')")
+	Long countActiveInProgressProjects();
+
+	// ==================== SUM QUERIES ====================
+
+//	@Query("SELECT COALESCE(SUM(p.targetCo2), 0) FROM Project p")
+//	Double getTotalTargetCo2();
+//
+//	@Query("SELECT COALESCE(SUM(p.totalCo2Absorbed), 0) FROM Project p")
+//	Double getTotalCo2Absorbed();
+
+	// ==================== FIND QUERIES ====================
+
+//	@Query("SELECT p FROM Project p WHERE p.farm.id = :farmId")
+//	List<Project> findByFarmId(@Param("farmId") Integer farmId);
+//
+//	@Query("SELECT p FROM Project p WHERE p. projectStatus = :status")
+//	Page<Project> findByStatus(@Param("status") ProjectStatus status, Pageable pageable);
+//
+//	@Query("SELECT p FROM Project p " +
+//	       "WHERE LOWER(p.projectName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+//	       "OR LOWER(p.projectCode) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+//	List<Project> searchProjects(@Param("keyword") String keyword);
+//
+//	@Query("SELECT p FROM Project p " +
+//	       "LEFT JOIN FETCH p.farm " +
+//	       "WHERE p.id = :id")
+//	Optional<Project> findByIdWithFarm(@Param("id") Integer id);
+//
+//	// Derived query methods
+//	Optional<Project> findByProjectCode(String projectCode);
+//	List<Project> findByProjectStatus(ProjectStatus status);
 }
