@@ -15,27 +15,27 @@ import java.util.Optional;
 @Repository
 public interface ProjectPhaseRepository extends JpaRepository<ProjectPhase, Integer> {
 
-	List<ProjectPhase> findByProjectIdOrderByPhaseOrderAsc(Integer projectId);
+	List<ProjectPhase> findByProjectIdOrderByPhaseNumberAsc(Integer projectId);
 
-	Optional<ProjectPhase> findByProjectIdAndPhaseOrder(Integer projectId, Integer phaseOrder);
+	Optional<ProjectPhase> findByProjectIdAndPhaseNumber(Integer projectId, Integer phaseNumber);
 
-	boolean existsByProjectIdAndPhaseOrder(Integer projectId, Integer phaseOrder);
+	boolean existsByProjectIdAndPhaseNumber(Integer projectId, Integer phaseNumber);
 
 	// Đếm số phase theo status của project
 	long countByProjectIdAndPhaseStatus(Integer projectId, PhaseStatus status);
 
-	// Lấy max phase order của project
-	@Query("SELECT COALESCE(MAX(pp.phaseOrder), 0) FROM ProjectPhase pp WHERE pp. project.id = :projectId")
-	Integer findMaxPhaseOrderByProjectId(@Param("projectId") Integer projectId);
+	// Lấy max phase number của project
+	@Query("SELECT COALESCE(MAX(pp.phaseNumber), 0) FROM ProjectPhase pp WHERE pp. project.id = :projectId")
+	Integer findMaxPhaseNumberByProjectId(@Param("projectId") Integer projectId);
 
 	// Tổng hợp từ phases để update project
 	@Query("SELECT COALESCE(SUM(pp.budget), 0) FROM ProjectPhase pp WHERE pp.project. id = :projectId")
 	BigDecimal sumBudgetByProjectId(@Param("projectId") Integer projectId);
 
-	@Query("SELECT COALESCE(SUM(pp.targetConsumedCarbon), 0) FROM ProjectPhase pp WHERE pp.project. id = :projectId")
+	@Query("SELECT COALESCE(SUM(pp.targetCo2Kg), 0) FROM ProjectPhase pp WHERE pp.project. id = :projectId")
 	BigDecimal sumTargetCarbonByProjectId(@Param("projectId") Integer projectId);
 
-	@Query("SELECT COALESCE(SUM(pp. currentConsumedCarbon), 0) FROM ProjectPhase pp WHERE pp.project.id = :projectId")
+	@Query("SELECT COALESCE(SUM(pp. actualCo2Kg), 0) FROM ProjectPhase pp WHERE pp.project.id = :projectId")
 	BigDecimal sumCurrentCarbonByProjectId(@Param("projectId") Integer projectId);
 
 	@Query("SELECT COALESCE(SUM(pp.actualCost), 0) FROM ProjectPhase pp WHERE pp.project. id = :projectId")
@@ -48,11 +48,11 @@ public interface ProjectPhaseRepository extends JpaRepository<ProjectPhase, Inte
 	// Update actual cost và current carbon cho phase (từ farm data)
 	@Modifying
 	@Query("UPDATE ProjectPhase pp SET " +
-	       "pp.actualCost = :actualCost, " +
-	       "pp.currentConsumedCarbon = :currentCarbon, " +
-	       "pp.updatedAt = CURRENT_TIMESTAMP " +
-	       "WHERE pp.id = :phaseId")
+			"pp.actualCost = :actualCost, " +
+			"pp.actualCo2Kg = :currentCarbon, " +
+			"pp.updatedAt = CURRENT_TIMESTAMP " +
+			"WHERE pp.id = :phaseId")
 	void updateComputedFields(@Param("phaseId") Integer phaseId,
-	                          @Param("actualCost") BigDecimal actualCost,
-	                          @Param("currentCarbon") BigDecimal currentCarbon);
+			@Param("actualCost") BigDecimal actualCost,
+			@Param("currentCarbon") BigDecimal currentCarbon);
 }

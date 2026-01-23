@@ -18,18 +18,18 @@ import java.util.UUID;
 public class ProjectPhaseResponse {
 	private Integer id;
 	private Integer projectId;
-	private Integer phaseOrder;
+	private Integer phaseNumber;
 	private String phaseName;
 	private String description;
 	private PhaseStatus phaseStatus;
-	private LocalDate expectedStartDate;
-	private LocalDate expectedEndDate;
+	private LocalDate plannedStartDate;
+	private LocalDate plannedEndDate;
 	private LocalDate actualStartDate;
 	private LocalDate actualEndDate;
 	private BigDecimal budget;
-	private BigDecimal actualCost;          // Computed field
-	private BigDecimal targetConsumedCarbon;
-	private BigDecimal currentConsumedCarbon; // Computed field
+	private BigDecimal actualCost; // Computed field
+	private BigDecimal targetCo2Kg;
+	private BigDecimal actualCo2Kg; // Computed field
 	private String notes;
 	private UUID createdBy;
 	private OffsetDateTime createdAt;

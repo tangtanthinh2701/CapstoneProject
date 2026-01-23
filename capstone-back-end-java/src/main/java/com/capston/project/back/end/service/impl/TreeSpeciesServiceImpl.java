@@ -39,7 +39,7 @@ public class TreeSpeciesServiceImpl implements TreeSpeciesService {
 		TreeSpecies treeSpecies = TreeSpecies.builder()
 		                                     .name(request.getName())
 		                                     .scientificName(request.getScientificName())
-		                                     .carbonAbsorptionRate(request.getCarbonAbsorptionRate())
+		                                     .baseCarbonRate(request.getCarbonAbsorptionRate())
 		                                     .description(request.getDescription())
 		                                     .imageUrl(request.getImageUrl())
 		                                     .build();
@@ -69,7 +69,7 @@ public class TreeSpeciesServiceImpl implements TreeSpeciesService {
 
 		// Check duplicate name
 		if (request.getName() != null && !request.getName().equalsIgnoreCase(treeSpecies.getName())) {
-			if (treeSpeciesRepository. existsByNameIgnoreCase(request.getName())) {
+			if (treeSpeciesRepository.existsByNameIgnoreCase(request.getName())) {
 				throw new DuplicateResourceException("Tree species with name '" + request.getName() + "' already exists");
 			}
 			treeSpecies.setName(request.getName());
@@ -79,7 +79,7 @@ public class TreeSpeciesServiceImpl implements TreeSpeciesService {
 			treeSpecies.setScientificName(request.getScientificName());
 		}
 		if (request.getCarbonAbsorptionRate() != null) {
-			treeSpecies.setCarbonAbsorptionRate(request.getCarbonAbsorptionRate());
+			treeSpecies.setBaseCarbonRate(request.getCarbonAbsorptionRate());
 		}
 		if (request.getDescription() != null) {
 			treeSpecies.setDescription(request.getDescription());
@@ -131,19 +131,19 @@ public class TreeSpeciesServiceImpl implements TreeSpeciesService {
 	}
 
 	private TreeSpeciesResponse mapToResponse(TreeSpecies entity) {
-		BigDecimal rate = entity.getCarbonAbsorptionRate();
+		BigDecimal rate = entity.getBaseCarbonRate();
 
 		return TreeSpeciesResponse.builder()
-		                          .id(entity. getId())
+		                          .id(entity.getId())
 		                          .name(entity.getName())
 		                          .scientificName(entity.getScientificName())
 		                          .carbonAbsorptionRate(rate)
 		                          .description(entity.getDescription())
-		                          .imageUrl(entity. getImageUrl())
+		                          .imageUrl(entity.getImageUrl())
 		                          .createdAt(entity.getCreatedAt())
 		                          .updatedAt(entity.getUpdatedAt())
 		                          .estimatedCarbonPerYear(rate)
-		                          .estimatedCarbon5Years(rate. multiply(BigDecimal.valueOf(5)))
+		                          .estimatedCarbon5Years(rate.multiply(BigDecimal.valueOf(5)))
 		                          .estimatedCarbon10Years(rate.multiply(BigDecimal.valueOf(10)))
 		                          .build();
 	}

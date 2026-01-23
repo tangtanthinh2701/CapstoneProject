@@ -13,8 +13,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "project_phases",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"project_id", "phase_order"}))
+@Table(name = "project_phases", uniqueConstraints = @UniqueConstraint(columnNames = { "project_id", "phase_number" }))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -30,8 +29,8 @@ public class ProjectPhase {
 	@JsonIgnore
 	private Project project;
 
-	@Column(name = "phase_order", nullable = false)
-	private Integer phaseOrder;
+	@Column(name = "phase_number", nullable = false)
+	private Integer phaseNumber;
 
 	@Column(name = "phase_name")
 	private String phaseName;
@@ -44,11 +43,11 @@ public class ProjectPhase {
 	@Builder.Default
 	private PhaseStatus phaseStatus = PhaseStatus.PLANNING;
 
-	@Column(name = "expected_start_date")
-	private LocalDate expectedStartDate;
+	@Column(name = "planned_start_date")
+	private LocalDate plannedStartDate;
 
-	@Column(name = "expected_end_date")
-	private LocalDate expectedEndDate;
+	@Column(name = "planned_end_date")
+	private LocalDate plannedEndDate;
 
 	@Column(name = "actual_start_date", nullable = false)
 	private LocalDate actualStartDate;
@@ -64,14 +63,14 @@ public class ProjectPhase {
 	@Builder.Default
 	private BigDecimal actualCost = BigDecimal.ZERO;
 
-	@Column(name = "target_consumed_carbon", precision = 15, scale = 2)
+	@Column(name = "target_co2_kg", precision = 15, scale = 2)
 	@Builder.Default
-	private BigDecimal targetConsumedCarbon = BigDecimal.ZERO;
+	private BigDecimal targetCo2Kg = BigDecimal.ZERO;
 
 	// Trường được tính toán từ cây trong farm
-	@Column(name = "current_consumed_carbon", precision = 15, scale = 2)
+	@Column(name = "actual_co2_kg", precision = 15, scale = 2)
 	@Builder.Default
-	private BigDecimal currentConsumedCarbon = BigDecimal.ZERO;
+	private BigDecimal actualCo2Kg = BigDecimal.ZERO;
 
 	@Column(name = "notes", columnDefinition = "TEXT")
 	private String notes;

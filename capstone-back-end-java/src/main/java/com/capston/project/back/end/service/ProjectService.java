@@ -46,4 +46,14 @@ public interface ProjectService {
 	void recalculateProjectFields(Integer projectId);
 
 	void recalculateAllProjects();
+
+	// Farm and Partner Assignment
+	void assignFarmToProject(Integer projectId, Integer farmId, java.util.UUID assignedBy);
+
+	void removeFarmFromProject(Integer projectId, Integer farmId);
+
+	void addPartnerToProject(Integer projectId, java.util.UUID partnerUserId, String partnerRole,
+			java.math.BigDecimal contributionAmount, String notes);
+
+	void removePartnerFromProject(Integer projectId, java.util.UUID partnerUserId);
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
-import { getContractList, type Contract } from '../../models/contract.api';
+import { contractApi, type Contract } from '../../models/contract.api';
 
 const statusBadgeClass = (status: string) => {
   switch (status) {
@@ -21,392 +21,205 @@ const statusBadgeClass = (status: string) => {
   }
 };
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('vi-VN');
-};
-
 export default function ContractWorkflowPage() {
   const navigate = useNavigate();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    'pending' | 'expiring' | 'renewal'
-  >('pending');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'expiring'>('pending');
 
-  useEffect(() => {
-    loadContracts();
-  }, []);
-
-  const loadContracts = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const response = await getContractList({ size: 1000 });
-
-      if (response.success && response.data) {
-        setContracts(response.data);
-      } else {
-        throw new Error('Không tải được danh sách hợp đồng');
-      }
+      const response = await contractApi.getAll({ page: 0, size: 100 });
+      const data = (response as any)?.data || response || [];
+      setContracts(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      console.error('Error loading contracts:', err);
-      setError(err.message || 'Không tải được danh sách hợp đồng');
+      setError(err.message || 'Không tải được dữ liệu');
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter contracts by status
-  const pendingContracts = contracts.filter(
-    (c) => c.contractStatus === 'PENDING',
-  );
-  const expiringContracts = contracts.filter(
-    (c) => c.isExpiringSoon && c.contractStatus === 'ACTIVE',
-  );
-  const activeRenewableContracts = contracts.filter(
-    (c) => c.contractStatus === 'ACTIVE' && c.canRenew,
-  );
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const getTabContracts = () => {
-    switch (activeTab) {
-      case 'pending':
-        return pendingContracts;
-      case 'expiring':
-        return expiringContracts;
-      case 'renewal':
-        return activeRenewableContracts;
-      default:
-        return [];
+  const handleApprove = async (id: number) => {
+    if (!window.confirm('Xác nhận phê duyệt hợp đồng này?')) return;
+    try {
+      await contractApi.approve(id);
+      alert('Phê duyệt thành công!');
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Thất bại');
     }
   };
 
-  const tabContracts = getTabContracts();
+  const handleReject = async (id: number) => {
+    const reason = prompt('Nhập lý do từ chối:');
+    if (!reason) return;
+    try {
+      await contractApi.reject(id, reason);
+      alert('Đã từ chối hợp đồng');
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Thất bại');
+    }
+  };
+
+  // Filter contracts
+  const filteredContracts = contracts.filter((c) => {
+    if (filter === 'pending') return c.contractStatus === 'PENDING';
+    if (filter === 'expiring') {
+      // Check if expiring in 30 days
+      if (!c.endDate) return false;
+      const daysLeft = Math.ceil((new Date(c.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      return daysLeft > 0 && daysLeft <= 30;
+    }
+    return true;
+  });
+
+  const pendingCount = contracts.filter((c) => c.contractStatus === 'PENDING').length;
+  const expiringCount = contracts.filter((c) => {
+    if (!c.endDate) return false;
+    const daysLeft = Math.ceil((new Date(c.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return daysLeft > 0 && daysLeft <= 30;
+  }).length;
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+  };
 
   return (
-    <div className='flex bg-[#07150D] min-h-screen text-white'>
+    <div className="flex bg-[#07150D] text-white min-h-screen">
       <Sidebar />
 
-      <main className='flex-1 p-8'>
+      <main className="flex-1 p-8">
         <Breadcrumbs
           items={[
             { label: 'Trang chủ', href: '/' },
-            { label: 'Quản lý hợp đồng', href: '/contracts' },
-            { label: 'Quy trình xử lý' },
+            { label: 'Hợp đồng', href: '/contracts' },
+            { label: 'Quy trình phê duyệt' },
           ]}
         />
 
-        {/* HEADER */}
-        <div className='mb-6'>
-          <h1 className='text-3xl font-bold mb-2'>Quy trình xử lý Hợp đồng</h1>
-          <p className='text-gray-400'>
-            Quản lý các hợp đồng cần phê duyệt, sắp hết hạn và có thể gia hạn.
-          </p>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Quy trình Phê duyệt Hợp đồng</h1>
+          <p className="text-gray-400">Xử lý các hợp đồng chờ duyệt và sắp hết hạn</p>
         </div>
 
-        {/* STATS CARDS */}
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-6'>
-          <div
-            className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B] cursor-pointer hover:border-yellow-500/50 transition'
-            onClick={() => setActiveTab('pending')}
+        {/* STATS */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <button
+            onClick={() => setFilter('all')}
+            className={`p-4 rounded-xl border transition text-left ${filter === 'all'
+                ? 'bg-green-500/20 border-green-500 text-green-400'
+                : 'bg-[#0E2219] border-[#1E3A2B] hover:border-green-500/50'
+              }`}
           >
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>Chờ phê duyệt</p>
-              <span className='material-icons text-yellow-500'>
-                pending_actions
-              </span>
-            </div>
-            <p className='text-4xl font-bold text-yellow-400'>
-              {pendingContracts.length}
-            </p>
-            <p className='text-xs text-gray-400 mt-2'>Hợp đồng cần duyệt</p>
-          </div>
+            <p className="text-2xl font-bold">{contracts.length}</p>
+            <p className="text-sm text-gray-400">Tất cả hợp đồng</p>
+          </button>
 
-          <div
-            className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B] cursor-pointer hover:border-orange-500/50 transition'
-            onClick={() => setActiveTab('expiring')}
+          <button
+            onClick={() => setFilter('pending')}
+            className={`p-4 rounded-xl border transition text-left ${filter === 'pending'
+                ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400'
+                : 'bg-[#0E2219] border-[#1E3A2B] hover:border-yellow-500/50'
+              }`}
           >
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>Sắp hết hạn</p>
-              <span className='material-icons text-orange-500'>warning</span>
-            </div>
-            <p className='text-4xl font-bold text-orange-400'>
-              {expiringContracts.length}
-            </p>
-            <p className='text-xs text-gray-400 mt-2'>Cần xem xét gia hạn</p>
-          </div>
+            <p className="text-2xl font-bold">{pendingCount}</p>
+            <p className="text-sm text-gray-400">Chờ phê duyệt</p>
+          </button>
 
-          <div
-            className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B] cursor-pointer hover: border-blue-500/50 transition'
-            onClick={() => setActiveTab('renewal')}
+          <button
+            onClick={() => setFilter('expiring')}
+            className={`p-4 rounded-xl border transition text-left ${filter === 'expiring'
+                ? 'bg-orange-500/20 border-orange-500 text-orange-400'
+                : 'bg-[#0E2219] border-[#1E3A2B] hover:border-orange-500/50'
+              }`}
           >
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>Có thể gia hạn</p>
-              <span className='material-icons text-blue-500'>autorenew</span>
-            </div>
-            <p className='text-4xl font-bold text-blue-400'>
-              {activeRenewableContracts.length}
-            </p>
-            <p className='text-xs text-gray-400 mt-2'>Đủ điều kiện</p>
-          </div>
+            <p className="text-2xl font-bold">{expiringCount}</p>
+            <p className="text-sm text-gray-400">Sắp hết hạn (30 ngày)</p>
+          </button>
         </div>
 
-        {/* ERROR */}
-        {error && (
-          <div className='mb-6 bg-red-900/20 border border-red-500 text-red-200 px-4 py-3 rounded-xl flex items-center gap-2'>
-            <span className='material-icons'>error</span>
-            <span>{error}</span>
+        {/* CONTENT */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mb-4"></div>
+              <p className="text-gray-400">Đang tải...</p>
+            </div>
           </div>
-        )}
-
-        {/* TABS */}
-        <div className='bg-[#0E2219] border border-[#1E3A2B] rounded-xl overflow-hidden'>
-          <div className='flex border-b border-[#1E3A2B]'>
-            <button
-              onClick={() => setActiveTab('pending')}
-              className={`flex-1 px-6 py-4 font-semibold transition flex items-center justify-center gap-2 ${
-                activeTab === 'pending'
-                  ? 'bg-[#13271F] text-yellow-400 border-b-2 border-yellow-500'
-                  : 'text-gray-400 hover:text-white hover:bg-[#0A1812]'
-              }`}
-            >
-              <span className='material-icons text-sm'>pending_actions</span>
-              Chờ phê duyệt ({pendingContracts.length})
-            </button>
-
-            <button
-              onClick={() => setActiveTab('expiring')}
-              className={`flex-1 px-6 py-4 font-semibold transition flex items-center justify-center gap-2 ${
-                activeTab === 'expiring'
-                  ? 'bg-[#13271F] text-orange-400 border-b-2 border-orange-500'
-                  : 'text-gray-400 hover:text-white hover: bg-[#0A1812]'
-              }`}
-            >
-              <span className='material-icons text-sm'>warning</span>
-              Sắp hết hạn ({expiringContracts.length})
-            </button>
-
-            <button
-              onClick={() => setActiveTab('renewal')}
-              className={`flex-1 px-6 py-4 font-semibold transition flex items-center justify-center gap-2 ${
-                activeTab === 'renewal'
-                  ? 'bg-[#13271F] text-blue-400 border-b-2 border-blue-500'
-                  : 'text-gray-400 hover:text-white hover:bg-[#0A1812]'
-              }`}
-            >
-              <span className='material-icons text-sm'>autorenew</span>
-              Có thể gia hạn ({activeRenewableContracts.length})
-            </button>
+        ) : error ? (
+          <div className="bg-red-900/20 border border-red-500 text-red-200 px-6 py-4 rounded-xl">
+            <p>{error}</p>
+            <button onClick={loadData} className="mt-2 text-sm underline">Thử lại</button>
           </div>
-
-          <div className='p-6'>
-            {loading ? (
-              <div className='text-center py-12 text-gray-400'>
-                <div className='inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mb-2'></div>
-                <p>Đang tải dữ liệu...</p>
-              </div>
-            ) : tabContracts.length === 0 ? (
-              <div className='text-center py-12 text-gray-400'>
-                <span className='material-icons text-5xl mb-2 opacity-30'>
-                  inbox
-                </span>
-                <p>
-                  {activeTab === 'pending' &&
-                    'Không có hợp đồng nào cần phê duyệt'}
-                  {activeTab === 'expiring' &&
-                    'Không có hợp đồng nào sắp hết hạn'}
-                  {activeTab === 'renewal' &&
-                    'Không có hợp đồng nào có thể gia hạn'}
-                </p>
-              </div>
-            ) : (
-              <div className='space-y-3'>
-                {tabContracts.map((contract) => (
-                  <div
-                    key={contract.id}
-                    className='p-5 bg-[#071811] rounded-lg border border-[#1E3A2B] hover:border-green-500/30 transition cursor-pointer'
-                    onClick={() => navigate(`/contracts/${contract.id}`)}
-                  >
-                    {/* HEADER */}
-                    <div className='flex justify-between items-start mb-3'>
-                      <div className='flex-1'>
-                        <div className='flex items-center gap-2 mb-1'>
-                          <span className='px-2 py-1 bg-blue-500/20 text-blue-400 text-xs font-bold rounded'>
-                            {contract.contractCode}
-                          </span>
-                          <h4 className='font-bold text-lg text-white'>
-                            {contract.projectName}
-                          </h4>
-                        </div>
-                        <p className='text-sm text-gray-400'>
-                          {contract.projectCode}
-                        </p>
-                      </div>
-                      <span
-                        className={`px-3 py-1 text-xs font-semibold rounded-full ${statusBadgeClass(
-                          contract.contractStatus,
-                        )}`}
-                      >
-                        {contract.contractStatus}
-                      </span>
+        ) : filteredContracts.length === 0 ? (
+          <div className="text-center py-20 text-gray-400">
+            <span className="material-icons text-6xl mb-4 opacity-30">description</span>
+            <p>Không có hợp đồng nào trong danh mục này</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredContracts.map((contract) => (
+              <div
+                key={contract.id}
+                className="bg-[#0E2219] rounded-xl border border-[#1E3A2B] p-6 hover:border-green-500/50 transition"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-gray-400 font-mono">{contract.contractCode}</p>
+                    <h3 className="text-lg font-semibold mt-1">Dự án #{contract.projectId}</h3>
+                    <div className="flex gap-4 mt-2 text-sm text-gray-400">
+                      <span>Giá trị: {formatCurrency(contract.totalValue)}</span>
+                      <span>Loại: {contract.contractType}</span>
+                      {contract.endDate && (
+                        <span>Hết hạn: {new Date(contract.endDate).toLocaleDateString('vi-VN')}</span>
+                      )}
                     </div>
+                  </div>
 
-                    {/* DETAILS */}
-                    <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-3 text-sm'>
-                      <div>
-                        <p className='text-gray-400 text-xs mb-1'>
-                          Loại hợp đồng
-                        </p>
-                        <p className='font-semibold text-white'>
-                          {contract.contractType === 'OWNERSHIP'
-                            ? 'Sở hữu'
-                            : 'Dịch vụ'}
-                        </p>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 text-xs rounded-full ${statusBadgeClass(contract.contractStatus)}`}>
+                      {contract.contractStatus}
+                    </span>
 
-                      <div>
-                        <p className='text-gray-400 text-xs mb-1'>Thời hạn</p>
-                        <p className='font-semibold text-white'>
-                          {contract.contractTermYears} năm
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className='text-gray-400 text-xs mb-1'>
-                          Ngày kết thúc
-                        </p>
-                        <p className='font-semibold text-white'>
-                          {formatDate(contract.endDate)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className='text-gray-400 text-xs mb-1'>
-                          {activeTab === 'expiring' || activeTab === 'renewal'
-                            ? 'Còn lại'
-                            : 'Giá trị'}
-                        </p>
-                        <p
-                          className={`font-semibold ${
-                            activeTab === 'expiring' || activeTab === 'renewal'
-                              ? 'text-orange-400'
-                              : 'text-yellow-400'
-                          }`}
+                    {contract.contractStatus === 'PENDING' && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApprove(contract.id)}
+                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-black rounded-lg font-semibold flex items-center gap-1 transition"
                         >
-                          {activeTab === 'expiring' || activeTab === 'renewal'
-                            ? `${contract.daysUntilExpiry} ngày`
-                            : `${(contract.totalAmount / 1000000000).toFixed(1)}B VND`}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* ACTIONS */}
-                    <div className='flex gap-2 pt-3 border-t border-[#1E3A2B]'>
-                      {activeTab === 'pending' && (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/contracts/${contract.id}/approve`);
-                            }}
-                            className='px-4 py-2 bg-green-500 hover:bg-green-600 text-black rounded-lg text-sm font-semibold flex items-center gap-1 transition'
-                          >
-                            <span className='material-icons text-sm'>
-                              check_circle
-                            </span>
-                            Phê duyệt
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/contracts/${contract.id}`);
-                            }}
-                            className='px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold flex items-center gap-1 transition'
-                          >
-                            <span className='material-icons text-sm'>
-                              visibility
-                            </span>
-                            Xem chi tiết
-                          </button>
-                        </>
-                      )}
-
-                      {activeTab === 'expiring' && (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/contracts/${contract.id}/renew`);
-                            }}
-                            className='px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold flex items-center gap-1 transition'
-                          >
-                            <span className='material-icons text-sm'>
-                              autorenew
-                            </span>
-                            Yêu cầu gia hạn
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/contracts/${contract.id}`);
-                            }}
-                            className='px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1 transition'
-                          >
-                            <span className='material-icons text-sm'>
-                              visibility
-                            </span>
-                            Xem chi tiết
-                          </button>
-                        </>
-                      )}
-
-                      {activeTab === 'renewal' && (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/contracts/${contract.id}/renew`);
-                            }}
-                            className='px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold flex items-center gap-1 transition'
-                          >
-                            <span className='material-icons text-sm'>
-                              autorenew
-                            </span>
-                            Gia hạn ngay
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/contracts/${contract.id}`);
-                            }}
-                            className='px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1 transition'
-                          >
-                            <span className='material-icons text-sm'>
-                              visibility
-                            </span>
-                            Xem chi tiết
-                          </button>
-                        </>
-                      )}
-                    </div>
-
-                    {/* WARNING */}
-                    {contract.isExpiringSoon && (
-                      <div className='mt-3 p-2 bg-orange-500/10 border border-orange-500/30 rounded text-xs text-orange-300 flex items-center gap-2'>
-                        <span className='material-icons text-sm'>warning</span>
-                        Hợp đồng sắp hết hạn trong {
-                          contract.daysUntilExpiry
-                        }{' '}
-                        ngày
+                          <span className="material-icons text-sm">check</span>
+                          Duyệt
+                        </button>
+                        <button
+                          onClick={() => handleReject(contract.id)}
+                          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold flex items-center gap-1 transition"
+                        >
+                          <span className="material-icons text-sm">close</span>
+                          Từ chối
+                        </button>
                       </div>
                     )}
+
+                    <button
+                      onClick={() => navigate(`/contracts/${contract.id}`)}
+                      className="p-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition"
+                    >
+                      <span className="material-icons">visibility</span>
+                    </button>
                   </div>
-                ))}
+                </div>
               </div>
-            )}
+            ))}
           </div>
-        </div>
+        )}
       </main>
     </div>
   );

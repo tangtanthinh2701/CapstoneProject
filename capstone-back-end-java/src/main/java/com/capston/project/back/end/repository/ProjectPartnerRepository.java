@@ -8,32 +8,33 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface ProjectPartnerRepository extends JpaRepository<ProjectPartner, Integer> {
 
 	List<ProjectPartner> findByProjectId(Integer projectId);
 
-	List<ProjectPartner> findByPartnerId(Integer partnerId);
+	List<ProjectPartner> findByPartnerUserId(UUID partnerUserId);
 
 	@Query("SELECT pp FROM ProjectPartner pp " +
-	       "JOIN FETCH pp.partner " +
-	       "JOIN FETCH pp.project " +
-	       "WHERE pp.project.id = : projectId")
+	       "LEFT JOIN FETCH pp.partnerUser " +
+	       "LEFT JOIN FETCH pp.project " +
+	       "WHERE pp.projectId = :projectId")
 	List<ProjectPartner> findByProjectIdWithDetails(@Param("projectId") Integer projectId);
 
 	@Query("SELECT pp FROM ProjectPartner pp " +
-	       "JOIN FETCH pp.partner " +
-	       "JOIN FETCH pp.project " +
-	       "WHERE pp.partner.id = :partnerId")
-	List<ProjectPartner> findByPartnerIdWithDetails(@Param("partnerId") Integer partnerId);
+	       "LEFT JOIN FETCH pp.partnerUser " +
+	       "LEFT JOIN FETCH pp.project " +
+	       "WHERE pp.partnerUserId = :partnerUserId")
+	List<ProjectPartner> findByPartnerUserIdWithDetails(@Param("partnerUserId") UUID partnerUserId);
 
-	boolean existsByProjectIdAndPartnerId(Integer projectId, Integer partnerId);
+	boolean existsByProjectIdAndPartnerUserId(Integer projectId, UUID partnerUserId);
 
-	Optional<ProjectPartner> findByProjectIdAndPartnerId(Integer projectId, Integer partnerId);
+	Optional<ProjectPartner> findByProjectIdAndPartnerUserId(Integer projectId, UUID partnerUserId);
 
-	void deleteByProjectIdAndPartnerId(Integer projectId, Integer partnerId);
+	void deleteByProjectIdAndPartnerUserId(Integer projectId, UUID partnerUserId);
 
-	@Query("SELECT COUNT(pp) FROM ProjectPartner pp WHERE pp.partner.id = :partnerId")
-	Long countProjectsByPartnerId(@Param("partnerId") Integer partnerId);
+	@Query("SELECT COUNT(pp) FROM ProjectPartner pp WHERE pp.partnerUserId = :partnerUserId")
+	Long countProjectsByPartnerUserId(@Param("partnerUserId") UUID partnerUserId);
 }

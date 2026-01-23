@@ -14,7 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -26,7 +26,7 @@ import java.util.UUID;
 @Builder
 public class Token {
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
   @Column(unique = true, nullable = false)
@@ -36,7 +36,7 @@ public class Token {
   private String tokenType;
 
   @Column(name = "expiration_date")
-  private LocalDateTime expirationDate;
+  private OffsetDateTime expirationDate;
 
   @Column(nullable = false)
   private Boolean revoked;

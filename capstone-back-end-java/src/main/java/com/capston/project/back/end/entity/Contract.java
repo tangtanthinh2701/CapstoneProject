@@ -1,6 +1,5 @@
 package com.capston.project.back.end.entity;
 
-import com.capston.project.back.end.common.ContractCategory;
 import com.capston.project.back.end.common.ContractStatus;
 import com.capston.project.back.end.common.ContractType;
 import jakarta.persistence.*;
@@ -27,64 +26,73 @@ import java.util.UUID;
 @Builder
 public class Contract {
 	@Id
-	@GeneratedValue(strategy = GenerationType. IDENTITY)
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 
 	@Column(name = "contract_code", unique = true, nullable = false, length = 50)
 	private String contractCode;
 
+	@Column(name = "project_id", nullable = false)
+	private Integer projectId;
+
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "project_id", nullable = false)
+	@JoinColumn(name = "project_id", insertable = false, updatable = false)
 	private Project project;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "contract_category", nullable = false)
-	@Builder.Default
-	private ContractCategory contractCategory = ContractCategory.ENTERPRISE_PROJECT;
-
-	@Enumerated(EnumType.STRING)
+	// Contract type
 	@Column(name = "contract_type", nullable = false, length = 50)
-	@Builder.Default
-	private ContractType contractType = ContractType.OWNERSHIP;
+	private ContractType contractType; // OWNERSHIP, INVESTMENT, SERVICE, CREDIT_PURCHASE
 
-	@Column(name = "unit_price", nullable = false, precision = 15, scale = 2)
-	private BigDecimal unitPrice;
+	// Parties
+	@Column(name = "party_a_id")
+	private UUID partyAId; // Company/Organization
 
-	@Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
-	private BigDecimal totalAmount;
+	@Column(name = "party_b_id")
+	private UUID partyBId; // Project owner
 
-	@Column(name = "contract_term_years")
-	private Integer contractTermYears;
+	// Financial terms
+	@Column(name = "total_value", nullable = false, precision = 15, scale = 2)
+	private BigDecimal totalValue;
 
-	@Column(name = "start_date")
+	@Column(name = "payment_terms", columnDefinition = "TEXT")
+	private String paymentTerms;
+
+	// Timeline
+	@Column(name = "start_date", nullable = false)
 	private LocalDate startDate;
 
 	@Column(name = "end_date")
 	private LocalDate endDate;
 
-	// Cơ chế gia hạn
-	@Column(name = "auto_renewal")
-	@Builder.Default
-	private Boolean autoRenewal = false;
+	@Column(name = "duration_years")
+	private Integer durationYears;
 
-	@Column(name = "renewal_term_years")
-	private Integer renewalTermYears;
-
-	@Column(name = "renewal_notice_days")
+	// Renewal terms
+	@Column(name = "is_renewable")
 	@Builder.Default
-	private Integer renewalNoticeDays = 30;
+	private Boolean isRenewable = false;
+
+	@Column(name = "renewal_terms", columnDefinition = "TEXT")
+	private String renewalTerms;
 
 	@Column(name = "max_renewals")
 	private Integer maxRenewals;
 
-	@Column(name = "renewal_count")
+	@Column(name = "current_renewal_count")
 	@Builder.Default
-	private Integer renewalCount = 0;
+	private Integer currentRenewalCount = 0;
 
-	// Điều khoản carbon / quyền lợi
+	// Terms & Conditions
+	@Column(name = "terms_and_conditions", columnDefinition = "TEXT")
+	private String termsAndConditions;
+
 	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "content", columnDefinition = "jsonb")
-	private Map<String, Object> content;
+	@Column(name = "special_clauses", columnDefinition = "jsonb")
+	private Map<String, Object> specialClauses;
+
+	// Rights (for OWNERSHIP type)
+	@Column(name = "carbon_credit_percentage", precision = 5, scale = 2)
+	private BigDecimal carbonCreditPercentage;
 
 	@Column(name = "harvest_rights")
 	@Builder.Default
@@ -94,43 +102,36 @@ public class Contract {
 	@Builder.Default
 	private Boolean transferAllowed = false;
 
-	// Điều khoản chấm dứt
-	@Column(name = "early_termination_penalty", precision = 15, scale = 2)
-	private BigDecimal earlyTerminationPenalty;
-
-	@Column(name = "termination_reason", columnDefinition = "TEXT")
-	private String terminationReason;
-
-	@Column(name = "terminated_at")
-	private OffsetDateTime terminatedAt;
-
+	// Status
 	@Enumerated(EnumType.STRING)
-	@Column(name = "contract_status")
+	@Column(name = "contract_status", length = 20)
 	@Builder.Default
 	private ContractStatus contractStatus = ContractStatus.DRAFT;
 
-	@Column(name = "payment_date")
-	private LocalDate paymentDate;
-
-	@Column(name = "contract_file_url", length = 500)
-	private String contractFileUrl;
-
+	// Approval
 	@Column(name = "approved_by")
 	private UUID approvedBy;
 
 	@Column(name = "approved_at")
 	private OffsetDateTime approvedAt;
 
+	// Termination
+	@Column(name = "terminated_at")
+	private OffsetDateTime terminatedAt;
+
+	@Column(name = "termination_reason", columnDefinition = "TEXT")
+	private String terminationReason;
+
+	@Column(name = "early_termination_fee", precision = 15, scale = 2)
+	private BigDecimal earlyTerminationFee;
+
+	// Documents
+	@Column(name = "contract_file_url", length = 500)
+	private String contractFileUrl;
+
+	// Tracking
 	@Column(name = "notes", columnDefinition = "TEXT")
 	private String notes;
-
-	// Dành cho contract dịch vụ
-	@Column(name = "service_scope", columnDefinition = "TEXT")
-	private String serviceScope;
-
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "kpi_requirements", columnDefinition = "jsonb")
-	private Map<String, Object> kpiRequirements;
 
 	@CreationTimestamp
 	@Column(name = "created_at", updatable = false)
@@ -141,32 +142,37 @@ public class Contract {
 	private OffsetDateTime updatedAt;
 
 	// Relationships
-	@OneToMany(mappedBy = "contract", cascade = CascadeType.ALL, fetch = FetchType. LAZY)
-	@Builder.Default
-	private List<OxiOwnership> ownerships = new ArrayList<>();
-
 	@OneToMany(mappedBy = "originalContract", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	@Builder.Default
 	private List<ContractRenewal> renewals = new ArrayList<>();
 
 	// Helper methods
-	public Integer getProjectId() {
-		return project != null ? project.getId() : null;
-	}
-
 	public boolean isExpiringSoon() {
-		if (endDate == null) return false;
-		LocalDate warningDate = LocalDate.now().plusDays(renewalNoticeDays != null ? renewalNoticeDays : 30);
+		if (endDate == null)
+			return false;
+		LocalDate warningDate = LocalDate.now().plusDays(30);
 		return endDate.isBefore(warningDate) && endDate.isAfter(LocalDate.now());
 	}
 
 	public boolean isExpired() {
-		if (endDate == null) return false;
+		if (endDate == null)
+			return false;
 		return endDate.isBefore(LocalDate.now());
 	}
 
 	public boolean canRenew() {
-		if (maxRenewals == null) return true;
-		return renewalCount < maxRenewals;
+		if (!Boolean.TRUE.equals(isRenewable))
+			return false;
+		if (maxRenewals == null)
+			return true;
+		return currentRenewalCount < maxRenewals;
+	}
+
+	@PrePersist
+	@PreUpdate
+	protected void calculateDuration() {
+		if (startDate != null && endDate != null) {
+			this.durationYears = java.time.Period.between(startDate, endDate).getYears();
+		}
 	}
 }

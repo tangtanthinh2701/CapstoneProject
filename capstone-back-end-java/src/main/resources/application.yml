@@ -35,3 +35,34 @@ springdoc:
   api-docs:
     path: /api-docs
   show-actuator: true
+
+websocket:
+  endpoint: /ws
+  topic: /topic
+  queue: /queue
+
+# VNPay Configuration (Sandbox)
+vnpay:
+  pay-url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+  return-url: http://localhost:8088/api/payments/vnpay-return
+  ipn-url: http://localhost:8088/api/payments/vnpay-ipn
+  tmn-code: YOUR_TMN_CODE  # Thay bằng mã merchant test
+  hash-secret: YOUR_HASH_SECRET  # Thay bằng secret key test
+  version: "2.1.0"
+  command: pay
+  order-type: other
+
+# OpenAI Configuration for AI Chatbot
+openai:
+  api-key: YOUR_OPENAI_API_KEY  # Thay bằng API key của bạn
+  model: gpt-3.5-turbo  # hoặc gpt-4
+  max-tokens: 1000
+  temperature: 0.7
+  system-prompt: |
+    Bạn là trợ lý AI của hệ thống Carbon Credit. Bạn giúp người dùng:
+    1. Tìm hiểu về các dự án trồng cây và tín chỉ carbon
+    2. Gợi ý dự án phù hợp dựa trên nhu cầu (năng suất CO2, giá cả, vị trí...)
+    3. Giải đáp thắc mắc về quy trình mua tín chỉ, hợp đồng
+    4. Hướng dẫn sử dụng hệ thống
+    Hãy trả lời ngắn gọn, chính xác và thân thiện bằng tiếng Việt.
+

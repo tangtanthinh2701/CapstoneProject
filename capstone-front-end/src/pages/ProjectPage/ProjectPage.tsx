@@ -2,25 +2,7 @@ import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
 import { useNavigate } from 'react-router-dom';
-import { deleteProject } from '../../models/project.api';
-
-interface Project {
-  id: number;
-  code: string;
-  name: string;
-  description: string | null;
-  projectStatus: string;
-  managerId: string;
-  isPublic: boolean;
-  budget: number;
-  targetConsumedCarbon: number;
-  currentConsumedCarbon: number;
-  createdAt: string;
-  updatedAt: string;
-  phases: any[] | null;
-  totalPhases: number | null;
-  completedPhases: number | null;
-}
+import { projectApi, type Project } from '../../models/project.api';
 
 interface PageInfo {
   page: number;
@@ -41,7 +23,6 @@ interface ApiResponse {
 }
 
 // ========== CONFIG ==========
-const API_BASE_URL = 'http://localhost:8088/api/projects';
 const PAGE_SIZE = 20;
 
 // ========== HELPERS ==========
@@ -49,14 +30,10 @@ const statusBadgeClass = (projectStatus: string) => {
   switch (projectStatus) {
     case 'PLANNING':
       return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
-    case 'PLANTING':
-      return 'bg-blue-100 text-blue-800 border border-blue-300';
-    case 'GROWING':
+    case 'ACTIVE':
       return 'bg-green-100 text-green-800 border border-green-300';
-    case 'MATURE':
+    case 'CANCELLED':
       return 'bg-red-100 text-red-800 border border-red-300';
-    case 'HARVESTING':
-      return 'bg-purple-100 text-purple-800 border border-purple-300';
     case 'COMPLETED':
       return 'bg-orange-100 text-gray-800 border border-gray-300';
     default:
@@ -64,15 +41,15 @@ const statusBadgeClass = (projectStatus: string) => {
   }
 };
 
-const formatCurrency = (amount: number) => {
+const formatCurrency = (amount?: number) => {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
-  }).format(amount);
+  }).format(amount || 0);
 };
 
-const formatCarbon = (amount: number) => {
-  return `${amount.toLocaleString('vi-VN')} tấn CO₂`;
+const formatCarbon = (amount?: number) => {
+  return `${(amount || 0).toLocaleString('vi-VN')} tấn CO₂`;
 };
 
 // ========== COMPONENT ==========
@@ -91,38 +68,25 @@ export default function ProjectListPage() {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Không tìm thấy token.  Vui lòng đăng nhập lại.');
-      }
-
-      const url = `${API_BASE_URL}?page=${pageNumber}&size=${PAGE_SIZE}`;
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+      const res = await projectApi.getAll({
+        page: pageNumber,
+        size: PAGE_SIZE,
+        keyword: search || undefined,
+        // status: statusFilter || undefined // Add if API supports it
       });
 
-      if (!res.ok) {
-        if (res.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-          return;
-        }
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      // Assuming API wrapper returns the data directly or the full response object
+      // Based on interceptor in api.ts, it returns response.data
+      // My API model for getAll returns api.get('/projects', ...).
+      // If backend returns standard ApiResponse structure:
+      const result = res as any;
+
+      if (result.success !== false) { // flexible check
+        setResponse(result);
+      } else {
+        throw new Error(result.message || 'API Error');
       }
 
-      const result: ApiResponse = await res.json();
-
-      // ✅ Kiểm tra API trả về success
-      if (!result.success) {
-        throw new Error(result.message || 'API trả về lỗi');
-      }
-
-      setResponse(result);
     } catch (err: any) {
       console.error('Error loading projects:', err);
       setError(err.message || 'Có lỗi xảy ra khi tải dữ liệu.');
@@ -136,7 +100,7 @@ export default function ProjectListPage() {
     if (!window.confirm('Bạn có chắc chắn muốn xóa dự án này?')) return;
 
     try {
-      await deleteProject(id);
+      await projectApi.delete(id);
       alert('Xóa thành công!');
       fetchProjects(page);
     } catch (err: any) {
@@ -148,14 +112,14 @@ export default function ProjectListPage() {
   // ========== EFFECTS ==========
   useEffect(() => {
     fetchProjects(page);
-  }, [page]);
+  }, [page, search]); // Re-fetch on search change? Or use a button. Let's keep it simple.
 
   // ========== FILTER ==========
   const projects = response?.data ?? [];
+  // Client-side status filter if API doesn't support it or just to be safe
   const filteredProjects = projects.filter((p) => {
-    const matchSearch = p.name?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter ? p.projectStatus === statusFilter : true;
-    return matchSearch && matchStatus;
+    return matchStatus;
   });
 
   // ========== RENDER ==========
@@ -172,7 +136,7 @@ export default function ProjectListPage() {
         />
 
         <h1 className='text-3xl font-bold mb-2'>Quản lý Dự án</h1>
-        <p className='text-gray-400 mb-6'>Danh sách các dự án trồng rừng. </p>
+        <p className='text-gray-400 mb-6'>Danh sách các dự án trồng rừng.</p>
 
         {/* SEARCH + FILTER */}
         <div className='flex flex-wrap items-center gap-4 mb-6'>
@@ -248,9 +212,12 @@ export default function ProjectListPage() {
           {/* ROWS */}
           {!loading &&
             filteredProjects.map((p) => {
+              const target = p.targetCo2Kg || 0;
+              const current = p.actualCo2Kg || 0;
+
               const carbonProgress =
-                p.targetConsumedCarbon > 0
-                  ? (p.currentConsumedCarbon / p.targetConsumedCarbon) * 100
+                target > 0
+                  ? (current / target) * 100
                   : 0;
 
               return (
@@ -280,17 +247,17 @@ export default function ProjectListPage() {
 
                   {/* Budget */}
                   <div className='text-sm text-gray-300'>
-                    {formatCurrency(p.budget)}
+                    {formatCurrency(p.totalBudget || (p as any).budget)}
                   </div>
 
                   {/* Target CO2 */}
                   <div className='text-sm text-gray-300'>
-                    {formatCarbon(p.targetConsumedCarbon)}
+                    {formatCarbon(target)}
                   </div>
 
                   {/* Current CO2 */}
                   <div className='text-sm text-green-400 font-semibold'>
-                    {formatCarbon(p.currentConsumedCarbon)}
+                    {formatCarbon(current)}
                   </div>
 
                   {/* Progress */}
@@ -371,11 +338,10 @@ export default function ProjectListPage() {
                         <button
                           key={idx}
                           onClick={() => setPage(idx)}
-                          className={`px-3 py-2 rounded-xl border transition ${
-                            idx === page
-                              ? 'bg-green-600 border-green-500 text-white font-semibold'
-                              : 'bg-[#0E2219] border-[#1E3A2B] hover:bg-[#13271F]'
-                          }`}
+                          className={`px-3 py-2 rounded-xl border transition ${idx === page
+                            ? 'bg-green-600 border-green-500 text-white font-semibold'
+                            : 'bg-[#0E2219] border-[#1E3A2B] hover:bg-[#13271F]'
+                            }`}
                         >
                           {idx + 1}
                         </button>

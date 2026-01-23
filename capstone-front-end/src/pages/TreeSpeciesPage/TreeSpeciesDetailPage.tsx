@@ -1,18 +1,16 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
-import {
-  getTreeSpeciesById,
-  deleteTreeSpecies,
-} from '../../models/treeSpecies.api';
-import type { TreeSpecies } from '../../models/treeSpecies.api';
+import { useAuth } from '../../contexts/AuthContext';
+import { getTreeSpeciesById, deleteTreeSpecies, type TreeSpecies } from '../../models/treeSpecies.api';
 
 export default function TreeSpeciesDetailPage() {
-  const { id } = useParams();
   const navigate = useNavigate();
+  const { id } = useParams();
+  const { isAdmin } = useAuth();
 
-  const [data, setData] = useState<TreeSpecies | null>(null);
+  const [species, setSpecies] = useState<TreeSpecies | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,18 +20,11 @@ export default function TreeSpeciesDetailPage() {
     const loadData = async () => {
       try {
         setLoading(true);
-        setError(null);
-
-        const response = await getTreeSpeciesById(Number(id));
-
-        if (!response.success || !response.data) {
-          throw new Error('Không tìm thấy loài cây');
-        }
-
-        setData(response.data);
+        const response = await getTreeSpeciesById(parseInt(id));
+        const data = (response as any)?.data || response;
+        setSpecies(data);
       } catch (err: any) {
-        console.error('Error loading tree species:', err);
-        setError(err.message || 'Không thể tải dữ liệu');
+        setError(err.message || 'Không tải được dữ liệu');
       } finally {
         setLoading(false);
       }
@@ -43,11 +34,11 @@ export default function TreeSpeciesDetailPage() {
   }, [id]);
 
   const handleDelete = async () => {
+    if (!species) return;
     if (!window.confirm('Bạn có chắc chắn muốn xóa loài cây này?')) return;
 
     try {
-      await deleteTreeSpecies(Number(id));
-      alert('Xóa thành công!');
+      await deleteTreeSpecies(species.id);
       navigate('/tree-species');
     } catch (err: any) {
       alert(err.message || 'Xóa thất bại');
@@ -56,28 +47,27 @@ export default function TreeSpeciesDetailPage() {
 
   if (loading) {
     return (
-      <div className='flex bg-[#07150D] text-white min-h-screen items-center justify-center'>
-        <div className='text-center'>
-          <div className='inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mb-4'></div>
-          <p className='text-gray-400'>Đang tải dữ liệu...</p>
-        </div>
+      <div className="flex bg-[#07150D] text-white min-h-screen">
+        <Sidebar />
+        <main className="flex-1 p-8 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mb-4"></div>
+            <p className="text-gray-400">Đang tải...</p>
+          </div>
+        </main>
       </div>
     );
   }
 
-  if (error || !data) {
+  if (error || !species) {
     return (
-      <div className='flex bg-[#07150D] text-white min-h-screen'>
+      <div className="flex bg-[#07150D] text-white min-h-screen">
         <Sidebar />
-        <main className='flex-1 p-8'>
-          <div className='bg-red-900/20 border border-red-500 text-red-200 px-6 py-4 rounded-xl'>
-            <h2 className='text-xl font-bold mb-2'>⚠️ Lỗi</h2>
+        <main className="flex-1 p-8">
+          <div className="bg-red-900/20 border border-red-500 text-red-200 px-6 py-4 rounded-xl">
             <p>{error || 'Không tìm thấy loài cây'}</p>
-            <button
-              onClick={() => navigate('/tree-species')}
-              className='mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg'
-            >
-              Quay lại danh sách
+            <button onClick={() => navigate('/tree-species')} className="mt-2 text-sm underline">
+              Quay lại
             </button>
           </div>
         </main>
@@ -86,121 +76,100 @@ export default function TreeSpeciesDetailPage() {
   }
 
   return (
-    <div className='flex bg-[#07150D] text-white min-h-screen'>
+    <div className="flex bg-[#07150D] text-white min-h-screen">
       <Sidebar />
 
-      <main className='flex-1 p-8 max-w-4xl mx-auto'>
-        {/* Breadcrumbs */}
+      <main className="flex-1 p-8">
         <Breadcrumbs
           items={[
             { label: 'Trang chủ', href: '/' },
-            { label: 'Quản lý loài cây', href: '/tree-species' },
-            { label: data.name },
+            { label: 'Loài cây', href: '/tree-species' },
+            { label: species.name },
           ]}
         />
 
-        {/* Header */}
-        <div className='flex justify-between items-start mb-6'>
+        {/* HEADER */}
+        <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className='text-3xl font-bold mb-2'>{data.name}</h1>
-            <p className='text-gray-400 italic'>{data.scientificName}</p>
+            <h1 className="text-3xl font-bold mb-2">{species.name}</h1>
+            {species.scientificName && (
+              <p className="text-gray-400 italic">{species.scientificName}</p>
+            )}
           </div>
 
-          <div className='flex gap-3'>
-            <button
-              onClick={() => navigate(`/tree-species/${id}/edit`)}
-              className='px-4 py-2 bg-green-500 hover:bg-green-600 text-black rounded-lg font-semibold flex items-center gap-2'
-            >
-              <span className='material-icons text-lg'>edit</span>
-              Chỉnh sửa
-            </button>
-            <button
-              onClick={handleDelete}
-              className='px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold flex items-center gap-2'
-            >
-              <span className='material-icons text-lg'>delete</span>
-              Xóa
-            </button>
+          {isAdmin && (
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigate(`/tree-species/${species.id}/edit`)}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center gap-2 transition"
+              >
+                <span className="material-icons text-sm">edit</span>
+                Sửa
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center gap-2 transition"
+              >
+                <span className="material-icons text-sm">delete</span>
+                Xóa
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* IMAGE */}
+          {species.imageUrl && (
+            <div className="lg:col-span-1">
+              <img
+                src={species.imageUrl}
+                alt={species.name}
+                className="w-full h-64 object-cover rounded-xl border border-[#1E3A2B]"
+              />
+            </div>
+          )}
+
+          {/* INFO */}
+          <div className={species.imageUrl ? 'lg:col-span-2' : 'lg:col-span-3'}>
+            <div className="bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span className="material-icons text-green-500">eco</span>
+                Thông tin carbon
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-[#071811] p-4 rounded-lg text-center">
+                  <p className="text-3xl font-bold text-green-400">{species.baseCarbonRate}</p>
+                  <p className="text-sm text-gray-400">kg CO₂/năm</p>
+                </div>
+                <div className="bg-[#071811] p-4 rounded-lg text-center">
+                  <p className="text-3xl font-bold text-blue-400">{(species.baseCarbonRate * 5).toFixed(0)}</p>
+                  <p className="text-sm text-gray-400">kg CO₂ (5 năm)</p>
+                </div>
+                <div className="bg-[#071811] p-4 rounded-lg text-center">
+                  <p className="text-3xl font-bold text-purple-400">{(species.baseCarbonRate * 10).toFixed(0)}</p>
+                  <p className="text-sm text-gray-400">kg CO₂ (10 năm)</p>
+                </div>
+              </div>
+
+              {species.description && (
+                <div>
+                  <h4 className="font-semibold mb-2">Mô tả</h4>
+                  <p className="text-gray-300">{species.description}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Image */}
-        {data.imageUrl && (
-          <div className='mb-6'>
-            <img
-              src={data.imageUrl}
-              alt={data.name}
-              className='w-full max-h-96 object-cover rounded-xl'
-            />
-          </div>
-        )}
-
-        {/* Info Cards */}
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-6'>
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>CO₂ hấp thụ/năm</p>
-              <span className='material-icons text-green-500'>eco</span>
-            </div>
-            <p className='text-2xl font-bold text-green-400'>
-              {data.estimatedCarbonPerYear.toFixed(1)} tấn
-            </p>
-          </div>
-
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>Dự đoán 5 năm</p>
-              <span className='material-icons text-blue-500'>trending_up</span>
-            </div>
-            <p className='text-2xl font-bold text-blue-400'>
-              {data.estimatedCarbon5Years.toFixed(1)} tấn
-            </p>
-          </div>
-
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>Dự đoán 10 năm</p>
-              <span className='material-icons text-purple-500'>insights</span>
-            </div>
-            <p className='text-2xl font-bold text-purple-400'>
-              {data.estimatedCarbon10Years.toFixed(1)} tấn
-            </p>
-          </div>
-        </div>
-
-        {/* Description */}
-        {data.description && (
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B] mb-6'>
-            <h2 className='text-xl font-semibold mb-3 flex items-center gap-2'>
-              <span className='material-icons text-yellow-500'>
-                description
-              </span>
-              Mô tả
-            </h2>
-            <p className='text-gray-300 leading-relaxed'>{data.description}</p>
-          </div>
-        )}
-
-        {/* Metadata */}
-        <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-          <h2 className='text-xl font-semibold mb-4 flex items-center gap-2'>
-            <span className='material-icons text-blue-500'>info</span>
-            Thông tin bổ sung
-          </h2>
-          <div className='grid grid-cols-2 gap-4 text-sm'>
-            <div>
-              <p className='text-gray-400 mb-1'>Ngày tạo</p>
-              <p className='font-semibold'>
-                {new Date(data.createdAt).toLocaleDateString('vi-VN')}
-              </p>
-            </div>
-            <div>
-              <p className='text-gray-400 mb-1'>Cập nhật lần cuối</p>
-              <p className='font-semibold'>
-                {new Date(data.updatedAt).toLocaleDateString('vi-VN')}
-              </p>
-            </div>
-          </div>
+        <div className="mt-6">
+          <button
+            onClick={() => navigate('/tree-species')}
+            className="px-6 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-lg text-gray-300 hover:bg-[#13271F] transition flex items-center gap-2"
+          >
+            <span className="material-icons">arrow_back</span>
+            Quay lại danh sách
+          </button>
         </div>
       </main>
     </div>
