@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,22 +35,23 @@ public class ProjectController {
 	 * Create a new project with phases
 	 */
 	@PostMapping("/create-projects")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<ProjectResponse>> createProject(@Valid @RequestBody ProjectRequest request,
-	                                                                                      Authentication authentication) {
+			Authentication authentication) {
 		String username = authentication.getName();
 		User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
 		UUID managerId = user.getId();
 
 		ProjectResponse response = projectService.createProject(request, managerId);
 		return ResponseEntity.status(HttpStatus.CREATED)
-				             .body(ApiResponse.success("Project created successfully", response));
+				.body(ApiResponse.success("Project created successfully", response));
 	}
 
 	@GetMapping("/{id}")
 	public ResponseEntity<ApiResponse<ProjectResponse>> getProjectById(@PathVariable Integer id) {
 
 		ProjectResponse response = projectService.getProjectById(id);
-		return ResponseEntity. ok(ApiResponse.success(response));
+		return ResponseEntity.ok(ApiResponse.success(response));
 	}
 
 	/**
@@ -66,16 +68,18 @@ public class ProjectController {
 	 * Cập nhật project
 	 */
 	@PutMapping("/{id}")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<ProjectResponse>> updateProject(@PathVariable Integer id,
-	                                                                  @Valid @RequestBody ProjectRequest request) {
+			@Valid @RequestBody ProjectRequest request) {
 		ProjectResponse response = projectService.updateProject(id, request);
-		return ResponseEntity. ok(ApiResponse.success("Project updated successfully", response));
+		return ResponseEntity.ok(ApiResponse.success("Project updated successfully", response));
 	}
 
 	/**
 	 * Xóa project
 	 */
 	@DeleteMapping("/{id}")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<Void>> deleteProject(@PathVariable Integer id) {
 		projectService.deleteProject(id);
 		return ResponseEntity.ok(ApiResponse.success("Project deleted successfully", null));
@@ -86,18 +90,18 @@ public class ProjectController {
 	 */
 	@GetMapping
 	public ResponseEntity<ApiResponse<List<ProjectResponse>>> getAllProjects(@RequestParam(defaultValue = "0") int page,
-	                                                                         @RequestParam(defaultValue = "20") int size,
-	                                                                         @RequestParam(defaultValue = "createdAt") String sortBy,
-	                                                                         @RequestParam(defaultValue = "desc") String sortDir) {
+			@RequestParam(defaultValue = "20") int size,
+			@RequestParam(defaultValue = "createdAt") String sortBy,
+			@RequestParam(defaultValue = "desc") String sortDir) {
 
 		Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
-		Pageable pageable = PageRequest. of(page, size, sort);
+		Pageable pageable = PageRequest.of(page, size, sort);
 
 		Page<ProjectResponse> projectPage = projectService.getAllProjects(pageable);
 
 		return ResponseEntity.ok(ApiResponse.success("Projects retrieved successfully",
-		                                              projectPage.getContent(),
-		                                              buildPageInfo(projectPage)));
+				projectPage.getContent(),
+				buildPageInfo(projectPage)));
 	}
 
 	/**
@@ -105,15 +109,15 @@ public class ProjectController {
 	 */
 	@GetMapping("/status/{status}")
 	public ResponseEntity<ApiResponse<List<ProjectResponse>>> getProjectsByStatus(@PathVariable ProjectStatus status,
-	                                                                              @RequestParam(defaultValue = "0") int page,
-	                                                                              @RequestParam(defaultValue = "10") int size) {
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
 
-		Pageable pageable = PageRequest. of(page, size, Sort.by("createdAt").descending());
-		Page<ProjectResponse> projectPage = projectService. getProjectsByStatus(status, pageable);
+		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+		Page<ProjectResponse> projectPage = projectService.getProjectsByStatus(status, pageable);
 
 		return ResponseEntity.ok(ApiResponse.success("Projects retrieved successfully",
-		                                             projectPage.getContent(),
-		                                             buildPageInfo(projectPage)));
+				projectPage.getContent(),
+				buildPageInfo(projectPage)));
 	}
 
 	/**
@@ -121,30 +125,31 @@ public class ProjectController {
 	 */
 	@GetMapping("/manager/{managerId}")
 	public ResponseEntity<ApiResponse<List<ProjectResponse>>> getProjectsByManager(@PathVariable UUID managerId,
-	                                                                               @RequestParam(defaultValue = "0") int page,
-	                                                                               @RequestParam(defaultValue = "10") int size) {
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
 
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 		Page<ProjectResponse> projectPage = projectService.getProjectsByManager(managerId, pageable);
 
-		return ResponseEntity. ok(ApiResponse.success("Projects retrieved successfully",
-		                                              projectPage.getContent(),
-		                                              buildPageInfo(projectPage)));
+		return ResponseEntity.ok(ApiResponse.success("Projects retrieved successfully",
+				projectPage.getContent(),
+				buildPageInfo(projectPage)));
 	}
 
 	/**
 	 * Lấy public projects
 	 */
 	@GetMapping("/public")
-	public ResponseEntity<ApiResponse<List<ProjectResponse>>> getPublicProjects(@RequestParam(defaultValue = "0") int page,
-	                                                                            @RequestParam(defaultValue = "10") int size) {
+	public ResponseEntity<ApiResponse<List<ProjectResponse>>> getPublicProjects(
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
 
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-		Page<ProjectResponse> projectPage = projectService. getPublicProjects(pageable);
+		Page<ProjectResponse> projectPage = projectService.getPublicProjects(pageable);
 
 		return ResponseEntity.ok(ApiResponse.success("Public projects retrieved successfully",
-		                                             projectPage.getContent(),
-		                                             buildPageInfo(projectPage)));
+				projectPage.getContent(),
+				buildPageInfo(projectPage)));
 	}
 
 	/**
@@ -152,15 +157,15 @@ public class ProjectController {
 	 */
 	@GetMapping("/search")
 	public ResponseEntity<ApiResponse<List<ProjectResponse>>> searchProjects(@RequestParam String keyword,
-	                                                                         @RequestParam(defaultValue = "0") int page,
-	                                                                         @RequestParam(defaultValue = "10") int size) {
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
 
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 		Page<ProjectResponse> projectPage = projectService.searchProjects(keyword, pageable);
 
 		return ResponseEntity.ok(ApiResponse.success("Search completed",
-		                                             projectPage.getContent(),
-		                                             buildPageInfo(projectPage)));
+				projectPage.getContent(),
+				buildPageInfo(projectPage)));
 	}
 
 	// ==================== PHASE ENDPOINTS ====================
@@ -169,7 +174,8 @@ public class ProjectController {
 	 * Lấy danh sách phases của project
 	 */
 	@GetMapping("/{projectId}/phases")
-	public ResponseEntity<ApiResponse<List<ProjectPhaseResponse>>> getPhasesByProjectId(@PathVariable Integer projectId) {
+	public ResponseEntity<ApiResponse<List<ProjectPhaseResponse>>> getPhasesByProjectId(
+			@PathVariable Integer projectId) {
 		List<ProjectPhaseResponse> phases = projectService.getPhasesByProjectId(projectId);
 		return ResponseEntity.ok(ApiResponse.success(phases));
 	}
@@ -178,31 +184,35 @@ public class ProjectController {
 	 * Thêm phase vào project
 	 */
 	@PostMapping("/{projectId}/phases")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<ProjectPhaseResponse>> addPhaseToProject(@PathVariable Integer projectId,
-	                                                                           @Valid @RequestBody ProjectPhaseRequest request) {
+			@Valid @RequestBody ProjectPhaseRequest request) {
 
 		ProjectPhaseResponse response = projectService.addPhaseToProject(projectId, request);
 		return ResponseEntity.status(HttpStatus.CREATED)
-		                     .body(ApiResponse.success("Phase added successfully", response));
+				.body(ApiResponse.success("Phase added successfully", response));
 	}
 
 	/**
 	 * Cập nhật phase
 	 */
 	@PutMapping("/{projectId}/phases/{phaseId}")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<ProjectPhaseResponse>> updatePhase(@PathVariable Integer projectId,
-	                                                                     @PathVariable Integer phaseId,
-	                                                                     @Valid @RequestBody ProjectPhaseRequest request) {
+			@PathVariable Integer phaseId,
+			@Valid @RequestBody ProjectPhaseRequest request) {
 
 		ProjectPhaseResponse response = projectService.updatePhase(projectId, phaseId, request);
-		return ResponseEntity. ok(ApiResponse.success("Phase updated successfully", response));
+		return ResponseEntity.ok(ApiResponse.success("Phase updated successfully", response));
 	}
 
 	/**
 	 * Xóa phase
 	 */
 	@DeleteMapping("/{projectId}/phases/{phaseId}")
-	public ResponseEntity<ApiResponse<Void>> deletePhase(@PathVariable Integer projectId, @PathVariable Integer phaseId) {
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<ApiResponse<Void>> deletePhase(@PathVariable Integer projectId,
+			@PathVariable Integer phaseId) {
 		projectService.deletePhase(projectId, phaseId);
 		return ResponseEntity.ok(ApiResponse.success("Phase deleted successfully", null));
 	}
@@ -213,6 +223,7 @@ public class ProjectController {
 	 * Tính toán lại các trường computed của một project
 	 */
 	@PostMapping("/{projectId}/recalculate")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<ProjectResponse>> recalculateProject(@PathVariable Integer projectId) {
 		projectService.recalculateProjectFields(projectId);
 		ProjectResponse response = projectService.getProjectById(projectId);
@@ -223,20 +234,81 @@ public class ProjectController {
 	 * Tính toán lại tất cả projects (Admin only)
 	 */
 	@PostMapping("/recalculate-all")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<Void>> recalculateAllProjects() {
-		projectService. recalculateAllProjects();
+		projectService.recalculateAllProjects();
 		return ResponseEntity.ok(ApiResponse.success("All projects recalculated successfully", null));
 	}
 
+	// ==================== FARM & PARTNER ASSIGNMENT ====================
+
+	/**
+	 * Gán Farm vào Project (Admin only)
+	 */
+	@PostMapping("/{projectId}/farms/{farmId}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<ApiResponse<Void>> assignFarmToProject(
+			@PathVariable Integer projectId,
+			@PathVariable Integer farmId,
+			Authentication authentication) {
+		String username = authentication.getName();
+		User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+		projectService.assignFarmToProject(projectId, farmId, user.getId());
+		return ResponseEntity.ok(ApiResponse.success("Farm assigned to project successfully", null));
+	}
+
+	/**
+	 * Xóa Farm khỏi Project (Admin only)
+	 */
+	@DeleteMapping("/{projectId}/farms/{farmId}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<ApiResponse<Void>> removeFarmFromProject(
+			@PathVariable Integer projectId,
+			@PathVariable Integer farmId) {
+		projectService.removeFarmFromProject(projectId, farmId);
+		return ResponseEntity.ok(ApiResponse.success("Farm removed from project successfully", null));
+	}
+
+	/**
+	 * Gán Partner vào Project (Admin only)
+	 */
+	@PostMapping("/{projectId}/partners")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<ApiResponse<Void>> addPartnerToProject(
+			@PathVariable Integer projectId,
+			@RequestBody java.util.Map<String, Object> request) {
+		UUID partnerUserId = UUID.fromString((String) request.get("partnerUserId"));
+		String partnerRole = (String) request.get("partnerRole");
+		java.math.BigDecimal contributionAmount = request.get("contributionAmount") != null
+				? new java.math.BigDecimal(request.get("contributionAmount").toString())
+				: null;
+		String notes = (String) request.get("notes");
+
+		projectService.addPartnerToProject(projectId, partnerUserId, partnerRole, contributionAmount, notes);
+		return ResponseEntity.ok(ApiResponse.success("Partner added to project successfully", null));
+	}
+
+	/**
+	 * Xóa Partner khỏi Project (Admin only)
+	 */
+	@DeleteMapping("/{projectId}/partners/{partnerUserId}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<ApiResponse<Void>> removePartnerFromProject(
+			@PathVariable Integer projectId,
+			@PathVariable UUID partnerUserId) {
+		projectService.removePartnerFromProject(projectId, partnerUserId);
+		return ResponseEntity.ok(ApiResponse.success("Partner removed from project successfully", null));
+	}
+
 	// ==================== PRIVATE METHODS ====================
-	private ApiResponse. PageInfo buildPageInfo(Page<? > page) {
+	private ApiResponse.PageInfo buildPageInfo(Page<?> page) {
 		return ApiResponse.PageInfo.builder()
-		                           .page(page.getNumber())
-		                           .size(page.getSize())
-		                           .totalElements(page.getTotalElements())
-		                           .totalPages(page.getTotalPages())
-		                           .hasNext(page.hasNext())
-		                           .hasPrevious(page.hasPrevious())
-		                           .build();
+				.page(page.getNumber())
+				.size(page.getSize())
+				.totalElements(page.getTotalElements())
+				.totalPages(page.getTotalPages())
+				.hasNext(page.hasNext())
+				.hasPrevious(page.hasPrevious())
+				.build();
 	}
 }

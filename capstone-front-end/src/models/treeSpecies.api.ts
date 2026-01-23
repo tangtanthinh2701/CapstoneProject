@@ -1,169 +1,46 @@
+import api from '../utils/api';
+
 export interface TreeSpecies {
   id: number;
   name: string;
-  scientificName: string;
-  carbonAbsorptionRate: number;
+  scientificName?: string;
+  baseCarbonRate: number; // Matches DB: base_carbon_rate
   description?: string;
   imageUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-  estimatedCarbonPerYear: number;
-  estimatedCarbon5Years: number;
-  estimatedCarbon10Years: number;
+  createdAt?: string;
+  // Computed fields (if backend provides them)
+  estimatedCarbonPerYear?: number;
+  estimatedCarbon5Years?: number;
+  estimatedCarbon10Years?: number;
 }
 
 export interface TreeSpeciesPayload {
   name: string;
-  scientificName: string;
-  carbonAbsorptionRate: number;
+  scientificName?: string;
+  baseCarbonRate: number;
   description?: string;
   imageUrl?: string;
 }
 
-interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-  errors: any;
-  timestamp: string;
-  pageInfo?: {
-    page: number;
-    size: number;
-    totalElements: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrevious: boolean;
-  };
-}
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    throw new Error('Token không tồn tại.  Vui lòng đăng nhập lại.');
-  }
-  return {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
-};
-/** CREATE */
-export const createTreeSpecies = async (payload: TreeSpeciesPayload) => {
-  const res = await fetch('http://localhost:8088/api/tree-species', {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Tạo loài cây thất bại');
-  }
-
-  const json: ApiResponse<TreeSpecies> = await res.json();
-
-  if (!json.success) {
-    throw new Error(json.message || 'Tạo loài cây thất bại');
-  }
-
-  return json;
+export const getTreeSpeciesList = async (params?: any) => {
+  return api.get('/tree-species', { params });
 };
 
-/** UPDATE */
-export const updateTreeSpecies = async (
-  id: number,
-  payload: TreeSpeciesPayload,
-) => {
-  const res = await fetch(`http://localhost:8088/api/tree-species/${id}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Cập nhật loài cây thất bại');
-  }
-
-  const json: ApiResponse<TreeSpecies> = await res.json();
-
-  if (!json.success) {
-    throw new Error(json.message || 'Cập nhật loài cây thất bại');
-  }
-
-  return json;
-};
-
-/** GET BY ID */
 export const getTreeSpeciesById = async (id: number) => {
-  const res = await fetch(`http://localhost:8088/api/tree-species/${id}`, {
-    headers: getAuthHeaders(),
-  });
-
-  if (!res.ok) {
-    if (res.status === 404) {
-      throw new Error('Không tìm thấy loài cây');
-    }
-    const error = await res.json();
-    throw new Error(error.message || 'Tải dữ liệu thất bại');
-  }
-
-  const json: ApiResponse<TreeSpecies> = await res.json();
-
-  if (!json.success) {
-    throw new Error(json.message || 'Tải dữ liệu thất bại');
-  }
-
-  return json;
+  return api.get(`/tree-species/${id}`);
 };
 
-/** GET ALL (with pagination) */
-export const getTreeSpeciesList = async (
-  page: number = 0,
-  size: number = 100,
-): Promise<ApiResponse<TreeSpecies[]>> => {
-  const res = await fetch(
-    `http://localhost:8088/api/tree-species?page=${page}&size=${size}`,
-    {
-      headers: getAuthHeaders(),
-    },
-  );
-
-  if (!res.ok) {
-    throw new Error('Không tải được danh sách loài cây');
-  }
-
-  const json: ApiResponse<TreeSpecies[]> = await res.json();
-
-  if (!json.success) {
-    throw new Error(json.message || 'Không tải được danh sách loài cây');
-  }
-
-  return json;
+export const createTreeSpecies = async (data: TreeSpeciesPayload) => {
+  return api.post('/tree-species', data);
 };
 
-/** GET ALL - Simple version (for dropdowns, etc.) */
-export const fetchTreeSpecies = async (): Promise<TreeSpecies[]> => {
-  const response = await getTreeSpeciesList(0, 100);
-  return response.data;
+export const updateTreeSpecies = async (id: number, data: TreeSpeciesPayload) => {
+  return api.put(`/tree-species/${id}`, data);
 };
 
-/** DELETE */
 export const deleteTreeSpecies = async (id: number) => {
-  const res = await fetch(`http://localhost:8088/api/tree-species/${id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Xóa loài cây thất bại');
-  }
-
-  const json = await res.json();
-
-  if (!json.success) {
-    throw new Error(json.message || 'Xóa loài cây thất bại');
-  }
-
-  return json;
+  return api.delete(`/tree-species/${id}`);
 };
+
+// Legacy alias for backward compatibility
+export const fetchTreeSpecies = getTreeSpeciesList;

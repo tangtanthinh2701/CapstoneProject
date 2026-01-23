@@ -24,7 +24,7 @@ public class CarbonCreditResponse {
 	private String projectCode;
 
 	// Credit details
-	private Integer reportYear;
+	private Integer issuanceYear;
 	private BigDecimal totalCo2Tons;
 	private Integer creditsIssued;
 	private Integer creditsSold;

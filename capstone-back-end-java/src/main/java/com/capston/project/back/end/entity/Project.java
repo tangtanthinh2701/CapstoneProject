@@ -21,7 +21,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +35,7 @@ import java.util.UUID;
 @Builder
 public class Project {
 	@Id
-	@GeneratedValue(strategy = GenerationType. IDENTITY)
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 
 	@Column(name = "code", unique = true, nullable = false, length = 50)
@@ -61,25 +60,29 @@ public class Project {
 	private Boolean isPublic = true;
 
 	// Các trường được tính toán tự động
-	@Column(name = "budget", precision = 15, scale = 2)
+	@Column(name = "total_budget", precision = 15, scale = 2)
 	@Builder.Default
-	private BigDecimal budget = BigDecimal. ZERO;
+	private BigDecimal totalBudget = BigDecimal.ZERO;
 
-	@Column(name = "target_consumed_carbon", precision = 15, scale = 2)
+	@Column(name = "actual_cost", precision = 15, scale = 2)
 	@Builder.Default
-	private BigDecimal targetConsumedCarbon = BigDecimal.ZERO;
+	private BigDecimal actualCost = BigDecimal.ZERO;
 
-	@Column(name = "current_consumed_carbon", precision = 15, scale = 2)
+	@Column(name = "target_co2_kg", precision = 15, scale = 2)
 	@Builder.Default
-	private BigDecimal currentConsumedCarbon = BigDecimal. ZERO;
+	private BigDecimal targetCo2Kg = BigDecimal.ZERO;
+
+	@Column(name = "actual_co2_kg", precision = 15, scale = 2)
+	@Builder.Default
+	private BigDecimal actualCo2Kg = BigDecimal.ZERO;
 
 	@CreationTimestamp
 	@Column(name = "created_at", updatable = false)
-	private LocalDateTime createdAt;
+	private OffsetDateTime createdAt;
 
 	@UpdateTimestamp
 	@Column(name = "updated_at")
-	private LocalDateTime updatedAt;
+	private OffsetDateTime updatedAt;
 
 	// Relationship với Phases - sử dụng LAZY để tránh N+1
 	@OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
@@ -100,22 +103,48 @@ public class Project {
 	// Tính toán lại các trường từ phases
 	public void recalculateFromPhases() {
 		if (phases == null || phases.isEmpty()) {
-			this.budget = BigDecimal.ZERO;
-			this.targetConsumedCarbon = BigDecimal.ZERO;
-			this. currentConsumedCarbon = BigDecimal.ZERO;
+			this.totalBudget = BigDecimal.ZERO;
+			this.targetCo2Kg = BigDecimal.ZERO;
+			this.actualCo2Kg = BigDecimal.ZERO;
 			return;
 		}
 
-		this.budget = phases.stream()
-		                    .map(p -> p.getBudget() != null ? p.getBudget() : BigDecimal.ZERO)
-		                    .reduce(BigDecimal. ZERO, BigDecimal::add);
+		this.totalBudget = phases.stream()
+				.map(p -> p.getBudget() != null ? p.getBudget() : BigDecimal.ZERO)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
 
-		this.targetConsumedCarbon = phases.stream()
-		                                  .map(p -> p.getTargetConsumedCarbon() != null ? p.getTargetConsumedCarbon() : BigDecimal.ZERO)
-		                                  .reduce(BigDecimal.ZERO, BigDecimal:: add);
+		this.targetCo2Kg = phases.stream()
+				.map(p -> p.getTargetCo2Kg() != null
+						? p.getTargetCo2Kg()
+						: BigDecimal.ZERO)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
 
-		this.currentConsumedCarbon = phases.stream()
-		                                   .map(p -> p.getCurrentConsumedCarbon() != null ? p.getCurrentConsumedCarbon() : BigDecimal.ZERO)
-		                                   .reduce(BigDecimal.ZERO, BigDecimal::add);
+		this.actualCo2Kg = phases.stream()
+				.map(p -> p.getActualCo2Kg() != null
+						? p.getActualCo2Kg()
+						: BigDecimal.ZERO)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
+
+		// Tự động cập nhật trạng thái dự án dựa trên phase
+		updateStatusFromPhases();
+	}
+
+	private void updateStatusFromPhases() {
+		if (phases == null || phases.isEmpty() || projectStatus == ProjectStatus.CANCELLED) {
+			return;
+		}
+
+		boolean allCompleted = phases.stream()
+				.allMatch(p -> p.getPhaseStatus() == com.capston.project.back.end.common.PhaseStatus.COMPLETED);
+
+		if (allCompleted) {
+			this.projectStatus = ProjectStatus.COMPLETED;
+		} else {
+			boolean anyStarted = phases.stream()
+					.anyMatch(p -> p.getPhaseStatus() != com.capston.project.back.end.common.PhaseStatus.PLANNING);
+			if (anyStarted && this.projectStatus == ProjectStatus.PLANNING) {
+				this.projectStatus = ProjectStatus.ACTIVE;
+			}
+		}
 	}
 }

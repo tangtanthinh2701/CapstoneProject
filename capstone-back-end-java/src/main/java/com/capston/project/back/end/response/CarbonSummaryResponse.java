@@ -2,8 +2,7 @@ package com.capston.project.back.end.response;
 
 import lombok.*;
 
-import java.math. BigDecimal;
-import java. util.List;
+import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -31,8 +30,6 @@ public class CarbonSummaryResponse {
 	private BigDecimal totalCost;              // Tổng chi phí mua cây
 	private BigDecimal budgetRemaining;        // Ngân sách còn lại
 
-	// Purchases
-	private List<TreePurchaseResponse> purchases;
 
 	// Reserve info
 	private BigDecimal reserveAvailable;       // Carbon từ quỹ có thể dùng

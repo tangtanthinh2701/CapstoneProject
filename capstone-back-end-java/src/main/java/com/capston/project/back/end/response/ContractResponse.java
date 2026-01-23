@@ -1,6 +1,5 @@
 package com.capston.project.back.end.response;
 
-import com.capston.project.back.end.common.ContractCategory;
 import com.capston.project.back.end.common.ContractStatus;
 import com.capston.project.back.end.common.ContractType;
 import lombok.*;
@@ -28,7 +27,6 @@ public class ContractResponse {
 	private String projectCode;
 
 	// Contract details
-	private ContractCategory contractCategory;
 	private ContractType contractType;
 	private BigDecimal unitPrice;
 	private BigDecimal totalAmount;

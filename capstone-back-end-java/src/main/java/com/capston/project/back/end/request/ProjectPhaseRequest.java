@@ -11,7 +11,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,7 +20,7 @@ public class ProjectPhaseRequest {
 
 	@NotNull(message = "Phase order is required")
 	@Positive(message = "Phase order must be positive")
-	private Integer phaseOrder;
+	private Integer phaseNumber;
 
 	private String phaseName;
 
@@ -29,9 +28,9 @@ public class ProjectPhaseRequest {
 
 	private PhaseStatus phaseStatus;
 
-	private LocalDate expectedStartDate;
+	private LocalDate plannedStartDate;
 
-	private LocalDate expectedEndDate;
+	private LocalDate plannedEndDate;
 
 	@NotNull(message = "Actual start date is required")
 	private LocalDate actualStartDate;
@@ -40,7 +39,7 @@ public class ProjectPhaseRequest {
 
 	private BigDecimal budget;
 
-	private BigDecimal targetConsumedCarbon;
+	private BigDecimal targetCo2Kg;
 
 	private String notes;
 

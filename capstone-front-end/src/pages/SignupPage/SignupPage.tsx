@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ export default function SignUpPage() {
     email: '',
     phone: '',
     address: '',
+    // Hidden fields with defaults for API compatibility
     dateOfBirth: new Date().toISOString().split('T')[0],
     sex: true,
   });
@@ -18,17 +20,12 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
-    const target = e.target as
-      | HTMLInputElement
-      | HTMLTextAreaElement
-      | HTMLSelectElement;
-    const { name, value, type } = target;
-    const checked = (target as HTMLInputElement).checked;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: value,
     }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
   };
@@ -37,31 +34,29 @@ export default function SignUpPage() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.fullName.trim())
-      newErrors.fullName = 'Họ và tên là bắt buộc.';
+      newErrors.fullName = 'Vui lòng nhập họ và tên';
 
     if (!formData.username.trim())
-      newErrors.username = 'Tên đăng nhập là bắt buộc.';
+      newErrors.username = 'Vui lòng nhập tên đăng nhập';
 
-    if (!formData.password) newErrors.password = 'Mật khẩu là bắt buộc.';
+    if (!formData.email.trim()) newErrors.email = 'Vui lòng nhập email';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+      newErrors.email = 'Email không hợp lệ';
+
+    if (!formData.phone.trim()) newErrors.phone = 'Vui lòng nhập số điện thoại';
+    else if (!/^\d{10}$/.test(formData.phone))
+      newErrors.phone = 'Số điện thoại phải có 10 chữ số';
+
+    if (!formData.address.trim()) newErrors.address = 'Vui lòng nhập địa chỉ';
+
+    if (!formData.password) newErrors.password = 'Vui lòng nhập mật khẩu';
     else if (formData.password.length < 6)
-      newErrors.password = 'Mật khẩu phải ít nhất 6 ký tự.';
+      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
 
     if (!formData.confirmPassword)
-      newErrors.confirmPassword = 'Vui lòng nhập lại mật khẩu.';
+      newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu';
     else if (formData.confirmPassword !== formData.password)
-      newErrors.confirmPassword = 'Mật khẩu nhập lại không khớp.';
-
-    if (!formData.email.trim()) newErrors.email = 'Email là bắt buộc.';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
-      newErrors.email = 'Email không đúng định dạng.';
-
-    if (!formData.phone.trim()) newErrors.phone = 'Số điện thoại là bắt buộc.';
-    else if (!/^\d{10}$/.test(formData.phone))
-      newErrors.phone = 'Số điện thoại phải đúng 10 chữ số.';
-
-    if (!formData.address.trim()) newErrors.address = 'Địa chỉ là bắt buộc.';
-
-    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Ngày sinh là bắt buộc.';
+      newErrors.confirmPassword = 'Mật khẩu không khớp';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -93,265 +88,190 @@ export default function SignUpPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrors({ api: data.error || data.message || 'Đăng ký thất bại.' });
+        setErrors({ api: data.error || data.message || 'Đăng ký thất bại' });
         setLoading(false);
         return;
       }
+
+      // Success
+      alert('Đăng ký thành công! Vui lòng đăng nhập.');
       window.location.href = '/login';
     } catch (err) {
       console.error(err);
-      setErrors({ api: 'Không thể kết nối server.' });
+      setErrors({ api: 'Không thể kết nối đến máy chủ' });
     }
 
     setLoading(false);
   };
 
   return (
-    <div className='min-h-screen bg-[#0A1A11] text-white px-10 py-6'>
-      {/* HEADER */}
-      <div className='flex items-center gap-2 mb-10'>
-        <div className='w-4 h-4 bg-green-500 rounded-md'></div>
-        <span className='text-lg font-semibold'>OxyAI Management</span>
-      </div>
-
-      {/* MAIN */}
-      <div className='grid grid-cols-1 lg:grid-cols-2 gap-12 items-stretch'>
-        {/* LEFT */}
-        <div className='flex flex-col justify-between'>
-          <div className='w-full h-[330px] rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-green-600 shadow-xl'></div>
-
-          <div className='mt-10'>
-            <h1 className='text-4xl font-extrabold mb-3'>
-              Quản lý Oxy thông minh
-            </h1>
-            <p className='text-gray-300'>
-              Tối ưu hóa quy trình, giám sát thời gian thực và đưa ra quyết định
-              dựa trên dữ liệu.
-            </p>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-[#07150D] py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-xl w-full space-y-8 bg-[#0E2219] p-10 rounded-2xl border border-[#1E3A2B] shadow-2xl">
+        <div className="text-center">
+          <h2 className="mt-2 text-3xl font-bold text-white">Đăng ký tài khoản</h2>
+          <p className="mt-2 text-sm text-gray-400">
+            Tạo tài khoản để tham gia hệ thống
+          </p>
         </div>
 
-        {/* RIGHT: FORM */}
-        <div className='bg-[#0F251B] border border-[#1d3a29]/50 p-10 rounded-3xl shadow-2xl'>
-          <h2 className='text-3xl font-bold mb-2'>Tạo tài khoản mới</h2>
-          <p className='text-gray-400 mb-10 text-sm'>
-            Bắt đầu giao dịch và quản lý oxy công nghiệp thông minh.
-          </p>
+        <form className="mt-8 space-y-6" onSubmit={onSubmit}>
+          <div className="space-y-4">
 
-          <form
-            onSubmit={onSubmit}
-            className='grid grid-cols-1 md:grid-cols-2 gap-6'
-          >
-            {/* Họ và tên */}
-            <FormField
-              label='Họ và tên'
-              name='fullName'
-              error={errors.fullName}
-              value={formData.fullName}
-              handleChange={handleChange}
-            />
+            {/* Full Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Họ và tên <span className="text-red-500">*</span>
+              </label>
+              <input
+                name="fullName"
+                type="text"
+                value={formData.fullName}
+                onChange={handleChange}
+                placeholder="Nguyễn Văn A"
+                className={`mt-1 block w-full px-4 py-3 bg-[#071811] border ${errors.fullName ? 'border-red-500' : 'border-[#1E3A2B]'
+                  } rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition`}
+              />
+              {errors.fullName && <p className="mt-1 text-xs text-red-500">{errors.fullName}</p>}
+            </div>
 
             {/* Username */}
-            <FormField
-              label='Tên đăng nhập'
-              name='username'
-              error={errors.username}
-              value={formData.username}
-              handleChange={handleChange}
-            />
-
-            {/* Password */}
-            <PasswordField
-              label='Mật khẩu'
-              name='password'
-              error={errors.password}
-              value={formData.password}
-              handleChange={handleChange}
-            />
-
-            {/* Confirm Password */}
-            <PasswordField
-              label='Nhập lại mật khẩu'
-              name='confirmPassword'
-              error={errors.confirmPassword}
-              value={formData.confirmPassword}
-              handleChange={handleChange}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Tên đăng nhập <span className="text-red-500">*</span>
+              </label>
+              <input
+                name="username"
+                type="text"
+                value={formData.username}
+                onChange={handleChange}
+                placeholder="username"
+                className={`mt-1 block w-full px-4 py-3 bg-[#071811] border ${errors.username ? 'border-red-500' : 'border-[#1E3A2B]'
+                  } rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition`}
+              />
+              {errors.username && <p className="mt-1 text-xs text-red-500">{errors.username}</p>}
+            </div>
 
             {/* Email */}
-            <FormField
-              label='Email'
-              name='email'
-              error={errors.email}
-              value={formData.email}
-              handleChange={handleChange}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="email@example.com"
+                className={`mt-1 block w-full px-4 py-3 bg-[#071811] border ${errors.email ? 'border-red-500' : 'border-[#1E3A2B]'
+                  } rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition`}
+              />
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+            </div>
 
             {/* Phone */}
-            <FormField
-              label='Số điện thoại'
-              name='phone'
-              error={errors.phone}
-              value={formData.phone}
-              handleChange={handleChange}
-            />
-
-            {/* DOB */}
-            <FormField
-              label='Ngày sinh'
-              name='dateOfBirth'
-              type='date'
-              error={errors.dateOfBirth}
-              value={formData.dateOfBirth}
-              handleChange={handleChange}
-            />
-
-            {/* SEX */}
             <div>
-              <label className='text-sm'>Giới tính</label>
-              <select
-                name='sex'
-                value={formData.sex ? 'true' : 'false'}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    sex: e.target.value === 'true',
-                  }))
-                }
-                className='mt-2 w-full px-4 py-3 rounded-xl bg-[#152E22] border border-[#244a37]'
-              >
-                <option value='true'>Nam</option>
-                <option value='false'>Nữ</option>
-              </select>
+              <label className="block text-sm font-medium text-gray-300">
+                Số điện thoại <span className="text-red-500">*</span>
+              </label>
+              <input
+                name="phone"
+                type="text"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="0901234567"
+                className={`mt-1 block w-full px-4 py-3 bg-[#071811] border ${errors.phone ? 'border-red-500' : 'border-[#1E3A2B]'
+                  } rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition`}
+              />
+              {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
             </div>
 
             {/* Address */}
-            <div className='md:col-span-2'>
-              <label className='text-sm'>Địa chỉ</label>
-              <textarea
-                rows={3}
-                name='address'
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Địa chỉ <span className="text-red-500">*</span>
+              </label>
+              <input
+                name="address"
+                type="text"
                 value={formData.address}
                 onChange={handleChange}
-                className={`mt-2 w-full px-4 py-3 rounded-xl bg-[#152E22] border ${
-                  errors.address ? 'border-red-500' : 'border-[#244a37]'
-                }`}
-                placeholder='Nhập địa chỉ của bạn'
+                placeholder="123 Đường ABC, Quận 1, TP.HCM"
+                className={`mt-1 block w-full px-4 py-3 bg-[#071811] border ${errors.address ? 'border-red-500' : 'border-[#1E3A2B]'
+                  } rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition`}
               />
-              {errors.address && (
-                <p className='text-red-400 text-xs'>{errors.address}</p>
-              )}
+              {errors.address && <p className="mt-1 text-xs text-red-500">{errors.address}</p>}
             </div>
 
-            {/* BUTTON */}
-            <div className='md:col-span-2 mt-4'>
-              <button
-                type='submit'
-                disabled={loading}
-                className={`w-full py-3 rounded-xl text-black font-semibold transition ${
-                  loading ? 'bg-green-300' : 'bg-green-500 hover:bg-green-600'
-                }`}
-              >
-                {loading ? 'Đang đăng ký...' : 'Đăng ký'}
-              </button>
-
-              {errors.api && (
-                <p className='text-red-400 text-sm text-center mt-2'>
-                  {errors.api}
-                </p>
-              )}
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Mật khẩu <span className="text-red-500">*</span>
+              </label>
+              <input
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Ít nhất 6 ký tự"
+                className={`mt-1 block w-full px-4 py-3 bg-[#071811] border ${errors.password ? 'border-red-500' : 'border-[#1E3A2B]'
+                  } rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition`}
+              />
+              {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
             </div>
-          </form>
-        </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Xác nhận mật khẩu <span className="text-red-500">*</span>
+              </label>
+              <input
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Nhập lại mật khẩu"
+                className={`mt-1 block w-full px-4 py-3 bg-[#071811] border ${errors.confirmPassword ? 'border-red-500' : 'border-[#1E3A2B]'
+                  } rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition`}
+              />
+              {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword}</p>}
+            </div>
+          </div>
+
+          {errors.api && (
+            <div className="bg-red-900/20 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm text-center">
+              {errors.api}
+            </div>
+          )}
+
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-black bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                  Đang xử lý...
+                </span>
+              ) : (
+                'Đăng ký'
+              )}
+            </button>
+          </div>
+
+          <div className="text-center text-sm">
+            <span className="text-gray-400">Đã có tài khoản? </span>
+            <Link to="/login" className="font-medium text-green-400 hover:text-green-300">
+              Đăng nhập ngay
+            </Link>
+          </div>
+
+          <div className="text-center text-xs text-gray-500 mt-6">
+            <p>Bằng việc đăng ký, bạn đồng ý với <a href="#" className="hover:text-green-400 underline">Điều khoản dịch vụ</a> và <a href="#" className="hover:text-green-400 underline">Chính sách bảo mật</a></p>
+          </div>
+        </form>
       </div>
-    </div>
-  );
-}
-
-/* ========================
-   FORM FIELD COMPONENT
-======================== */
-interface FormFieldProps {
-  label: string;
-  name: string;
-  type?: string;
-  value: string;
-  handleChange: (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
-  ) => void;
-  error?: string;
-}
-
-function FormField({
-  label,
-  name,
-  type = 'text',
-  value,
-  handleChange,
-  error,
-}: FormFieldProps) {
-  return (
-    <div>
-      <label className='text-sm'>{label}</label>
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={handleChange}
-        className={`mt-2 w-full px-4 py-3 rounded-xl bg-[#152E22] border ${
-          error ? 'border-red-500' : 'border-[#244a37]'
-        }`}
-        placeholder={`Nhập ${label.toLowerCase()}`}
-      />
-      {error && <p className='text-red-400 text-xs mt-1'>{error}</p>}
-    </div>
-  );
-}
-
-/* ========================
-   PASSWORD FIELD COMPONENT
-======================== */
-interface PasswordFieldProps {
-  label: string;
-  name: string;
-  value: string;
-  handleChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  error?: string;
-}
-
-function PasswordField({
-  label,
-  name,
-  value,
-  handleChange,
-  error,
-}: PasswordFieldProps) {
-  const [show, setShow] = useState(false);
-
-  return (
-    <div>
-      <label className='text-sm'>{label}</label>
-
-      <div className='relative'>
-        <input
-          type={show ? 'text' : 'password'}
-          name={name}
-          value={value}
-          onChange={handleChange}
-          className={`mt-2 w-full px-4 py-3 rounded-xl bg-[#152E22] border ${
-            error ? 'border-red-500' : 'border-[#244a37]'
-          }`}
-          placeholder={`Nhập ${label.toLowerCase()}`}
-        />
-        <span
-          className='material-icons absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-white'
-          onClick={() => setShow(!show)}
-        >
-          {show ? 'visibility' : 'visibility_off'}
-        </span>
-      </div>
-
-      {error && <p className='text-red-400 text-xs mt-1'>{error}</p>}
     </div>
   );
 }

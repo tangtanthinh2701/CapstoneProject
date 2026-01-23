@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -25,12 +25,12 @@ public class ProjectResponse {
 	private UUID managerId;
 	private Boolean isPublic;
 
-	private BigDecimal budget;
-	private BigDecimal targetConsumedCarbon;
-	private BigDecimal currentConsumedCarbon;
+	private BigDecimal totalBudget;
+	private BigDecimal targetCo2Kg;
+	private BigDecimal actualCo2Kg;
 
-	private LocalDateTime createdAt;
-	private LocalDateTime updatedAt;
+	private OffsetDateTime createdAt;
+	private OffsetDateTime updatedAt;
 
 	private List<ProjectPhaseResponse> phases;
 

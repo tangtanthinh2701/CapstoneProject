@@ -20,10 +20,11 @@ public interface ContractRenewalRepository extends JpaRepository<ContractRenewal
 	@Query("SELECT cr FROM ContractRenewal cr " +
 	       "LEFT JOIN FETCH cr.originalContract " +
 	       "WHERE cr.originalContract.id = :contractId " +
-	       "ORDER BY cr. renewalNumber DESC")
+	       "ORDER BY cr.renewalNumber DESC")
 	List<ContractRenewal> findByContractIdWithDetails(@Param("contractId") Integer contractId);
 
-	Page<ContractRenewal> findByStatus(RenewalStatus status, Pageable pageable);
+	@Query("SELECT cr FROM ContractRenewal cr WHERE cr.renewalStatus = :status")
+	Page<ContractRenewal> findByRenewalStatus(@Param("status") RenewalStatus status, Pageable pageable);
 
 	@Query("SELECT MAX(cr.renewalNumber) FROM ContractRenewal cr WHERE cr.originalContract.id = :contractId")
 	Optional<Integer> findMaxRenewalNumber(@Param("contractId") Integer contractId);
@@ -34,5 +35,9 @@ public interface ContractRenewalRepository extends JpaRepository<ContractRenewal
 	       "WHERE cr.id = :id")
 	Optional<ContractRenewal> findByIdWithDetails(@Param("id") Integer id);
 
-	Long countByOriginalContractIdAndStatus(Integer contractId, RenewalStatus status);
+	@Query("SELECT COUNT(cr) FROM ContractRenewal cr WHERE cr.originalContractId = :contractId AND cr.renewalStatus = :status")
+	Long countByOriginalContractIdAndRenewalStatus(@Param("contractId") Integer contractId, @Param("status") RenewalStatus status);
+
+	// Count by status (for Admin statistics)
+	long countByRenewalStatus(RenewalStatus status);
 }

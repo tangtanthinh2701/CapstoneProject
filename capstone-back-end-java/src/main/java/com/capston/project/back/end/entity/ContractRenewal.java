@@ -9,7 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java. util.UUID;
+import java.util.UUID;
 
 @Entity
 @Table(name = "contract_renewals")
@@ -23,44 +23,43 @@ public class ContractRenewal {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "original_contract_id", nullable = false)
-	@JsonIgnore
-	private Contract originalContract;
+	@Column(name = "original_contract_id", nullable = false)
+	private Integer originalContractId;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "new_contract_id")
-	private Contract newContract;
+	@JoinColumn(name = "original_contract_id", insertable = false, updatable = false)
+	@JsonIgnore
+	private Contract originalContract;
 
 	@Column(name = "renewal_number", nullable = false)
 	private Integer renewalNumber;
 
-	@Column(name = "renewal_term_years", nullable = false)
-	private Integer renewalTermYears;
-
-	@Column(name = "old_end_date", nullable = false)
-	private LocalDate oldEndDate;
-
+	// New terms
 	@Column(name = "new_start_date", nullable = false)
 	private LocalDate newStartDate;
 
 	@Column(name = "new_end_date", nullable = false)
 	private LocalDate newEndDate;
 
-	@Column(name = "renewal_amount", precision = 15, scale = 2)
-	private BigDecimal renewalAmount;
+	@Column(name = "renewal_fee", precision = 15, scale = 2)
+	private BigDecimal renewalFee;
 
+	@Column(name = "updated_terms", columnDefinition = "TEXT")
+	private String updatedTerms;
+
+	// Status
 	@Enumerated(EnumType.STRING)
-	@Column(name = "status", length = 50)
+	@Column(name = "renewal_status", length = 20)
 	@Builder.Default
-	private RenewalStatus status = RenewalStatus.PENDING;
+	private RenewalStatus renewalStatus = RenewalStatus.PENDING;
 
+	// Approval
 	@Column(name = "requested_by")
 	private UUID requestedBy;
 
-	@CreationTimestamp
 	@Column(name = "requested_at")
-	private OffsetDateTime requestedAt;
+	@Builder.Default
+	private OffsetDateTime requestedAt = OffsetDateTime.now();
 
 	@Column(name = "approved_by")
 	private UUID approvedBy;
@@ -74,9 +73,4 @@ public class ContractRenewal {
 	@CreationTimestamp
 	@Column(name = "created_at", updatable = false)
 	private OffsetDateTime createdAt;
-
-	// Helper
-	public Integer getOriginalContractId() {
-		return originalContract != null ?  originalContract.getId() : null;
-	}
 }

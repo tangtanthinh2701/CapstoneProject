@@ -47,8 +47,8 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
 
 	// Search theo tên hoặc mô tả
 	@Query("SELECT p FROM Project p WHERE " +
-	       "LOWER(p.name) LIKE LOWER(CONCAT('%', : keyword, '%')) OR " +
-	       "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+			"LOWER(p.name) LIKE LOWER(CONCAT('%', : keyword, '%')) OR " +
+			"LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
 	Page<Project> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 	@Query("SELECT p.id FROM Project p WHERE p.isPublic = true")
@@ -57,15 +57,15 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
 	// Cập nhật computed fields
 	@Modifying
 	@Query("UPDATE Project p SET " +
-	       "p.budget = :budget, " +
-	       "p.targetConsumedCarbon = :targetCarbon, " +
-	       "p.currentConsumedCarbon = :currentCarbon, " +
-	       "p.updatedAt = CURRENT_TIMESTAMP " +
-	       "WHERE p. id = :projectId")
+			"p.totalBudget = :budget, " +
+			"p.targetCo2Kg = :targetCarbon, " +
+			"p.actualCo2Kg = :currentCarbon, " +
+			"p.updatedAt = CURRENT_TIMESTAMP " +
+			"WHERE p. id = :projectId")
 	void updateComputedFields(@Param("projectId") Integer projectId,
-	                          @Param("budget") BigDecimal budget,
-	                          @Param("targetCarbon") BigDecimal targetCarbon,
-	                          @Param("currentCarbon") BigDecimal currentCarbon);
+			@Param("budget") BigDecimal budget,
+			@Param("targetCarbon") BigDecimal targetCarbon,
+			@Param("currentCarbon") BigDecimal currentCarbon);
 
 	// Lấy tất cả project IDs để batch update
 	@Query("SELECT p.id FROM Project p")
@@ -74,50 +74,51 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
 	@Query("SELECT COUNT(p) FROM Project p WHERE p.projectStatus = :status")
 	Long countByProjectStatus(@Param("status") ProjectStatus status);
 
-	@Query("SELECT COALESCE(SUM(p. targetConsumedCarbon), 0) FROM Project p")
-	BigDecimal sumTargetConsumedCarbon();
+	@Query("SELECT COALESCE(SUM(p. targetCo2Kg), 0) FROM Project p")
+	BigDecimal sumTargetCo2Kg();
 
-	@Query("SELECT p FROM Project p ORDER BY p.currentConsumedCarbon DESC LIMIT :limit")
+	@Query("SELECT p FROM Project p ORDER BY p.actualCo2Kg DESC LIMIT :limit")
 	List<Project> findTopProjectsByCo2(@Param("limit") int limit);
 
-//	@Query("SELECT p FROM Project p ORDER BY p.totalCo2Absorbed DESC")
-//	List<Project> findTopProjectsByCo2Ordered();
+	// @Query("SELECT p FROM Project p ORDER BY p.totalCo2Absorbed DESC")
+	// List<Project> findTopProjectsByCo2Ordered();
 
 	@Query("SELECT COUNT(p) FROM Project p WHERE p.projectStatus IN :statuses")
 	Long countByProjectStatusIn(@Param("statuses") List<ProjectStatus> statuses);
 
 	// ✅ Count active projects (not PLANNING, not COMPLETED)
 	@Query("SELECT COUNT(p) FROM Project p " +
-	       "WHERE p.projectStatus NOT IN ('PLANNING', 'COMPLETED')")
+			"WHERE p.projectStatus NOT IN ('PLANNING', 'COMPLETED')")
 	Long countActiveInProgressProjects();
 
 	// ==================== SUM QUERIES ====================
 
-//	@Query("SELECT COALESCE(SUM(p.targetCo2), 0) FROM Project p")
-//	Double getTotalTargetCo2();
-//
-//	@Query("SELECT COALESCE(SUM(p.totalCo2Absorbed), 0) FROM Project p")
-//	Double getTotalCo2Absorbed();
+	// @Query("SELECT COALESCE(SUM(p.targetCo2), 0) FROM Project p")
+	// Double getTotalTargetCo2();
+	//
+	// @Query("SELECT COALESCE(SUM(p.totalCo2Absorbed), 0) FROM Project p")
+	// Double getTotalCo2Absorbed();
 
 	// ==================== FIND QUERIES ====================
 
-//	@Query("SELECT p FROM Project p WHERE p.farm.id = :farmId")
-//	List<Project> findByFarmId(@Param("farmId") Integer farmId);
-//
-//	@Query("SELECT p FROM Project p WHERE p. projectStatus = :status")
-//	Page<Project> findByStatus(@Param("status") ProjectStatus status, Pageable pageable);
-//
-//	@Query("SELECT p FROM Project p " +
-//	       "WHERE LOWER(p.projectName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-//	       "OR LOWER(p.projectCode) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-//	List<Project> searchProjects(@Param("keyword") String keyword);
-//
-//	@Query("SELECT p FROM Project p " +
-//	       "LEFT JOIN FETCH p.farm " +
-//	       "WHERE p.id = :id")
-//	Optional<Project> findByIdWithFarm(@Param("id") Integer id);
-//
-//	// Derived query methods
-//	Optional<Project> findByProjectCode(String projectCode);
-//	List<Project> findByProjectStatus(ProjectStatus status);
+	// @Query("SELECT p FROM Project p WHERE p.farm.id = :farmId")
+	// List<Project> findByFarmId(@Param("farmId") Integer farmId);
+	//
+	// @Query("SELECT p FROM Project p WHERE p. projectStatus = :status")
+	// Page<Project> findByStatus(@Param("status") ProjectStatus status, Pageable
+	// pageable);
+	//
+	// @Query("SELECT p FROM Project p " +
+	// "WHERE LOWER(p.projectName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+	// "OR LOWER(p.projectCode) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+	// List<Project> searchProjects(@Param("keyword") String keyword);
+	//
+	// @Query("SELECT p FROM Project p " +
+	// "LEFT JOIN FETCH p.farm " +
+	// "WHERE p.id = :id")
+	// Optional<Project> findByIdWithFarm(@Param("id") Integer id);
+	//
+	// // Derived query methods
+	// Optional<Project> findByProjectCode(String projectCode);
+	// List<Project> findByProjectStatus(ProjectStatus status);
 }

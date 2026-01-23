@@ -26,6 +26,11 @@ public class AuthController {
     return ResponseEntity.ok(authService.register(request));
   }
 
+  @PostMapping("/register-admin")
+  public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody RegisterRequest request) {
+    return ResponseEntity.ok(authService.registerAdmin(request));
+  }
+
   @PostMapping("/login")
   public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
     return ResponseEntity.ok(authService.login(request));
@@ -43,8 +48,24 @@ public class AuthController {
     return ResponseEntity.ok("Password reset successful.");
   }
 
+  @PostMapping("/forgot-password")
+  public ResponseEntity<String> forgotPassword(@RequestBody java.util.Map<String, String> request) {
+    String email = request.get("email");
+    authService.forgotPassword(email);
+    return ResponseEntity.ok("OTP sent successfully to your email.");
+  }
+
+  @PostMapping("/verify-otp")
+  public ResponseEntity<String> verifyOtpAndResetPassword(@RequestBody java.util.Map<String, String> request) {
+    String email = request.get("email");
+    String otp = request.get("otp");
+    String newPassword = request.get("newPassword");
+    authService.verifyOtpAndResetPassword(email, otp, newPassword);
+    return ResponseEntity.ok("Password reset successful.");
+  }
+
   @PostMapping("/logout")
-  public ResponseEntity<String> logout(@RequestHeader("Authorization")  String authHeader) {
+  public ResponseEntity<String> logout(@RequestHeader("Authorization") String authHeader) {
     if (authHeader != null && authHeader.startsWith("Bearer ")) {
       String token = authHeader.substring(7);
       authService.logout(token);

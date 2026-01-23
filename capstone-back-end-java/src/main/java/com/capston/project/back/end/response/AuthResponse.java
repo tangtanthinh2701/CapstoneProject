@@ -1,5 +1,6 @@
 package com.capston.project.back.end.response;
 
+import com.capston.project.back.end.common.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,4 +18,5 @@ public class AuthResponse {
   private UUID userId;
   private String username;
   private String fullName;
+  private Role role;
 }

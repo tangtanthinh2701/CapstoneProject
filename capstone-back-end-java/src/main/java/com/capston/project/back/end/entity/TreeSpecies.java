@@ -28,8 +28,8 @@ public class TreeSpecies {
 	@Column(name = "scientific_name")
 	private String scientificName;
 
-	@Column(name = "carbon_absorption_rate", precision = 10, scale = 4, nullable = false)
-	private BigDecimal carbonAbsorptionRate;
+	@Column(name = "base_carbon_rate", precision = 10, scale = 4, nullable = false)
+	private BigDecimal baseCarbonRate; // Hệ số k_i (kg CO2/cây/năm)
 
 	@Column(name = "description", columnDefinition = "TEXT")
 	private String description;
@@ -48,35 +48,24 @@ public class TreeSpecies {
 	@Column(name = "deleted_at")
 	private OffsetDateTime deletedAt;
 
+	// Relationships
 	@OneToMany(mappedBy = "treeSpecies", fetch = FetchType.LAZY)
 	@Builder.Default
-	private List<TreesFarm> treesFarms = new ArrayList<>();
+	private List<TreeBatch> treeBatches = new ArrayList<>();
 
-	@OneToMany(mappedBy = "treeSpecies", fetch = FetchType.LAZY)
-	@Builder.Default
-	private List<OxiOwnership> ownerships = new ArrayList<>();
-
-//	public BigDecimal calculateCO2Absorption(int numberOfTrees, int years) {
-//		if (carbonAbsorptionRate == null) {
-//			return BigDecimal.ZERO;
-//		}
-//		return carbonAbsorptionRate.multiply(BigDecimal.valueOf(numberOfTrees))
-//		                           .multiply(BigDecimal.valueOf(years));
-//	}
-//
 	/**
 	 * Tính CO2 hấp thụ ước tính theo tuổi cây (năm)
 	 */
 	public BigDecimal calculateEstimatedCarbon(int ageInYears) {
-		return carbonAbsorptionRate.multiply(BigDecimal.valueOf(ageInYears));
+		return baseCarbonRate.multiply(BigDecimal.valueOf(ageInYears));
 	}
 
 	/**
 	 * Tính CO2 hấp thụ với environmental factor
 	 */
 	public BigDecimal calculateEstimatedCarbon(int ageInYears, BigDecimal environmentalFactor) {
-		return carbonAbsorptionRate
-				.multiply(BigDecimal. valueOf(ageInYears))
+		return baseCarbonRate
+				.multiply(BigDecimal.valueOf(ageInYears))
 				.multiply(environmentalFactor);
 	}
 }

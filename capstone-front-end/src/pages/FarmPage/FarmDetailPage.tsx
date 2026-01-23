@@ -1,53 +1,57 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
-import { useFarmDetailViewModel } from '../../viewmodels/useFarmViewModel';
-import AddTreeModal from '../../components/AddTreeModal';
-import { deleteFarm } from '../../models/farm.api';
+import { useAuth } from '../../contexts/AuthContext';
+import { farmApi, type Farm } from '../../models/farm.api';
 
-const statusBadgeClass = (status: string) => {
+const statusBadge = (status: string) => {
   switch (status) {
     case 'ACTIVE':
-      return 'bg-green-100 text-green-800 border border-green-300';
+      return 'bg-green-100 text-green-800';
     case 'INACTIVE':
-      return 'bg-gray-100 text-gray-800 border border-gray-300';
+      return 'bg-gray-100 text-gray-800';
     case 'MAINTENANCE':
-      return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
+      return 'bg-yellow-100 text-yellow-800';
     default:
       return 'bg-gray-200 text-gray-700';
   }
 };
 
-const healthBadgeClass = (status: string) => {
-  switch (status) {
-    case 'HEALTHY':
-      return 'bg-green-100 text-green-800';
-    case 'WEAK':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'SICK':
-      return 'bg-orange-100 text-orange-800';
-    case 'DYING':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
 export default function FarmDetailPage() {
   const navigate = useNavigate();
-  const { farm, trees, loading, error, addTree, reload } =
-    useFarmDetailViewModel();
+  const { id } = useParams();
+  const { isAdmin } = useAuth();
 
-  const [showAddTreeModal, setShowAddTreeModal] = useState(false);
+  const [farm, setFarm] = useState<Farm | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const response = await farmApi.getById(id);
+        const data = (response as any)?.data || response;
+        setFarm(data);
+      } catch (err: any) {
+        setError(err.message || 'Không tải được dữ liệu');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [id]);
 
   const handleDelete = async () => {
     if (!farm) return;
-    if (!window.confirm('Bạn có chắc chắn muốn xóa nông trại này? ')) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa nông trại này?')) return;
 
     try {
-      await deleteFarm(farm.id);
-      alert('Xóa thành công!');
+      await farmApi.delete(farm.id);
       navigate('/farms');
     } catch (err: any) {
       alert(err.message || 'Xóa thất bại');
@@ -56,28 +60,27 @@ export default function FarmDetailPage() {
 
   if (loading) {
     return (
-      <div className='flex bg-[#07150D] text-white min-h-screen items-center justify-center'>
-        <div className='text-center'>
-          <div className='inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mb-4'></div>
-          <p className='text-gray-400'>Đang tải dữ liệu...</p>
-        </div>
+      <div className="flex bg-[#07150D] text-white min-h-screen">
+        <Sidebar />
+        <main className="flex-1 p-8 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mb-4"></div>
+            <p className="text-gray-400">Đang tải...</p>
+          </div>
+        </main>
       </div>
     );
   }
 
   if (error || !farm) {
     return (
-      <div className='flex bg-[#07150D] text-white min-h-screen'>
+      <div className="flex bg-[#07150D] text-white min-h-screen">
         <Sidebar />
-        <main className='flex-1 p-8'>
-          <div className='bg-red-900/20 border border-red-500 text-red-200 px-6 py-4 rounded-xl'>
-            <h2 className='text-xl font-bold mb-2'>⚠️ Lỗi</h2>
+        <main className="flex-1 p-8">
+          <div className="bg-red-900/20 border border-red-500 text-red-200 px-6 py-4 rounded-xl">
             <p>{error || 'Không tìm thấy nông trại'}</p>
-            <button
-              onClick={() => navigate('/farms')}
-              className='mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg'
-            >
-              Quay lại danh sách
+            <button onClick={() => navigate('/farms')} className="mt-2 text-sm underline">
+              Quay lại
             </button>
           </div>
         </main>
@@ -86,10 +89,10 @@ export default function FarmDetailPage() {
   }
 
   return (
-    <div className='flex bg-[#07150D] text-white min-h-screen'>
+    <div className="flex bg-[#07150D] text-white min-h-screen">
       <Sidebar />
 
-      <main className='flex-1 p-8'>
+      <main className="flex-1 p-8">
         <Breadcrumbs
           items={[
             { label: 'Trang chủ', href: '/' },
@@ -99,266 +102,96 @@ export default function FarmDetailPage() {
         />
 
         {/* HEADER */}
-        <div className='flex justify-between items-start mb-6'>
+        <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className='text-3xl font-bold mb-2'>{farm.name}</h1>
-            <div className='flex items-center gap-3'>
-              <span className='text-gray-400 font-mono text-sm'>
-                {farm.code}
-              </span>
-              <span
-                className={`px-3 py-1 text-xs font-semibold rounded-full ${statusBadgeClass(
-                  farm.farmStatus,
-                )}`}
+            <p className="text-sm text-gray-400 font-mono mb-1">{farm.code}</p>
+            <h1 className="text-3xl font-bold mb-2">{farm.name}</h1>
+            <span className={`px-3 py-1 text-sm rounded-full ${statusBadge(farm.farmStatus)}`}>
+              {farm.farmStatus}
+            </span>
+          </div>
+
+          {isAdmin && (
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigate(`/farms/${farm.id}/edit`)}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center gap-2 transition"
               >
-                {farm.farmStatus}
-              </span>
-            </div>
-          </div>
-
-          <div className='flex gap-3'>
-            <button
-              onClick={() => navigate(`/farms/${farm.id}/edit`)}
-              className='px-4 py-2 bg-green-500 hover:bg-green-600 text-black rounded-lg font-semibold flex items-center gap-2'
-            >
-              <span className='material-icons text-lg'>edit</span>
-              Chỉnh sửa
-            </button>
-            <button
-              onClick={handleDelete}
-              className='px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold flex items-center gap-2'
-            >
-              <span className='material-icons text-lg'>delete</span>
-              Xóa
-            </button>
-          </div>
-        </div>
-
-        {/* DESCRIPTION */}
-        {farm.description && (
-          <p className='text-gray-300 mb-6 leading-relaxed'>
-            {farm.description}
-          </p>
-        )}
-
-        {/* STATS */}
-        <div className='grid grid-cols-1 md:grid-cols-4 gap-4 mb-6'>
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>Tổng diện tích</p>
-              <span className='material-icons text-green-500'>terrain</span>
-            </div>
-            <p className='text-2xl font-bold text-green-400'>
-              {farm.area.toLocaleString()} m²
-            </p>
-            <p className='text-xs text-gray-400 mt-1'>
-              SD: {farm.usableArea.toLocaleString()} m²
-            </p>
-          </div>
-
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>Tổng số cây</p>
-              <span className='material-icons text-blue-500'>park</span>
-            </div>
-            <p className='text-2xl font-bold text-blue-400'>
-              {farm.totalTrees.toLocaleString()}
-            </p>
-            <p className='text-xs text-gray-400 mt-1'>
-              Sống: {farm.aliveTrees} | Chết: {farm.deadTrees}
-            </p>
-          </div>
-
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>Số loài cây</p>
-              <span className='material-icons text-purple-500'>nature</span>
-            </div>
-            <p className='text-2xl font-bold text-purple-400'>
-              {farm.totalSpecies || trees.length}
-            </p>
-          </div>
-
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>CO₂ ước tính</p>
-              <span className='material-icons text-yellow-500'>eco</span>
-            </div>
-            <p className='text-2xl font-bold text-yellow-400'>
-              {farm.totalEstimatedCarbon?.toFixed(1) || 0} tấn
-            </p>
-          </div>
-        </div>
-
-        {/* INFO CARDS */}
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6'>
-          {/* LOCATION */}
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <h3 className='font-semibold text-lg mb-3 flex items-center gap-2'>
-              <span className='material-icons text-blue-500'>location_on</span>
-              Vị trí
-            </h3>
-            <p className='text-gray-300 text-sm mb-2'>{farm.location}</p>
-            <p className='text-xs text-gray-400'>
-              📍 {farm.latitude}, {farm.longitude}
-            </p>
-          </div>
-
-          {/* ENVIRONMENT */}
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <h3 className='font-semibold text-lg mb-3 flex items-center gap-2'>
-              <span className='material-icons text-green-500'>wb_sunny</span>
-              Môi trường
-            </h3>
-            <div className='space-y-2 text-sm'>
-              <div className='flex justify-between'>
-                <span className='text-gray-400'>Loại đất:</span>
-                <span className='text-gray-200'>{farm.soilType}</span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='text-gray-400'>Khí hậu:</span>
-                <span className='text-gray-200'>{farm.climateZone}</span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='text-gray-400'>Lượng mưa TB:</span>
-                <span className='text-gray-200'>{farm.avgRainfall} mm</span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='text-gray-400'>Nhiệt độ TB:</span>
-                <span className='text-gray-200'>{farm.avgTemperature}°C</span>
-              </div>
-            </div>
-          </div>
-
-          {/* METADATA */}
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <h3 className='font-semibold text-lg mb-3 flex items-center gap-2'>
-              <span className='material-icons text-yellow-500'>info</span>
-              Thông tin
-            </h3>
-            <div className='space-y-2 text-sm'>
-              <div className='flex justify-between'>
-                <span className='text-gray-400'>Ngày trồng:</span>
-                <span className='text-gray-200'>
-                  {new Date(farm.plantingDate).toLocaleDateString('vi-VN')}
-                </span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='text-gray-400'>Ngày tạo:</span>
-                <span className='text-gray-200'>
-                  {new Date(farm.createdAt).toLocaleDateString('vi-VN')}
-                </span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='text-gray-400'>Cập nhật:</span>
-                <span className='text-gray-200'>
-                  {new Date(farm.updatedAt).toLocaleDateString('vi-VN')}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* TREES IN FARM */}
-        <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-          <div className='flex justify-between items-center mb-4'>
-            <h3 className='font-semibold text-xl flex items-center gap-2'>
-              <span className='material-icons text-green-500'>forest</span>
-              Cây trong nông trại ({trees.length})
-            </h3>
-            <button
-              onClick={() => setShowAddTreeModal(true)}
-              className='px-4 py-2 bg-green-500 hover:bg-green-600 text-black rounded-lg font-semibold flex items-center gap-2'
-            >
-              <span className='material-icons text-lg'>add</span>
-              Thêm cây
-            </button>
-          </div>
-
-          {trees.length === 0 ? (
-            <div className='text-center py-12 text-gray-400'>
-              <span className='material-icons text-5xl mb-2 opacity-30'>
-                nature_people
-              </span>
-              <p>Chưa có cây nào trong nông trại này. </p>
-            </div>
-          ) : (
-            <div className='space-y-3'>
-              {trees.map((tree) => (
-                <div
-                  key={tree.id}
-                  className='p-4 bg-[#071811] rounded-lg border border-[#1E3A2B] hover:border-green-500/30 transition'
-                >
-                  <div className='flex justify-between items-start mb-2'>
-                    <div>
-                      <h4 className='font-semibold text-lg'>
-                        {tree.treeSpeciesName}
-                      </h4>
-                      <p className='text-sm text-gray-400 italic'>
-                        {tree.scientificName}
-                      </p>
-                    </div>
-                    <span
-                      className={`px-3 py-1 text-xs font-semibold rounded-full ${healthBadgeClass(
-                        tree.currentAvgHealthStatus,
-                      )}`}
-                    >
-                      {tree.currentAvgHealthStatus}
-                    </span>
-                  </div>
-
-                  <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
-                    <div>
-                      <p className='text-gray-400 text-xs mb-1'>Số lượng</p>
-                      <p className='font-semibold text-blue-400'>
-                        {tree.numberTrees.toLocaleString()}
-                      </p>
-                      <p className='text-xs text-gray-500'>
-                        Còn: {tree.availableTrees} | Bán: {tree.soldTrees}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className='text-gray-400 text-xs mb-1'>Tuổi</p>
-                      <p className='font-semibold'>
-                        {tree.ageInYears} năm {tree.ageInMonths} tháng
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className='text-gray-400 text-xs mb-1'>Chiều cao TB</p>
-                      <p className='font-semibold'>
-                        {tree.currentAvgHeight} cm
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className='text-gray-400 text-xs mb-1'>CO₂ ước tính</p>
-                      <p className='font-semibold text-green-400'>
-                        {tree.totalEstimatedCarbon.toFixed(1)} tấn
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                <span className="material-icons text-sm">edit</span>
+                Sửa
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center gap-2 transition"
+              >
+                <span className="material-icons text-sm">delete</span>
+                Xóa
+              </button>
             </div>
           )}
         </div>
-      </main>
 
-      {/* ADD TREE MODAL */}
-      {showAddTreeModal && (
-        <AddTreeModal
-          farmId={farm.id}
-          farmLatitude={farm.latitude}
-          farmLongitude={farm.longitude}
-          onClose={() => setShowAddTreeModal(false)}
-          onSuccess={() => {
-            setShowAddTreeModal(false);
-            reload();
-          }}
-        />
-      )}
+        {/* INFO CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {/* Location */}
+          <div className="bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <span className="material-icons text-blue-500">location_on</span>
+              Vị trí
+            </h3>
+            <p className="text-gray-300">{farm.location || 'Chưa có thông tin'}</p>
+            {farm.latitude && farm.longitude && (
+              <p className="text-sm text-gray-400 mt-2">
+                {farm.latitude}, {farm.longitude}
+              </p>
+            )}
+          </div>
+
+          {/* Area */}
+          <div className="bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <span className="material-icons text-green-500">terrain</span>
+              Diện tích
+            </h3>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Tổng:</span>
+                <span className="font-semibold">{farm.area?.toLocaleString()} m²</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Sử dụng:</span>
+                <span className="font-semibold">{farm.usableArea?.toLocaleString() || 0} m²</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Environment */}
+          <div className="bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <span className="material-icons text-yellow-500">eco</span>
+              Môi trường
+            </h3>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Loại đất:</span>
+                <span className="font-semibold">{farm.soilType || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Khí hậu:</span>
+                <span className="font-semibold">{farm.climateZone || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Description */}
+        {farm.description && (
+          <div className="bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]">
+            <h3 className="text-lg font-semibold mb-4">Mô tả</h3>
+            <p className="text-gray-300">{farm.description}</p>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

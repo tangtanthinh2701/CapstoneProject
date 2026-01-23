@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,7 +39,7 @@ public class ContractController {
 
 	@PostMapping
 	public ResponseEntity<ApiResponse<ContractResponse>> createContract(@Valid @RequestBody ContractRequest request) {
-		ContractResponse response = contractService. createContract(request);
+		ContractResponse response = contractService.createContract(request);
 		return ResponseEntity.status(HttpStatus.CREATED)
 		                     .body(ApiResponse.success("Contract created successfully", response));
 	}
@@ -56,12 +57,14 @@ public class ContractController {
 	}
 
 	@PutMapping("/{id}")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<ContractResponse>> updateContract(@PathVariable Integer id, @Valid @RequestBody ContractRequest request) {
 		ContractResponse response = contractService.updateContract(id, request);
 		return ResponseEntity.ok(ApiResponse.success("Contract updated successfully", response));
 	}
 
 	@DeleteMapping("/{id}")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<Void>> deleteContract(@PathVariable Integer id) {
 		contractService.deleteContract(id);
 		return ResponseEntity.ok(ApiResponse.success("Contract deleted successfully", null));
@@ -125,24 +128,28 @@ public class ContractController {
 	}
 
 	@PostMapping("/{id}/approve")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<ContractResponse>> approveContract(@PathVariable Integer id, @RequestBody ContractApprovalRequest request) {
 		ContractResponse response = contractService.approveContract(id, request);
 		return ResponseEntity.ok(ApiResponse.success("Contract approved successfully", response));
 	}
 
 	@PostMapping("/{id}/reject")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<ContractResponse>> rejectContract(@PathVariable Integer id, @RequestParam String reason) {
 		ContractResponse response = contractService.rejectContract(id, reason);
 		return ResponseEntity.ok(ApiResponse.success("Contract rejected", response));
 	}
 
 	@PostMapping("/{id}/activate")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<ContractResponse>> activateContract(@PathVariable Integer id) {
 		ContractResponse response = contractService. activateContract(id);
 		return ResponseEntity.ok(ApiResponse.success("Contract activated successfully", response));
 	}
 
 	@PostMapping("/{id}/terminate")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<ContractResponse>> terminateContract(@PathVariable Integer id, @Valid @RequestBody ContractTerminationRequest request) {
 		ContractResponse response = contractService.terminateContract(id, request);
 		return ResponseEntity.ok(ApiResponse.success("Contract terminated", response));
@@ -158,6 +165,7 @@ public class ContractController {
 	}
 
 	@PostMapping("/renewals/{renewalId}/approve")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<ContractRenewalResponse>> approveRenewal(@PathVariable Integer renewalId,
 	                                                                           @RequestBody ContractApprovalRequest request) {
 		ContractRenewalResponse response = contractService.approveRenewal(renewalId, request);
@@ -165,6 +173,7 @@ public class ContractController {
 	}
 
 	@PostMapping("/renewals/{renewalId}/reject")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<ContractRenewalResponse>> rejectRenewal(@PathVariable Integer renewalId,
 	                                                                          @RequestParam String reason) {
 		ContractRenewalResponse response = contractService.rejectRenewal(renewalId, reason);

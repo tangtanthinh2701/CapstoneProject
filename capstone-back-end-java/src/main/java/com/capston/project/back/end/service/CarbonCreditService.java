@@ -1,7 +1,6 @@
 package com.capston.project.back.end.service;
 
 import com.capston.project.back.end.common.CreditStatus;
-import com.capston.project.back.end.common.TransactionStatus;
 import com.capston.project.back.end.request.CarbonCreditRequest;
 import com.capston.project.back.end.request.CreditPurchaseRequest;
 import com.capston.project.back.end.request.CreditRetireRequest;
@@ -25,33 +24,26 @@ public interface CarbonCreditService {
 
 	// Carbon Credit List
 	Page<CarbonCreditResponse> getAllCredits(Pageable pageable);
+	Page<CarbonCreditResponse> getCreditsByProjectId(Integer projectId, Pageable pageable);
 	Page<CarbonCreditResponse> getCreditsByStatus(CreditStatus status, Pageable pageable);
-	List<CarbonCreditResponse> getCreditsByProjectId(Integer projectId);
-	List<CarbonCreditResponse> getAvailableCredits();
-	Page<CarbonCreditResponse> searchCredits(String keyword, Pageable pageable);
+	Page<CarbonCreditResponse> getAvailableCredits(Pageable pageable);
 
 	// Credit Workflow
-	CarbonCreditResponse verifyAndActivateCredit(Integer id, UUID verifiedBy);
-	CarbonCreditResponse cancelCredit(Integer id, String reason);
+	CarbonCreditResponse verifyAndActivateCredit(Integer creditId, UUID verifiedBy);
+	void allocateCreditsToOwners(Integer creditId, UUID allocatedBy);
 
 	// Credit Allocation
-	CreditAllocationResponse allocateCreditsToOwners(Integer creditId);
 	List<CreditAllocationResponse> getAllocationsByCreditId(Integer creditId);
 	List<CreditAllocationResponse> getAllocationsByOwnerId(UUID ownerId);
-	CreditAllocationResponse claimAllocation(Integer allocationId);
+	CreditAllocationResponse claimAllocation(Integer allocationId, UUID claimedBy);
 
-	// Credit Transaction (Purchase)
-	CreditTransactionResponse purchaseCredits(CreditPurchaseRequest request);
-	CreditTransactionResponse retireCredits(CreditRetireRequest request);
-	CreditTransactionResponse getTransactionById(Integer id);
+	// Credit Transaction
+	CreditTransactionResponse purchaseCredits(CreditPurchaseRequest request, UUID buyerId);
+	CreditTransactionResponse retireCredits(CreditRetireRequest request, UUID retiredBy);
 	List<CreditTransactionResponse> getTransactionsByCreditId(Integer creditId);
-	List<CreditTransactionResponse> getTransactionsByEnterpriseId(UUID enterpriseId);
-	Page<CreditTransactionResponse> getTransactionsByStatus(TransactionStatus status, Pageable pageable);
+	List<CreditTransactionResponse> getTransactionsByBuyerId(UUID buyerId);
 
 	// Statistics
 	CreditSummaryResponse getCreditSummary();
-	CreditSummaryResponse getCreditSummaryByProject(Integer projectId);
-
-	// Scheduled tasks
-	void checkAndUpdateExpiredCredits();
+	CreditSummaryResponse getCreditSummaryByProjectId(Integer projectId);
 }

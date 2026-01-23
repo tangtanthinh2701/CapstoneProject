@@ -43,7 +43,7 @@ org.springframework.boot.devtools.restart.classloader.RestartClassLoader@257d1d2
 	Managed classes names [
 		com.capston.project.back.end.common.BaseEntity
 		com.capston.project.back.end.entity.CarbonCredit
-		com.capston.project.back.end.entity.CarbonCreditAllocation
+		com.capston.project.back.end.entity.CreditAllocation
 		com.capston.project.back.end.entity.Contract
 		com.capston.project.back.end.entity.ContractRenewal
 		com.capston.project.back.end.entity.CreditTransaction
@@ -324,7 +324,7 @@ org.springframework.boot.devtools.restart.classloader.RestartClassLoader@257d1d2
 	String xmlpi( ... )
 	String xmlquery( ... )
 
-2025-12-26 02:13:41 [restartedMain] DEBUG o.h.b.i.b.BytecodeProviderImpl - HHH000513: Unable to create the ReflectionOptimizer for [com.capston.project.back.end.entity.CarbonCreditAllocation]: private accessor [allocatedCredits]
+2025-12-26 02:13:41 [restartedMain] DEBUG o.h.b.i.b.BytecodeProviderImpl - HHH000513: Unable to create the ReflectionOptimizer for [com.capston.project.back.end.entity.CreditAllocation]: private accessor [allocatedCredits]
 2025-12-26 02:13:41 [restartedMain] DEBUG o.h.b.i.b.BytecodeProviderImpl - HHH000513: Unable to create the ReflectionOptimizer for [com.capston.project.back.end.entity.ProjectPhase]: private accessor [actualCost]
 2025-12-26 02:13:41 [restartedMain] DEBUG o.h.b.i.b.BytecodeProviderImpl - HHH000513: Unable to create the ReflectionOptimizer for [com.capston.project.back.end.entity.Contract]: private accessor [approvedAt]
 2025-12-26 02:13:41 [restartedMain] DEBUG o.h.b.i.b.BytecodeProviderImpl - HHH000513: Unable to create the ReflectionOptimizer for [com.capston.project.back.end.entity.TreeSpecies]: private accessor [carbonAbsorptionRate]
@@ -1354,7 +1354,7 @@ org.springframework.boot.devtools.restart.classloader.RestartClassLoader@3269ec1
 	Managed classes names [
 		com.capston.project.back.end.common.BaseEntity
 		com.capston.project.back.end.entity.CarbonCredit
-		com.capston.project.back.end.entity.CarbonCreditAllocation
+		com.capston.project.back.end.entity.CreditAllocation
 		com.capston.project.back.end.entity.Contract
 		com.capston.project.back.end.entity.ContractRenewal
 		com.capston.project.back.end.entity.CreditTransaction
@@ -1635,7 +1635,7 @@ org.springframework.boot.devtools.restart.classloader.RestartClassLoader@3269ec1
 	String xmlpi( ... )
 	String xmlquery( ... )
 
-2025-12-26 02:15:19 [restartedMain] DEBUG o.h.b.i.b.BytecodeProviderImpl - HHH000513: Unable to create the ReflectionOptimizer for [com.capston.project.back.end.entity.CarbonCreditAllocation]: private accessor [allocatedCredits]
+2025-12-26 02:15:19 [restartedMain] DEBUG o.h.b.i.b.BytecodeProviderImpl - HHH000513: Unable to create the ReflectionOptimizer for [com.capston.project.back.end.entity.CreditAllocation]: private accessor [allocatedCredits]
 2025-12-26 02:15:19 [restartedMain] DEBUG o.h.b.i.b.BytecodeProviderImpl - HHH000513: Unable to create the ReflectionOptimizer for [com.capston.project.back.end.entity.ProjectPhase]: private accessor [actualCost]
 2025-12-26 02:15:19 [restartedMain] DEBUG o.h.b.i.b.BytecodeProviderImpl - HHH000513: Unable to create the ReflectionOptimizer for [com.capston.project.back.end.entity.Contract]: private accessor [approvedAt]
 2025-12-26 02:15:19 [restartedMain] DEBUG o.h.b.i.b.BytecodeProviderImpl - HHH000513: Unable to create the ReflectionOptimizer for [com.capston.project.back.end.entity.TreeSpecies]: private accessor [carbonAbsorptionRate]

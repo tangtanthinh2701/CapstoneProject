@@ -23,12 +23,12 @@ public interface TreeSpeciesRepository extends JpaRepository<TreeSpecies, Intege
 	@Query("SELECT ts FROM TreeSpecies ts WHERE ts.deletedAt IS NULL")
 	List<TreeSpecies> findAllActive();
 
-	@Query("SELECT ts FROM TreeSpecies ts WHERE ts. deletedAt IS NULL " +
+	@Query("SELECT ts FROM TreeSpecies ts WHERE ts.deletedAt IS NULL " +
 	       "AND (LOWER(ts.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-	       "OR LOWER(ts.scientificName) LIKE LOWER(CONCAT('%', : keyword, '%')))")
+	       "OR LOWER(ts.scientificName) LIKE LOWER(CONCAT('%', :keyword, '%')))")
 	Page<TreeSpecies> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 	@Query("SELECT ts FROM TreeSpecies ts WHERE ts.deletedAt IS NULL " +
-	       "ORDER BY ts.carbonAbsorptionRate DESC")
+	       "ORDER BY ts.baseCarbonRate DESC")
 	List<TreeSpecies> findTopByCarbonAbsorption(Pageable pageable);
 }

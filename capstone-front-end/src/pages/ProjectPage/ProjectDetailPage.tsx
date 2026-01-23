@@ -2,90 +2,39 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
-import {
-  getCarbonSummary,
-  type CarbonSummary,
-} from '../../models/treePurchase.api';
-import TreePurchaseModal from '../../components/TreePurchaseModal';
-import CarbonAllocationModal from '../../components/CarbonAllocationModal';
-import PurchaseListModal from '../../components/PurchaseListModal';
-
-// Types from previous implementation
-interface Phase {
-  id: number;
-  projectId: number;
-  phaseOrder: number;
-  phaseName: string;
-  description: string | null;
-  phaseStatus: string;
-  expectedStartDate: string;
-  expectedEndDate: string;
-  actualStartDate: string | null;
-  actualEndDate: string | null;
-  budget: number;
-  actualCost: number;
-  targetConsumedCarbon: number;
-  currentConsumedCarbon: number;
-  notes: string | null;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ProjectDetail {
-  id: number;
-  code: string;
-  name: string;
-  description: string | null;
-  projectStatus: string;
-  managerId: string;
-  isPublic: boolean;
-  budget: number;
-  targetConsumedCarbon: number;
-  currentConsumedCarbon: number;
-  createdAt: string;
-  updatedAt: string;
-  phases: Phase[];
-  totalPhases: number;
-  completedPhases: number;
-}
-
-interface ApiResponse {
-  success: boolean;
-  message: string;
-  data: ProjectDetail;
-  errors: any;
-  timestamp: string;
-  pageInfo: any;
-}
+import { projectApi, type Project, type ProjectPhase } from '../../models/project.api';
 
 const statusBadgeClass = (status: string) => {
   switch (status) {
-    case 'PLANNING':
-      return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
-    case 'PLANTING':
-      return 'bg-blue-100 text-blue-800 border border-blue-300';
-    case 'GROWING':
-      return 'bg-green-100 text-green-800 border border-green-300';
-    case 'MATURE':
-      return 'bg-red-100 text-red-800 border border-red-300';
-    case 'HARVESTING':
-      return 'bg-purple-100 text-purple-800 border border-purple-300';
-    case 'COMPLETED':
-      return 'bg-gray-100 text-gray-800 border border-gray-300';
-    default:
-      return 'bg-gray-200 text-gray-700';
+    case 'PLANNING': return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
+    case 'ACTIVE': return 'bg-green-100 text-green-800 border border-green-300';
+    case 'COMPLETED': return 'bg-gray-100 text-gray-800 border border-gray-300';
+    case 'CANCELLED': return 'bg-red-100 text-red-800 border border-red-300';
+    default: return 'bg-gray-200 text-gray-700';
   }
 };
 
-const formatCurrency = (value: number) => {
+const phaseStatusClass = (status: string) => {
+  switch (status) {
+    case 'PLANNING': return 'text-blue-400';
+    case 'PLANTING': return 'text-yellow-400';
+    case 'GROWING': return 'text-green-400';
+    case 'MATURE': return 'text-emerald-400';
+    case 'HARVESTING': return 'text-orange-400';
+    case 'COMPLETED': return 'text-gray-400';
+    default: return 'text-gray-400';
+  }
+};
+
+const formatCurrency = (value?: number) => {
+  if (value === undefined || value === null) return '0 ₫';
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
   }).format(value);
 };
 
-const formatDate = (dateString: string) => {
+const formatDate = (dateString?: string) => {
   if (!dateString) return '—';
   return new Date(dateString).toLocaleDateString('vi-VN');
 };
@@ -94,122 +43,31 @@ export default function ProjectDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [project, setProject] = useState<ProjectDetail | null>(null);
-  const [carbonSummaries, setCarbonSummaries] = useState<
-    Map<number, CarbonSummary>
-  >(new Map());
+  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'media'>(
-    'overview',
-  );
 
-  // Modal states
-  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [showAllocationModal, setShowAllocationModal] = useState(false);
-  const [showPurchaseListModal, setShowPurchaseListModal] = useState(false);
-  const [selectedPhaseId, setSelectedPhaseId] = useState<number | null>(null);
-
-  // Fetch project data
   useEffect(() => {
-    const loadProject = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-
-        const res = await fetch(`http://localhost:8088/api/projects/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!res.ok) {
-          if (res.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
-            return;
-          }
-          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        }
-
-        const json: ApiResponse = await res.json();
-
-        if (!json.success) {
-          throw new Error(json.message || 'Failed to load project');
-        }
-
-        setProject(json.data);
-
-        // Load carbon summaries for all phases
-        const summaries = new Map<number, CarbonSummary>();
-        for (const phase of json.data.phases) {
-          try {
-            const summary = await getCarbonSummary(phase.id);
-            summaries.set(phase.id, summary);
-          } catch (err) {
-            console.error(
-              `Failed to load carbon summary for phase ${phase.id}:`,
-              err,
-            );
-          }
-        }
-        setCarbonSummaries(summaries);
-      } catch (err: any) {
-        console.error('Error loading project:', err);
-        setError(err.message || 'Có lỗi xảy ra khi tải dữ liệu');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (id) {
-      loadProject();
+      loadProject(id);
     }
-  }, [id, navigate]);
+  }, [id]);
 
-  const reloadCarbonSummary = async (phaseId: number) => {
+  const loadProject = async (projectId: string) => {
     try {
-      const summary = await getCarbonSummary(phaseId);
-      setCarbonSummaries((prev) => new Map(prev).set(phaseId, summary));
-    } catch (err) {
-      console.error('Failed to reload carbon summary:', err);
-    }
-  };
-
-  const handleOpenPurchaseModal = (phaseId: number) => {
-    setSelectedPhaseId(phaseId);
-    setShowPurchaseModal(true);
-  };
-
-  const handleOpenPurchaseListModal = (phaseId: number) => {
-    setSelectedPhaseId(phaseId);
-    setShowPurchaseListModal(true);
-  };
-
-  const handleTransferSurplus = async (phaseId: number) => {
-    if (!window.confirm('Bạn có chắc muốn chuyển carbon dư vào quỹ?')) return;
-
-    try {
-      const userId = localStorage.getItem('userId') || '';
-      const { transferSurplusToReserve } = await import(
-        '../../models/treePurchase.api'
-      );
-      await transferSurplusToReserve(phaseId, userId);
-      alert('Chuyển carbon dư thành công!');
-      await reloadCarbonSummary(phaseId);
+      setLoading(true);
+      setError(null);
+      const res = await projectApi.getById(projectId);
+      // The API wrapper returns response.data directly via interceptor
+      setProject(res as unknown as Project);
     } catch (err: any) {
-      alert(err.message || 'Chuyển carbon dư thất bại');
+      console.error('Error loading project:', err);
+      setError('Không thể tải thông tin dự án.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className='flex bg-[#07150D] text-white min-h-screen items-center justify-center'>
@@ -221,18 +79,18 @@ export default function ProjectDetailPage() {
     );
   }
 
-  // Error state
   if (error || !project) {
     return (
       <div className='flex bg-[#07150D] text-white min-h-screen'>
         <Sidebar />
         <main className='flex-1 p-8'>
-          <div className='bg-red-900/20 border border-red-500 text-red-200 px-6 py-4 rounded-xl'>
-            <h2 className='text-xl font-bold mb-2'>⚠️ Lỗi</h2>
-            <p>{error || 'Không tìm thấy dự án hoặc đã bị xóa.'}</p>
+          <div className='bg-red-900/20 border border-red-500/50 p-6 rounded-2xl text-center max-w-2xl mx-auto'>
+            <span className='material-icons text-5xl text-red-500 mb-4'>error_outline</span>
+            <h2 className='text-2xl font-bold mb-2'>Lỗi</h2>
+            <p className='text-gray-400 mb-6'>{error || 'Không tìm thấy dự án'}</p>
             <button
               onClick={() => navigate('/projects')}
-              className='mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg'
+              className='px-6 py-2 bg-red-600 hover:bg-red-700 rounded-xl font-bold transition-all'
             >
               Quay lại danh sách
             </button>
@@ -242,344 +100,210 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const totalBudget = project.phases.reduce((sum, p) => sum + p.budget, 0);
-  const totalActualCost = project.phases.reduce(
-    (sum, p) => sum + p.actualCost,
-    0,
-  );
-  const progressPercent =
-    project.targetConsumedCarbon > 0
-      ? Math.round(
-          (project.currentConsumedCarbon / project.targetConsumedCarbon) * 100,
-        )
-      : 0;
+  const targetCo2 = project.targetCo2Kg || 0;
+  const actualCo2 = project.actualCo2Kg || 0;
+  const projectProgress = targetCo2 > 0 ? Math.round((actualCo2 / targetCo2) * 100) : 0;
 
   return (
     <div className='flex bg-[#07150D] text-white min-h-screen'>
       <Sidebar />
 
-      <main className='flex-1 p-8'>
+      <main className='flex-1 p-8 max-w-7xl mx-auto w-full'>
         <Breadcrumbs
           items={[
             { label: 'Trang chủ', href: '/' },
-            { label: 'Danh sách dự án', href: '/projects' },
+            { label: 'Dự án', href: '/projects' },
             { label: project.name },
           ]}
         />
 
-        {/* Header */}
-        <div className='flex flex-wrap justify-between items-center gap-4 mb-6'>
-          <div>
-            <h1 className='text-3xl font-bold mb-2'>{project.name}</h1>
-            <div className='flex items-center gap-3'>
-              <span className='text-gray-400 font-mono text-sm'>
-                {project.code}
-              </span>
-              <span
-                className={`px-3 py-1 text-xs font-semibold rounded-full ${statusBadgeClass(
-                  project.projectStatus,
-                )}`}
-              >
+        {/* Header Section */}
+        <div className='flex flex-wrap justify-between items-start gap-6 mb-8'>
+          <div className='flex-1'>
+            <div className='flex items-center gap-3 mb-2'>
+              <h1 className='text-4xl font-bold tracking-tight'>{project.name}</h1>
+              <span className={`px-4 py-1 rounded-full text-xs font-bold border ${statusBadgeClass(project.projectStatus)}`}>
                 {project.projectStatus}
               </span>
               {project.isPublic && (
-                <span className='px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full border border-blue-300'>
-                  Công khai
+                <span className='p-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full' title='Dự án công khai'>
+                  <span className='material-icons text-xs'>public</span>
                 </span>
               )}
             </div>
+            <p className='text-gray-500 font-mono text-sm tracking-widest uppercase'>MÃ DỰ ÁN: {project.code}</p>
           </div>
 
-          <div className='flex gap-3'>
+          <div className='flex gap-3 shrink-0'>
             <button
-              onClick={() => navigate(`/projects/${id}/edit`)}
-              className='px-4 py-2 bg-green-500 hover:bg-green-600 text-black rounded-lg font-semibold flex items-center gap-2 transition'
+              onClick={() => navigate(`/projects/${project.id}/edit`)}
+              className='px-6 py-3 bg-[#0E2219] border border-[#1E3A2B] hover:border-green-500/50 text-white font-bold rounded-xl flex items-center gap-2 transition-all'
             >
-              <span className='material-icons text-lg'>edit</span>
+              <span className='material-icons'>edit</span>
               Chỉnh sửa
             </button>
-            <button
-              onClick={() => setShowAllocationModal(true)}
-              className='px-4 py-2 text-yellow-400 bg-[#0E2219] border border-[#1E3A2B] hover:bg-[#13271F] rounded-lg flex items-center gap-2 transition'
-            >
-              <span className='material-icons text-lg'>swap_horiz</span>
-              Phân bổ Carbon
-            </button>
           </div>
         </div>
 
-        {/* Description */}
-        {project.description && (
-          <p className='text-gray-300 mb-6 leading-relaxed'>
-            {project.description}
-          </p>
-        )}
+        <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 
-        {/* Top Statistics */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6'>
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>Ngân sách dự án</p>
-              <span className='material-icons text-yellow-500'>
-                account_balance_wallet
-              </span>
+          {/* Left Column: Info & Description */}
+          <div className='lg:col-span-2 space-y-8'>
+
+            {/* Description Card */}
+            <div className='bg-[#0E2219] p-8 rounded-3xl border border-[#1E3A2B]'>
+              <h3 className='text-xl font-bold mb-4 flex items-center gap-2'>
+                <span className='material-icons text-green-500'>description</span>
+                Mô tả dự án
+              </h3>
+              <p className='text-gray-300 leading-relaxed text-lg'>
+                {project.description || 'Dự án này chưa có mô tả chi tiết.'}
+              </p>
             </div>
-            <p className='text-2xl font-bold text-yellow-400'>
-              {formatCurrency(project.budget)}
-            </p>
-          </div>
 
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>Mục tiêu CO₂</p>
-              <span className='material-icons text-green-500'>eco</span>
-            </div>
-            <p className='text-2xl font-bold text-green-400'>
-              {project.targetConsumedCarbon.toLocaleString()} tấn
-            </p>
-          </div>
+            {/* Phases Section */}
+            <div>
+              <div className='flex items-center justify-between mb-6'>
+                <h3 className='text-2xl font-bold flex items-center gap-3'>
+                  <span className='material-icons text-blue-400'>timeline</span>
+                  Giai Đoạn Triển Khai
+                </h3>
+                <span className='px-3 py-1 bg-[#0E2219] rounded-lg border border-[#1E3A2B] text-xs font-bold text-gray-400'>
+                  {project.phases?.length || 0} GIAI ĐOẠN
+                </span>
+              </div>
 
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>CO₂ đã hấp thụ</p>
-              <span className='material-icons text-blue-500'>
-                cloud_download
-              </span>
-            </div>
-            <p className='text-2xl font-bold text-blue-400'>
-              {project.currentConsumedCarbon.toLocaleString()} tấn
-            </p>
-          </div>
+              <div className='space-y-4'>
+                {project.phases && project.phases.length > 0 ? (
+                  project.phases.map((phase: ProjectPhase, idx: number) => (
+                    <div key={idx} className='group bg-[#0E2219] rounded-2xl border border-[#1E3A2B] hover:border-blue-500/30 transition-all overflow-hidden'>
+                      <div className='p-6 flex flex-col md:flex-row gap-6'>
+                        <div className='flex-1'>
+                          <div className='flex items-center gap-3 mb-2'>
+                            <span className='w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-sm border border-blue-500/30'>
+                              {phase.phaseNumber}
+                            </span>
+                            <h4 className='text-lg font-bold group-hover:text-blue-400 transition-colors'>{phase.phaseName}</h4>
+                            <span className={`text-xs font-bold uppercase tracking-widest ${phaseStatusClass(phase.phaseStatus)}`}>
+                              • {phase.phaseStatus}
+                            </span>
+                          </div>
+                          <p className='text-gray-400 text-sm mb-4 line-clamp-2'>{phase.description || 'Chưa có mô tả.'}</p>
 
-          <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-            <div className='flex items-center justify-between mb-2'>
-              <p className='text-gray-400 text-sm'>Giai đoạn hoàn thành</p>
-              <span className='material-icons text-purple-500'>
-                check_circle
-              </span>
-            </div>
-            <p className='text-2xl font-bold text-purple-400'>
-              {project.completedPhases} / {project.totalPhases}
-            </p>
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B] mb-6'>
-          <div className='flex justify-between items-center mb-2'>
-            <h3 className='font-semibold'>Tiến độ hấp thụ CO₂</h3>
-            <span className='text-green-400 font-bold'>{progressPercent}%</span>
-          </div>
-          <div className='w-full h-4 bg-gray-700 rounded-full overflow-hidden'>
-            <div
-              className='h-4 bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-500'
-              style={{ width: `${progressPercent}%` }}
-            ></div>
-          </div>
-          <p className='text-sm text-gray-400 mt-2'>
-            {project.currentConsumedCarbon.toLocaleString()} /{' '}
-            {project.targetConsumedCarbon.toLocaleString()} tấn CO₂
-          </p>
-        </div>
-
-        {/* Phases Section */}
-        <div className='bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]'>
-          <h3 className='font-semibold text-xl mb-4 flex items-center gap-2'>
-            <span className='material-icons text-green-500'>timeline</span>
-            Các giai đoạn triển khai ({project.phases.length})
-          </h3>
-
-          {project.phases.length === 0 ? (
-            <div className='text-gray-400 text-center py-8'>
-              <span className='material-icons text-5xl mb-2 opacity-30'>
-                event_busy
-              </span>
-              <p>Chưa có giai đoạn nào được thêm. </p>
-            </div>
-          ) : (
-            <div className='space-y-4'>
-              {project.phases.map((phase) => {
-                const summary = carbonSummaries.get(phase.id);
-
-                return (
-                  <div
-                    key={phase.id}
-                    className='p-5 bg-[#13271F] rounded-lg border border-[#1E3A2B] hover:border-green-500/30 transition'
-                  >
-                    {/* Phase Header */}
-                    <div className='flex justify-between items-start mb-3'>
-                      <div className='flex-1'>
-                        <div className='flex items-center gap-2 mb-1'>
-                          <span className='px-2 py-1 bg-green-500/20 text-green-400 text-xs font-bold rounded'>
-                            #{phase.phaseOrder}
-                          </span>
-                          <h4 className='font-bold text-lg'>
-                            {phase.phaseName}
-                          </h4>
-                        </div>
-                        {phase.description && (
-                          <p className='text-gray-300 text-sm'>
-                            {phase.description}
-                          </p>
-                        )}
-                      </div>
-                      <span
-                        className={`px-3 py-1 text-xs font-semibold rounded-full ${statusBadgeClass(
-                          phase.phaseStatus,
-                        )}`}
-                      >
-                        {phase.phaseStatus}
-                      </span>
-                    </div>
-
-                    {/* Carbon Summary Cards */}
-                    {summary && (
-                      <div className='grid grid-cols-2 md:grid-cols-4 gap-3 mb-3'>
-                        <div className='p-3 bg-[#0E2219] rounded-lg'>
-                          <p className='text-gray-400 text-xs mb-1'>Mục tiêu</p>
-                          <p className='font-semibold text-green-400'>
-                            {summary.targetCarbon.toLocaleString()} tấn
-                          </p>
-                        </div>
-
-                        <div className='p-3 bg-[#0E2219] rounded-lg'>
-                          <p className='text-gray-400 text-xs mb-1'>Đã mua</p>
-                          <p className='font-semibold text-blue-400'>
-                            {summary.purchasedCarbon.toLocaleString()} tấn
-                          </p>
-                        </div>
-
-                        <div className='p-3 bg-[#0E2219] rounded-lg'>
-                          <p className='text-gray-400 text-xs mb-1'>Từ quỹ</p>
-                          <p className='font-semibold text-purple-400'>
-                            {summary.allocatedFromReserve.toLocaleString()} tấn
-                          </p>
-                        </div>
-
-                        <div className='p-3 bg-[#0E2219] rounded-lg'>
-                          <p className='text-gray-400 text-xs mb-1'>
-                            {summary.carbonSurplus > 0 ? 'Thừa' : 'Thiếu'}
-                          </p>
-                          <p
-                            className={`font-semibold ${
-                              summary.carbonSurplus > 0
-                                ? 'text-yellow-400'
-                                : 'text-red-400'
-                            }`}
-                          >
-                            {Math.abs(
-                              summary.carbonSurplus || summary.carbonDeficit,
-                            ).toLocaleString()}{' '}
-                            tấn
-                          </p>
+                          <div className='grid grid-cols-2 lg:grid-cols-4 gap-4'>
+                            <div className='space-y-1'>
+                              <p className='text-[10px] text-gray-500 uppercase font-bold'>Bắt đầu</p>
+                              <p className='text-sm text-gray-200'>{formatDate(phase.plannedStartDate)}</p>
+                            </div>
+                            <div className='space-y-1'>
+                              <p className='text-[10px] text-gray-500 uppercase font-bold'>Kết thúc</p>
+                              <p className='text-sm text-gray-200'>{formatDate(phase.plannedEndDate)}</p>
+                            </div>
+                            <div className='space-y-1'>
+                              <p className='text-[10px] text-gray-500 uppercase font-bold'>Ngân sách</p>
+                              <p className='text-sm text-yellow-500 font-bold'>{formatCurrency(phase.budget)}</p>
+                            </div>
+                            <div className='space-y-1'>
+                              <p className='text-[10px] text-gray-500 uppercase font-bold'>Mục tiêu CO₂</p>
+                              <p className='text-sm text-green-500 font-bold'>{((phase.targetCo2Kg || 0) / 1000).toLocaleString()} Tấn</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    )}
 
-                    {/* Progress Bar */}
-                    {summary && (
-                      <div className='mb-3'>
-                        <div className='flex justify-between text-xs text-gray-400 mb-1'>
-                          <span>Tiến độ carbon</span>
-                          <span>
-                            {summary.completionPercentage.toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className='w-full h-2 bg-gray-700 rounded-full overflow-hidden'>
+                      {/* Phase Progress Bar */}
+                      {(phase.targetCo2Kg || 0) > 0 && (
+                        <div className='h-1 bg-[#071811] w-full'>
                           <div
-                            className='h-2 bg-green-500 rounded-full transition-all'
-                            style={{
-                              width: `${Math.min(summary.completionPercentage, 100)}%`,
-                            }}
+                            className='h-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'
+                            style={{ width: `${Math.min(((phase.actualCo2Kg || 0) / (phase.targetCo2Kg || 1)) * 100, 100)}%` }}
                           ></div>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className='flex flex-wrap gap-2'>
-                      <button
-                        onClick={() => handleOpenPurchaseModal(phase.id)}
-                        className='px-3 py-2 bg-green-500 hover:bg-green-600 text-black rounded-lg text-sm font-semibold flex items-center gap-1 transition'
-                      >
-                        <span className='material-icons text-sm'>
-                          add_shopping_cart
-                        </span>
-                        Mua cây
-                      </button>
-
-                      <button
-                        onClick={() => handleOpenPurchaseListModal(phase.id)}
-                        className='px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold flex items-center gap-1 transition'
-                      >
-                        <span className='material-icons text-sm'>
-                          receipt_long
-                        </span>
-                        Xem đơn ({summary?.purchases.length || 0})
-                      </button>
-
-                      {summary && summary.carbonSurplus > 0 && (
-                        <button
-                          onClick={() => handleTransferSurplus(phase.id)}
-                          className='px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg text-sm font-semibold flex items-center gap-1 transition'
-                        >
-                          <span className='material-icons text-sm'>
-                            savings
-                          </span>
-                          Chuyển vào quỹ
-                        </button>
                       )}
                     </div>
-
-                    {/* Notes */}
-                    {phase.notes && (
-                      <div className='mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg'>
-                        <p className='text-xs text-yellow-200 flex items-start gap-2'>
-                          <span className='material-icons text-sm'>note</span>
-                          {phase.notes}
-                        </p>
-                      </div>
-                    )}
+                  ))
+                ) : (
+                  <div className='p-12 bg-[#0E2219] rounded-3xl border border-[#1E3A2B] border-dashed text-center opacity-50'>
+                    <span className='material-icons text-5xl mb-2'>event_note</span>
+                    <p>Chưa có giai đoạn nào.</p>
                   </div>
-                );
-              })}
+                )}
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Right Column: Key Stats & Progress */}
+          <div className='space-y-8'>
+
+            {/* Progress Card */}
+            <div className='bg-[#0E2219] p-8 rounded-3xl border border-[#1E3A2B] text-center'>
+              <h3 className='text-sm font-bold text-gray-500 uppercase tracking-widest mb-6'>Tiến Độ Carbon</h3>
+
+              <div className='relative w-48 h-48 mx-auto mb-6'>
+                <svg className='w-full h-full transform -rotate-90'>
+                  <circle cx='96' cy='96' r='80' fill='none' stroke='#071811' strokeWidth='12' />
+                  <circle
+                    cx='96' cy='96' r='80'
+                    fill='none' stroke='#22c55e' strokeWidth='12'
+                    strokeDasharray={`${2 * Math.PI * 80}`}
+                    strokeDashoffset={`${2 * Math.PI * 80 * (1 - projectProgress / 100)}`}
+                    strokeLinecap='round'
+                    className='transition-all duration-1000'
+                  />
+                </svg>
+                <div className='absolute inset-0 flex flex-col items-center justify-center font-bold'>
+                  <span className='text-4xl'>{projectProgress}%</span>
+                  <span className='text-[10px] text-gray-500'>HOÀN THÀNH</span>
+                </div>
+              </div>
+
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='p-4 bg-[#071811] rounded-2xl border border-[#1E3A2B]'>
+                  <p className='text-[10px] text-gray-500 uppercase font-bold mb-1'>Đã Hấp Thụ</p>
+                  <p className='text-xl font-bold text-blue-400'>
+                    {(actualCo2 / 1000).toLocaleString()}
+                    <span className='text-xs font-normal ml-1 text-gray-500'>tấn</span>
+                  </p>
+                </div>
+                <div className='p-4 bg-[#071811] rounded-2xl border border-[#1E3A2B]'>
+                  <p className='text-[10px] text-gray-500 uppercase font-bold mb-1'>Mục Tiêu</p>
+                  <p className='text-xl font-bold text-green-400'>
+                    {(targetCo2 / 1000).toLocaleString()}
+                    <span className='text-xs font-normal ml-1 text-gray-500'>tấn</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Financial Overview */}
+            <div className='bg-[#0E2219] p-8 rounded-3xl border border-[#1E3A2B]'>
+              <h3 className='text-sm font-bold text-gray-500 uppercase tracking-widest mb-6 border-b border-[#1E3A2B] pb-4'>Ngân Sách</h3>
+
+              <div className='space-y-6'>
+                <div className='flex items-center gap-4'>
+                  <div className='w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20'>
+                    <span className='material-icons text-yellow-500'>payments</span>
+                  </div>
+                  <div className='flex-1'>
+                    <p className='text-xs text-gray-500 font-bold'>DỰ TOÁN</p>
+                    <p className='text-xl font-bold text-white'>{formatCurrency(project.totalBudget)}</p>
+                  </div>
+                </div>
+
+                <div className='flex items-center gap-4'>
+                  <div className='w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center border border-red-500/20'>
+                    <span className='material-icons text-red-500'>account_balance_wallet</span>
+                  </div>
+                  <div className='flex-1'>
+                    <p className='text-xs text-gray-500 font-bold'>ĐÃ CHI</p>
+                    <p className='text-xl font-bold text-white'>{formatCurrency(project.actualCost)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
-
-      {/* Modals */}
-      {showPurchaseModal && selectedPhaseId && (
-        <TreePurchaseModal
-          phaseId={selectedPhaseId}
-          onClose={() => setShowPurchaseModal(false)}
-          onSuccess={() => {
-            setShowPurchaseModal(false);
-            reloadCarbonSummary(selectedPhaseId);
-          }}
-        />
-      )}
-
-      {showAllocationModal && (
-        <CarbonAllocationModal
-          projectPhases={project.phases}
-          onClose={() => setShowAllocationModal(false)}
-          onSuccess={() => {
-            setShowAllocationModal(false);
-            // Reload all summaries
-            project.phases.forEach((p) => reloadCarbonSummary(p.id));
-          }}
-        />
-      )}
-
-      {showPurchaseListModal && selectedPhaseId && (
-        <PurchaseListModal
-          phaseId={selectedPhaseId}
-          projectManagerId={project?.managerId}
-          onClose={() => setShowPurchaseListModal(false)}
-          onUpdate={() => reloadCarbonSummary(selectedPhaseId)}
-        />
-      )}
     </div>
   );
 }

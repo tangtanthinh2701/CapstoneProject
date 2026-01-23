@@ -1,6 +1,5 @@
 package com.capston.project.back.end.request;
 
-import com.capston.project.back.end.common.ContractCategory;
 import com.capston.project.back.end.common.ContractType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -24,8 +23,6 @@ public class ContractRequest {
 
 	@NotNull(message = "Project ID is required")
 	private Integer projectId;
-
-	private ContractCategory contractCategory;
 
 	private ContractType contractType;
 
