@@ -2,6 +2,7 @@ package com.capston.project.back.end.controller;
 
 import com.capston.project.back.end.common.FarmStatus;
 import com.capston.project.back.end.entity.User;
+import com.capston.project.back.end.exception.ResourceNotFoundException;
 import com.capston.project.back.end.repository.UserRepository;
 import com.capston.project.back.end.request.FarmRequest;
 import com.capston.project.back.end.response.FarmResponse;
@@ -20,7 +21,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/farms")
@@ -30,22 +30,32 @@ public class FarmController {
 	private final UserRepository userRepository;
 
 	@PostMapping
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
 	public ResponseEntity<ApiResponse<FarmResponse>> createFarm(@Valid @RequestBody FarmRequest request,
-	                                                            Authentication authentication) {
+			Authentication authentication) {
 		String username = authentication.getName();
 		User user = userRepository.findByUsername(username)
-		                          .orElseThrow(() -> new RuntimeException("User not found"));
-		UUID managerId = user.getId();
-		FarmResponse response = farmService.createFarm(request, managerId);
+				.orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
+		FarmResponse response = farmService.createFarm(request, user.getId());
 		return ResponseEntity.status(HttpStatus.CREATED)
-		                     .body(ApiResponse.success("Farm created successfully", response));
+				.body(ApiResponse.success("Farm created successfully", response));
 	}
 
-	@GetMapping("/{id}")
-	public ResponseEntity<ApiResponse<FarmResponse>> getFarmById(@PathVariable Integer id) {
-		FarmResponse response = farmService.getFarmById(id);
-		return ResponseEntity.ok(ApiResponse.success(response));
+	@GetMapping("/my-farms")
+	@PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
+	public ResponseEntity<ApiResponse<List<FarmResponse>>> getMyFarms(@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size,
+			Authentication authentication) {
+		String username = authentication.getName();
+		User user = userRepository.findByUsername(username)
+				.orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
+
+		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+		Page<FarmResponse> farmPage = farmService.getMyFarms(user.getId(), pageable);
+
+		return ResponseEntity.ok(ApiResponse.success("My farms retrieved successfully",
+				farmPage.getContent(),
+				buildPageInfo(farmPage)));
 	}
 
 	@GetMapping("/code/{code}")
@@ -55,15 +65,15 @@ public class FarmController {
 	}
 
 	@PutMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
 	public ResponseEntity<ApiResponse<FarmResponse>> updateFarm(@PathVariable Integer id,
-	                                                            @Valid @RequestBody FarmRequest request) {
+			@Valid @RequestBody FarmRequest request) {
 		FarmResponse response = farmService.updateFarm(id, request);
 		return ResponseEntity.ok(ApiResponse.success("Farm updated successfully", response));
 	}
 
 	@DeleteMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
 	public ResponseEntity<ApiResponse<Void>> deleteFarm(@PathVariable Integer id) {
 		farmService.deleteFarm(id);
 		return ResponseEntity.ok(ApiResponse.success("Farm deleted successfully", null));
@@ -73,33 +83,33 @@ public class FarmController {
 
 	@GetMapping
 	public ResponseEntity<ApiResponse<List<FarmResponse>>> getAllFarms(@RequestParam(defaultValue = "0") int page,
-	                                                                   @RequestParam(defaultValue = "10") int size,
-	                                                                   @RequestParam(defaultValue = "createdAt") String sortBy,
-	                                                                   @RequestParam(defaultValue = "desc") String sortDir) {
+			@RequestParam(defaultValue = "10") int size,
+			@RequestParam(defaultValue = "createdAt") String sortBy,
+			@RequestParam(defaultValue = "desc") String sortDir) {
 
 		Sort sort = sortDir.equalsIgnoreCase("asc")
-		            ? Sort.by(sortBy).ascending()
-		            : Sort.by(sortBy).descending();
+				? Sort.by(sortBy).ascending()
+				: Sort.by(sortBy).descending();
 		Pageable pageable = PageRequest.of(page, size, sort);
 
 		Page<FarmResponse> farmPage = farmService.getAllFarms(pageable);
 
 		return ResponseEntity.ok(ApiResponse.success("Farms retrieved successfully",
-		                                             farmPage.getContent(),
-		                                             buildPageInfo(farmPage)));
+				farmPage.getContent(),
+				buildPageInfo(farmPage)));
 	}
 
 	@GetMapping("/status/{status}")
 	public ResponseEntity<ApiResponse<List<FarmResponse>>> getFarmsByStatus(@PathVariable FarmStatus status,
-	                                                                        @RequestParam(defaultValue = "0") int page,
-	                                                                        @RequestParam(defaultValue = "10") int size) {
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
 
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 		Page<FarmResponse> farmPage = farmService.getFarmsByStatus(status, pageable);
 
 		return ResponseEntity.ok(ApiResponse.success("Farms retrieved successfully",
-		                                             farmPage.getContent(),
-		                                             buildPageInfo(farmPage)));
+				farmPage.getContent(),
+				buildPageInfo(farmPage)));
 	}
 
 	@GetMapping("/search")
@@ -108,15 +118,20 @@ public class FarmController {
 		return ResponseEntity.ok(ApiResponse.success("Search completed", farms));
 	}
 
+	@GetMapping("/{id:[0-9]+}")
+	public ResponseEntity<ApiResponse<FarmResponse>> getFarmById(@PathVariable Integer id) {
+		FarmResponse response = farmService.getFarmById(id);
+		return ResponseEntity.ok(ApiResponse.success(response));
+	}
+
 	private ApiResponse.PageInfo buildPageInfo(Page<?> page) {
 		return ApiResponse.PageInfo.builder()
-		                           .page(page.getNumber())
-		                           .size(page.getSize())
-		                           .totalElements(page.getTotalElements())
-		                           .totalPages(page.getTotalPages())
-		                           .hasNext(page.hasNext())
-		                           .hasPrevious(page.hasPrevious())
-		                           .build();
+				.page(page.getNumber())
+				.size(page.getSize())
+				.totalElements(page.getTotalElements())
+				.totalPages(page.getTotalPages())
+				.hasNext(page.hasNext())
+				.hasPrevious(page.hasPrevious())
+				.build();
 	}
 }
-

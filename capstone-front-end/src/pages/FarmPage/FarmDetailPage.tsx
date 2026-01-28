@@ -11,7 +11,7 @@ const statusBadge = (status: string) => {
       return 'bg-green-100 text-green-800';
     case 'INACTIVE':
       return 'bg-gray-100 text-gray-800';
-    case 'MAINTENANCE':
+    case 'CLOSED':
       return 'bg-yellow-100 text-yellow-800';
     default:
       return 'bg-gray-200 text-gray-700';
@@ -21,7 +21,7 @@ const statusBadge = (status: string) => {
 export default function FarmDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin, hasRole } = useAuth();
 
   const [farm, setFarm] = useState<Farm | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,7 +111,7 @@ export default function FarmDetailPage() {
             </span>
           </div>
 
-          {isAdmin && (
+          {(isAdmin || (hasRole(['FARMER']) && farm.createdBy === user?.id)) && (
             <div className="flex gap-3">
               <button
                 onClick={() => navigate(`/farms/${farm.id}/edit`)}
@@ -178,7 +178,15 @@ export default function FarmDetailPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Khí hậu:</span>
-                <span className="font-semibold">{farm.climateZone || 'N/A'}</span>
+                <span className="font-semibold text-blue-400">{farm.climateZone || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Lượng mưa TB:</span>
+                <span className="font-semibold text-yellow-400">{farm.avgRainfall || 0} mm</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Nhiệt độ TB:</span>
+                <span className="font-semibold text-red-400">{farm.avgTemperature || 0} °C</span>
               </div>
             </div>
           </div>

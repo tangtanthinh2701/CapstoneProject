@@ -18,6 +18,17 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: YOUR_EMAIL@gmail.com
+    password: YOUR_APP_PASSWORD
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 jwt:
   expiration: 2592000 #30 days = 30 * 24 * 60 * 60
   expiration-refresh-token: 5184000 #60 days = 60 * 24 * 60 * 60
@@ -66,3 +77,32 @@ openai:
     4. Hướng dẫn sử dụng hệ thống
     Hãy trả lời ngắn gọn, chính xác và thân thiện bằng tiếng Việt.
 
+# ==========================================
+# EXTERNAL API CONFIGURATIONS (ALL FREE!)
+# ==========================================
+
+# Geocoding: OpenStreetMap Nominatim (FREE, no API key needed)
+# Rate limit: 1 request/second
+# Docs: https://nominatim.org/release-docs/latest/api/Overview/
+geocoding:
+  use-mock: true  # Set to false to use real OpenStreetMap API (FREE!)
+
+# Weather: Open-Meteo (FREE, no API key needed, no rate limits)
+# Perfect for educational projects!
+# Docs: https://open-meteo.com/en/docs
+weather:
+  use-mock: true  # Set to false to use real Open-Meteo API (FREE!)
+
+# Soil: SoilGrids REST API by ISRIC (FREE, no API key needed)
+# Docs: https://rest.isric.org/
+soil:
+  use-mock: true  # Set to false to use real SoilGrids API (FREE!)
+
+# ==========================================
+# NOTES:
+# ==========================================
+# ✅ OpenStreetMap Nominatim: FREE - Just respect 1 req/sec limit
+# ✅ Open-Meteo: FREE - No limits for non-commercial use
+# ✅ SoilGrids: FREE - No API key needed
+# ❌ Google Maps: PAID (removed)
+# ❌ OpenWeatherMap: PAID for historical data (removed)

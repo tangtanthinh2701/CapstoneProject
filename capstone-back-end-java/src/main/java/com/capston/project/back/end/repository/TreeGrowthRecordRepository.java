@@ -1,5 +1,6 @@
 package com.capston.project.back.end.repository;
 
+import com.capston.project.back.end.common.HealthStatus;
 import com.capston.project.back.end.entity.TreeGrowthRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -54,5 +55,5 @@ public interface TreeGrowthRecordRepository extends JpaRepository<TreeGrowthReco
        List<TreeGrowthRecord> findUnhealthyRecords();
 
        // Find records by health status
-       List<TreeGrowthRecord> findByHealthStatus(String healthStatus);
+       List<TreeGrowthRecord> findByHealthStatus(HealthStatus healthStatus);
 }

@@ -24,8 +24,6 @@ public class ProjectRequest {
 
 	private UUID managerId;
 
-	private Boolean isPublic;
-
 	@Valid
 	private List<ProjectPhaseRequest> phases;
 }

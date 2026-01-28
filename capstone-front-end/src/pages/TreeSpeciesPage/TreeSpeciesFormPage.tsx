@@ -170,7 +170,7 @@ export default function TreeSpeciesFormPage() {
               </label>
               <input
                 className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Cây Đước"
+                placeholder="Nhập tên cây"
                 value={form.name}
                 onChange={(e) => updateField('name', e.target.value)}
               />
@@ -180,7 +180,7 @@ export default function TreeSpeciesFormPage() {
               <label className="block text-sm mb-2 text-gray-300">Tên khoa học</label>
               <input
                 className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Rhizophora apiculata"
+                placeholder="Nhập tên khoa học"
                 value={form.scientificName}
                 onChange={(e) => updateField('scientificName', e.target.value)}
               />
@@ -191,12 +191,14 @@ export default function TreeSpeciesFormPage() {
                 Tỷ lệ hấp thụ CO₂ cơ bản (kg/năm)
               </label>
               <input
-                type="number"
-                step="0.1"
+                type="text"
                 className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="25"
                 value={form.baseCarbonRate}
-                onChange={(e) => updateField('baseCarbonRate', parseFloat(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, '');
+                  updateField('baseCarbonRate', val === '' ? '' : parseFloat(val));
+                }}
               />
             </div>
 

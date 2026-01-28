@@ -23,6 +23,8 @@ public class CarbonCreditResponse {
 	private String projectName;
 	private String projectCode;
 
+	private List<TreeOriginResponse> origins;
+
 	// Credit details
 	private Integer issuanceYear;
 	private BigDecimal totalCo2Tons;
@@ -54,4 +56,16 @@ public class CarbonCreditResponse {
 	private List<CreditAllocationResponse> allocations;
 	private Integer totalTransactions;
 	private BigDecimal totalRevenue;
+
+	@Data
+	@Builder
+	@NoArgsConstructor
+	@AllArgsConstructor
+	public static class TreeOriginResponse {
+		private Integer farmId;
+		private String farmName;
+		private Integer batchId;
+		private String batchCode;
+		private Integer quantity;
+	}
 }

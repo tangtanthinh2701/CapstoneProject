@@ -11,6 +11,11 @@ node_modules
 dist
 dist-ssr
 *.local
+.codex
+.cursor
+.gemini
+.agent/skills
+.agents/skills
 
 # Editor directories and files
 .vscode/*

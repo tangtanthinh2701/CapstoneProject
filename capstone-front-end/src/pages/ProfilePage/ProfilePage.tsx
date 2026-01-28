@@ -221,7 +221,7 @@ export default function ProfilePage() {
                             <label className="block text-sm mb-2 text-gray-300">Địa chỉ</label>
                             <input
                                 className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                                placeholder="123 Đường ABC, Quận 1, TP.HCM"
+                                placeholder="Nhập địa chỉ"
                                 value={form.address}
                                 onChange={(e) => setForm({ ...form, address: e.target.value })}
                             />

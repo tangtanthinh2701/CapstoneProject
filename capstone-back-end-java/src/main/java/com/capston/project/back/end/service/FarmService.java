@@ -26,4 +26,6 @@ public interface FarmService {
 	Page<FarmResponse> getFarmsByStatus(FarmStatus status, Pageable pageable);
 
 	List<FarmResponse> searchFarms(String keyword);
+
+	Page<FarmResponse> getMyFarms(UUID userId, Pageable pageable);
 }

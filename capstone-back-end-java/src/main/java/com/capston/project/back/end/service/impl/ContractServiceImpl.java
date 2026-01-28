@@ -55,6 +55,13 @@ public class ContractServiceImpl implements ContractService {
         Project project = projectRepository.findById(request.getProjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
+        // Logic: Prevent contract creation if project has reached its CO2 target
+        if (project.getActualCo2Kg() != null && project.getTargetCo2Kg() != null
+                && project.getActualCo2Kg().compareTo(project.getTargetCo2Kg()) >= 0) {
+            throw new IllegalStateException(
+                    "Contracts cannot be created for this project as it has reached or exceeded its CO2 target sequestration.");
+        }
+
         // Generate contract code
         String contractCode = generateContractCode();
 
@@ -62,8 +69,8 @@ public class ContractServiceImpl implements ContractService {
                 .contractCode(contractCode)
                 .projectId(request.getProjectId())
                 .contractType(request.getContractType() != null
-                              ? request.getContractType()
-                              : null)
+                        ? request.getContractType()
+                        : null)
                 .totalValue(request.getTotalAmount())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
@@ -153,6 +160,12 @@ public class ContractServiceImpl implements ContractService {
         return contractRepository.searchByKeyword(keyword, pageable).map(this::mapToResponse);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ContractResponse> getMyContracts(java.util.UUID userId, Pageable pageable) {
+        return contractRepository.findByPartyAIdOrPartyBId(userId, userId, pageable).map(this::mapToResponse);
+    }
+
     // ==================== CONTRACT WORKFLOW ====================
 
     @Override
@@ -175,8 +188,7 @@ public class ContractServiceImpl implements ContractService {
                 String.format("Hợp đồng %s đã được gửi lên chờ phê duyệt", contract.getContractCode()),
                 NotificationType.CONTRACT_SUBMITTED,
                 ReferenceType.CONTRACT,
-                contract.getId()
-        );
+                contract.getId());
 
         // Send real-time WebSocket notification to admins
         approvalWebSocketService.notifyContractPendingApproval(contract.getId(), contract.getContractCode());
@@ -214,8 +226,7 @@ public class ContractServiceImpl implements ContractService {
                     NotificationType.CONTRACT_APPROVED,
                     ReferenceType.CONTRACT,
                     contract.getId(),
-                    metadata
-            );
+                    metadata);
         }
 
         if (contract.getPartyBId() != null) {
@@ -226,15 +237,16 @@ public class ContractServiceImpl implements ContractService {
                     NotificationType.CONTRACT_APPROVED,
                     ReferenceType.CONTRACT,
                     contract.getId(),
-                    metadata
-            );
+                    metadata);
             // Send real-time WebSocket notification
-            approvalWebSocketService.notifyContractApproved(contract.getPartyBId(), contract.getId(), contract.getContractCode());
+            approvalWebSocketService.notifyContractApproved(contract.getPartyBId(), contract.getId(),
+                    contract.getContractCode());
         }
 
         // Also notify partyA via WebSocket if exists
         if (contract.getPartyAId() != null) {
-            approvalWebSocketService.notifyContractApproved(contract.getPartyAId(), contract.getId(), contract.getContractCode());
+            approvalWebSocketService.notifyContractApproved(contract.getPartyAId(), contract.getId(),
+                    contract.getContractCode());
         }
 
         return mapToResponse(saved);
@@ -271,14 +283,15 @@ public class ContractServiceImpl implements ContractService {
                     NotificationType.CONTRACT_REJECTED,
                     ReferenceType.CONTRACT,
                     contract.getId(),
-                    metadata
-            );
+                    metadata);
             // Send real-time WebSocket notification
-            approvalWebSocketService.notifyContractRejected(contract.getPartyAId(), contract.getId(), contract.getContractCode(), reason);
+            approvalWebSocketService.notifyContractRejected(contract.getPartyAId(), contract.getId(),
+                    contract.getContractCode(), reason);
         }
 
         if (contract.getPartyBId() != null) {
-            approvalWebSocketService.notifyContractRejected(contract.getPartyBId(), contract.getId(), contract.getContractCode(), reason);
+            approvalWebSocketService.notifyContractRejected(contract.getPartyBId(), contract.getId(),
+                    contract.getContractCode(), reason);
         }
 
         return mapToResponse(saved);
@@ -317,12 +330,12 @@ public class ContractServiceImpl implements ContractService {
             notificationService.createAndSend(
                     contract.getPartyAId(),
                     "Hợp đồng đã chấm dứt",
-                    String.format("Hợp đồng %s đã bị chấm dứt. Lý do: %s", contract.getContractCode(), request.getTerminationReason()),
+                    String.format("Hợp đồng %s đã bị chấm dứt. Lý do: %s", contract.getContractCode(),
+                            request.getTerminationReason()),
                     NotificationType.SYSTEM,
                     ReferenceType.CONTRACT,
                     contract.getId(),
-                    null
-            );
+                    null);
         }
 
         return mapToResponse(saved);
@@ -367,8 +380,7 @@ public class ContractServiceImpl implements ContractService {
                 String.format("Hợp đồng %s có yêu cầu gia hạn lần %d", contract.getContractCode(), renewalNumber),
                 NotificationType.RENEWAL_REQUESTED,
                 ReferenceType.CONTRACT,
-                contract.getId()
-        );
+                contract.getId());
 
         return mapToRenewalResponse(saved, contract);
     }
@@ -406,8 +418,7 @@ public class ContractServiceImpl implements ContractService {
                     NotificationType.RENEWAL_APPROVED,
                     ReferenceType.CONTRACT,
                     contract.getId(),
-                    null
-            );
+                    null);
         }
 
         return mapToRenewalResponse(saved, contract);
@@ -442,8 +453,7 @@ public class ContractServiceImpl implements ContractService {
                     NotificationType.SYSTEM,
                     ReferenceType.CONTRACT,
                     contract.getId(),
-                    null
-            );
+                    null);
         }
 
         return mapToRenewalResponse(saved, contract);
@@ -525,8 +535,7 @@ public class ContractServiceImpl implements ContractService {
                         NotificationType.SYSTEM,
                         ReferenceType.CONTRACT,
                         contract.getId(),
-                        null
-                );
+                        null);
             }
         }
 
@@ -610,7 +619,7 @@ public class ContractServiceImpl implements ContractService {
         // Set project info if available
         if (contract.getProject() != null) {
             builder.projectName(contract.getProject().getName())
-                   .projectCode(contract.getProject().getCode());
+                    .projectCode(contract.getProject().getCode());
         }
 
         // Calculate days until expiry
@@ -641,4 +650,3 @@ public class ContractServiceImpl implements ContractService {
                 .build();
     }
 }
-

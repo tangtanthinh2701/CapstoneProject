@@ -21,9 +21,9 @@ public class TreeSpeciesRequest {
 	@Size(max = 255, message = "Scientific name must not exceed 255 characters")
 	private String scientificName;
 
-	@NotNull(message = "Carbon absorption rate is required")
-	@DecimalMin(value = "0.0001", message = "Carbon absorption rate must be positive")
-	private BigDecimal carbonAbsorptionRate;
+	@NotNull(message = "Base carbon rate is required")
+	@DecimalMin(value = "0.0001", message = "Base carbon rate must be positive")
+	private BigDecimal baseCarbonRate;
 
 	private String description;
 

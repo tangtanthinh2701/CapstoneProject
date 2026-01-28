@@ -35,7 +35,7 @@ public class TreeGrowthRecordController {
     // ==================== CRUD ====================
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
     public ResponseEntity<ApiResponse<TreeGrowthRecord>> createGrowthRecord(
             @Valid @RequestBody TreeGrowthRecordRequest request) {
         TreeGrowthRecord record = growthRecordService.createGrowthRecord(request);
@@ -50,7 +50,7 @@ public class TreeGrowthRecordController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
     public ResponseEntity<ApiResponse<TreeGrowthRecord>> updateGrowthRecord(
             @PathVariable Integer id,
             @Valid @RequestBody TreeGrowthRecordRequest request) {
@@ -59,7 +59,7 @@ public class TreeGrowthRecordController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
     public ResponseEntity<ApiResponse<Void>> deleteGrowthRecord(@PathVariable Integer id) {
         growthRecordService.deleteGrowthRecord(id);
         return ResponseEntity.ok(ApiResponse.success("Growth record deleted successfully", null));
@@ -78,8 +78,7 @@ public class TreeGrowthRecordController {
         return ResponseEntity.ok(ApiResponse.success(
                 "Growth records retrieved successfully",
                 recordPage.getContent(),
-                buildPageInfo(recordPage)
-        ));
+                buildPageInfo(recordPage)));
     }
 
     @GetMapping("/batch/{batchId}")
@@ -99,7 +98,7 @@ public class TreeGrowthRecordController {
     // ==================== CO2 CALCULATION ====================
 
     @PostMapping("/{id}/calculate-co2")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
     public ResponseEntity<ApiResponse<TreeGrowthRecord>> calculateCO2(
             @PathVariable Integer id) {
         TreeGrowthRecord record = growthRecordService.calculateAndUpdateCO2(id);
@@ -123,7 +122,7 @@ public class TreeGrowthRecordController {
     // ==================== HEALTH STATUS ====================
 
     @GetMapping("/unhealthy")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
     public ResponseEntity<ApiResponse<List<TreeGrowthRecord>>> getUnhealthyBatches() {
         List<TreeGrowthRecord> records = growthRecordService.getUnhealthyRecords();
         return ResponseEntity.ok(ApiResponse.success("Unhealthy batches retrieved", records));
@@ -142,4 +141,3 @@ public class TreeGrowthRecordController {
                 .build();
     }
 }
-

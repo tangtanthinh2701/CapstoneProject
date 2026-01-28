@@ -4,8 +4,8 @@ import com.capston.project.back.end.common.TransactionStatus;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time. OffsetDateTime;
-import java. util.UUID;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -21,6 +21,8 @@ public class CreditTransactionResponse {
 	private String creditCode;
 	private Integer projectId;
 	private String projectName;
+
+	private java.util.List<CarbonCreditResponse.TreeOriginResponse> origins;
 
 	// Transaction details
 	private UUID enterpriseId;

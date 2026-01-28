@@ -3,16 +3,16 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function Sidebar() {
   const location = useLocation();
-  const { user, isAdmin, logout } = useAuth();
+  const { user, logout } = useAuth();
 
   // Menu items với phân quyền
   const allMenuItems = [
-    { label: 'Tổng quan', path: '/dashboard', icon: 'dashboard', roles: ['ADMIN', 'USER'] },
+    { label: 'Tổng quan', path: '/dashboard', icon: 'dashboard', roles: ['ADMIN', 'FARMER', 'USER'] },
     { label: 'Dự án', path: '/projects', icon: 'inventory_2', roles: ['ADMIN', 'USER'] },
-    { label: 'Vườn ươm', path: '/farms', icon: 'local_florist', roles: ['ADMIN', 'USER'] },
-    { label: 'Lô cây', path: '/tree-batches', icon: 'forest', roles: ['ADMIN', 'USER'] },
-    { label: 'Loại cây', path: '/tree-species', icon: 'compost', roles: ['ADMIN', 'USER'] },
-    { label: 'Hợp đồng', path: '/contracts', icon: 'description', roles: ['ADMIN', 'USER'] },
+    { label: 'Vườn ươm', path: '/farms', icon: 'local_florist', roles: ['ADMIN', 'FARMER'] },
+    { label: 'Lô cây', path: '/tree-batches', icon: 'forest', roles: ['ADMIN', 'FARMER'] },
+    { label: 'Loại cây', path: '/tree-species', icon: 'compost', roles: ['ADMIN', 'FARMER'] },
+    { label: 'Hợp đồng', path: '/contracts', icon: 'description', roles: ['ADMIN', 'FARMER', 'USER'] },
     { label: 'Phê duyệt HĐ', path: '/contracts/workflow', icon: 'assignment', roles: ['ADMIN'] },
     { label: 'Tín chỉ Carbon', path: '/credits', icon: 'co2', roles: ['ADMIN', 'USER'] },
     { label: 'Quản lý Users', path: '/users', icon: 'people', roles: ['ADMIN'] },
@@ -38,7 +38,7 @@ export default function Sidebar() {
         <div>
           <p className="font-semibold text-white">{user?.fullName ?? 'Chưa đăng nhập'}</p>
           <p className="text-gray-400 text-sm">
-            {isAdmin ? 'Quản trị viên' : 'Người dùng'}
+            {user?.role === 'ADMIN' ? 'Quản trị viên' : user?.role === 'FARMER' ? 'Chủ nông trại' : 'Người dùng'}
           </p>
         </div>
       </div>

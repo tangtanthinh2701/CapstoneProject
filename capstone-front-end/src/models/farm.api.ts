@@ -4,18 +4,22 @@ export interface Farm {
   id: number;
   code: string;
   name: string;
-  description?: string;
-  location?: string;
-  latitude?: number;
-  longitude?: number;
+  description: string;
+  location: string;
+  latitude: number;
+  longitude: number;
   area: number;
-  usableArea?: number;
-  soilType?: string;
-  climateZone?: string;
-  avgRainfall?: number;
-  avgTemperature?: number;
-  plantingDate?: string;
-  farmStatus: 'ACTIVE' | 'INACTIVE' | 'CLOSED' | 'MAINTENANCE';
+  usableArea: number;
+  soilType: string;
+  climateZone: string;
+  avgRainfall: number;
+  avgTemperature: number;
+  farmStatus: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+  totalBatches?: number;
+  totalTrees?: number;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AddTreeToFarmPayload {
@@ -25,11 +29,18 @@ export interface AddTreeToFarmPayload {
   latitude: number;
   longitude: number;
   plantingDate: string;
+  currentAvgHeight?: number;
+  currentAvgTrunkDiameter?: number;
+  currentAvgCanopyDiameter?: number;
 }
 
 export const farmApi = {
   getAll: (params?: any) => api.get('/farms', { params }),
+  getMyFarms: (params?: any) => api.get('/farms/my-farms', { params }),
   getById: (id: number | string) => api.get<Farm>(`/farms/${id}`),
+  getByCode: (code: string) => api.get(`/farms/code/${code}`),
+  getByStatus: (status: string, params?: any) => api.get(`/farms/status/${status}`, { params }),
+  search: (keyword: string, params?: any) => api.get(`/farms/search`, { params: { ...params, keyword } }),
   create: (data: any) => api.post('/farms', data),
   update: (id: number | string, data: any) => api.put(`/farms/${id}`, data),
   delete: (id: number | string) => api.delete(`/farms/${id}`),

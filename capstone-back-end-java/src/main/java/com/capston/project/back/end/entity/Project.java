@@ -1,6 +1,7 @@
 package com.capston.project.back.end.entity;
 
 import com.capston.project.back.end.common.ProjectStatus;
+import com.capston.project.back.end.common.PhaseStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -54,10 +55,6 @@ public class Project {
 
 	@Column(name = "manager_id")
 	private UUID managerId;
-
-	@Column(name = "is_public")
-	@Builder.Default
-	private Boolean isPublic = true;
 
 	// Các trường được tính toán tự động
 	@Column(name = "total_budget", precision = 15, scale = 2)
@@ -135,13 +132,13 @@ public class Project {
 		}
 
 		boolean allCompleted = phases.stream()
-				.allMatch(p -> p.getPhaseStatus() == com.capston.project.back.end.common.PhaseStatus.COMPLETED);
+				.allMatch(p -> p.getPhaseStatus() == PhaseStatus.COMPLETED);
 
 		if (allCompleted) {
 			this.projectStatus = ProjectStatus.COMPLETED;
 		} else {
 			boolean anyStarted = phases.stream()
-					.anyMatch(p -> p.getPhaseStatus() != com.capston.project.back.end.common.PhaseStatus.PLANNING);
+					.anyMatch(p -> p.getPhaseStatus() != PhaseStatus.PLANNING);
 			if (anyStarted && this.projectStatus == ProjectStatus.PLANNING) {
 				this.projectStatus = ProjectStatus.ACTIVE;
 			}

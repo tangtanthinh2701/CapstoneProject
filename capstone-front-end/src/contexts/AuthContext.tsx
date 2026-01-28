@@ -1,12 +1,8 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-
-// ========================
-// TYPES
-// ========================
-export type UserRole = 'ADMIN' | 'USER' | 'PARTNER';
+export type UserRole = 'ADMIN' | 'USER' | 'FARMER';
 
 export interface User {
-    id: number;
+    id: number | string;
     username: string;
     fullName: string;
     email?: string;

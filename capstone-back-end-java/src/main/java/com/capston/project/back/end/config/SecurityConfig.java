@@ -53,11 +53,11 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.PUT, "/api/users/*/status").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.DELETE, "/api/users/*").hasRole("ADMIN")
 
-						// Farm Management (Admin CRUD)
-						.requestMatchers(HttpMethod.POST, "/api/farms").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.POST, "/api/farms/**").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.PUT, "/api/farms/**").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.DELETE, "/api/farms/**").hasRole("ADMIN")
+						// Farm Management (Admin & Farmer CRUD)
+						.requestMatchers(HttpMethod.POST, "/api/farms").hasAnyRole("ADMIN", "FARMER")
+						.requestMatchers(HttpMethod.POST, "/api/farms/**").hasAnyRole("ADMIN", "FARMER")
+						.requestMatchers(HttpMethod.PUT, "/api/farms/**").hasAnyRole("ADMIN", "FARMER")
+						.requestMatchers(HttpMethod.DELETE, "/api/farms/**").hasAnyRole("ADMIN", "FARMER")
 
 						// Tree Species Management (Admin CRUD)
 						.requestMatchers(HttpMethod.POST, "/api/tree-species").hasRole("ADMIN")
@@ -65,28 +65,29 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.PUT, "/api/tree-species/**").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.DELETE, "/api/tree-species/**").hasRole("ADMIN")
 
-						// Tree Batch Management (Admin CRUD)
-						.requestMatchers(HttpMethod.POST, "/api/tree-batches").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.POST, "/api/tree-batches/**").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.PUT, "/api/tree-batches/**").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.DELETE, "/api/tree-batches/**").hasRole("ADMIN")
+						// Tree Batch Management (Admin & Farmer CRUD)
+						.requestMatchers(HttpMethod.POST, "/api/tree-batches").hasAnyRole("ADMIN", "FARMER")
+						.requestMatchers(HttpMethod.POST, "/api/tree-batches/**").hasAnyRole("ADMIN", "FARMER")
+						.requestMatchers(HttpMethod.PUT, "/api/tree-batches/**").hasAnyRole("ADMIN", "FARMER")
+						.requestMatchers(HttpMethod.DELETE, "/api/tree-batches/**").hasAnyRole("ADMIN", "FARMER")
 
-						// Tree Growth Record Management (Admin CRUD)
-						.requestMatchers(HttpMethod.POST, "/api/tree-growth-records").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.POST, "/api/tree-growth-records/**").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.PUT, "/api/tree-growth-records/**").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.DELETE, "/api/tree-growth-records/**").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.GET, "/api/tree-growth-records/unhealthy").hasRole("ADMIN")
+						// Tree Growth Record Management (Admin & Farmer CRUD)
+						.requestMatchers(HttpMethod.POST, "/api/tree-growth-records").hasAnyRole("ADMIN", "FARMER")
+						.requestMatchers(HttpMethod.POST, "/api/tree-growth-records/**").hasAnyRole("ADMIN", "FARMER")
+						.requestMatchers(HttpMethod.PUT, "/api/tree-growth-records/**").hasAnyRole("ADMIN", "FARMER")
+						.requestMatchers(HttpMethod.DELETE, "/api/tree-growth-records/**").hasAnyRole("ADMIN", "FARMER")
+						.requestMatchers(HttpMethod.GET, "/api/tree-growth-records/unhealthy")
+						.hasAnyRole("ADMIN", "FARMER")
 
-						// Project Management (Admin CRUD)
-						.requestMatchers(HttpMethod.POST, "/api/projects/create-projects").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.POST, "/api/projects/**").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.PUT, "/api/projects/**").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.DELETE, "/api/projects/**").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.POST, "/api/projects/*/phases").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.PUT, "/api/projects/*/phases/*").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.DELETE, "/api/projects/*/phases/*").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.POST, "/api/projects/*/recalculate").hasRole("ADMIN")
+						// Project Management (Admin & User CRUD)
+						.requestMatchers(HttpMethod.POST, "/api/projects/create-projects").hasAnyRole("ADMIN", "USER")
+						.requestMatchers(HttpMethod.POST, "/api/projects/**").hasAnyRole("ADMIN", "USER")
+						.requestMatchers(HttpMethod.PUT, "/api/projects/**").hasAnyRole("ADMIN", "USER")
+						.requestMatchers(HttpMethod.DELETE, "/api/projects/**").hasAnyRole("ADMIN", "USER")
+						.requestMatchers(HttpMethod.POST, "/api/projects/*/phases").hasAnyRole("ADMIN", "USER")
+						.requestMatchers(HttpMethod.PUT, "/api/projects/*/phases/*").hasAnyRole("ADMIN", "USER")
+						.requestMatchers(HttpMethod.DELETE, "/api/projects/*/phases/*").hasAnyRole("ADMIN", "USER")
+						.requestMatchers(HttpMethod.POST, "/api/projects/*/recalculate").hasAnyRole("ADMIN", "USER")
 						.requestMatchers(HttpMethod.POST, "/api/projects/recalculate-all").hasRole("ADMIN")
 
 						// Contract Workflow (Admin approval)
@@ -173,11 +174,9 @@ public class SecurityConfig {
 						.requestMatchers("/api/notifications/**").authenticated()
 
 						// All other authenticated requests
-						.anyRequest().authenticated()
-				)
+						.anyRequest().authenticated())
 				.sessionManagement(session -> session
-						.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-				)
+						.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authenticationProvider(authenticationProvider())
 				.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -200,6 +199,7 @@ public class SecurityConfig {
 	public PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
 	}
+
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();

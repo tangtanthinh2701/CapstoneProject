@@ -12,7 +12,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Service để gửi real-time notifications qua WebSocket cho các tính năng phê duyệt
+ * Service để gửi real-time notifications qua WebSocket cho các tính năng phê
+ * duyệt
  */
 @Service
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class ApprovalWebSocketService {
      * Gửi notification đến tất cả admins khi có yêu cầu phê duyệt mới
      */
     public void notifyAdminsNewApprovalRequest(String type, String title, String message,
-                                                Integer referenceId, Map<String, Object> metadata) {
+            Integer referenceId, Map<String, Object> metadata) {
         log.info("Sending approval request notification to admins: {} - {}", type, title);
 
         Map<String, Object> payload = new HashMap<>();
@@ -48,12 +49,13 @@ public class ApprovalWebSocketService {
      * Gửi notification đến user cụ thể khi yêu cầu của họ được phê duyệt
      */
     public void notifyUserApprovalResult(UUID userId, String type, String title,
-                                          String message, Integer referenceId, boolean approved) {
+            String message, Integer referenceId, boolean approved) {
         log.info("Sending approval result to user {}: {} - approved={}", userId, type, approved);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("type", type);
-        payload.put("notificationType", approved ? NotificationType.APPROVAL_SUCCESS : NotificationType.APPROVAL_REJECTED);
+        payload.put("notificationType",
+                approved ? NotificationType.APPROVAL_SUCCESS : NotificationType.APPROVAL_REJECTED);
         payload.put("title", title);
         payload.put("message", message);
         payload.put("referenceId", referenceId);
@@ -64,8 +66,7 @@ public class ApprovalWebSocketService {
         messagingTemplate.convertAndSendToUser(
                 userId.toString(),
                 "/queue/notifications",
-                payload
-        );
+                payload);
         log.info("Approval result sent to user: {}", userId);
     }
 
@@ -73,7 +74,8 @@ public class ApprovalWebSocketService {
 
     /**
      * Thông báo* Sanitize user-provided text before including it in notifications.
-     * This performs basic HTML-style escaping to prevent injection when rendered on the client.
+     * This performs basic HTML-style escaping to prevent injection when rendered on
+     * the client.
      */
     private String sanitizeForNotification(String input) {
         if (input == null) {
@@ -99,8 +101,7 @@ public class ApprovalWebSocketService {
                 "Hợp đồng mới chờ phê duyệt",
                 "Hợp đồng " + safeContractCode + " đang chờ được phê duyệt",
                 contractId,
-                metadata
-        );
+                metadata);
     }
 
     /**
@@ -113,8 +114,7 @@ public class ApprovalWebSocketService {
                 "Hợp đồng đã được phê duyệt",
                 "Hợp đồng " + contractCode + " của bạn đã được phê duyệt",
                 contractId,
-                true
-        );
+                true);
     }
 
     /**
@@ -127,8 +127,7 @@ public class ApprovalWebSocketService {
                 "Hợp đồng bị từ chối",
                 "Hợp đồng " + contractCode + " đã bị từ chối. Lý do: " + reason,
                 contractId,
-                false
-        );
+                false);
     }
 
     // ==================== CONTRACT RENEWAL APPROVAL ====================
@@ -143,8 +142,7 @@ public class ApprovalWebSocketService {
                 "Yêu cầu gia hạn mới",
                 "Hợp đồng " + contractCode + " có yêu cầu gia hạn chờ phê duyệt",
                 renewalId,
-                metadata
-        );
+                metadata);
     }
 
     /**
@@ -157,8 +155,7 @@ public class ApprovalWebSocketService {
                 "Yêu cầu gia hạn đã được phê duyệt",
                 "Yêu cầu gia hạn hợp đồng " + contractCode + " đã được chấp thuận",
                 renewalId,
-                true
-        );
+                true);
     }
 
     /**
@@ -171,8 +168,7 @@ public class ApprovalWebSocketService {
                 "Yêu cầu gia hạn bị từ chối",
                 "Yêu cầu gia hạn hợp đồng " + contractCode + " đã bị từ chối. Lý do: " + reason,
                 renewalId,
-                false
-        );
+                false);
     }
 
     // ==================== CREDIT VERIFICATION ====================
@@ -187,8 +183,7 @@ public class ApprovalWebSocketService {
                 "Carbon Credit mới chờ xác minh",
                 "Carbon Credit " + creditCode + " đang chờ được xác minh",
                 creditId,
-                metadata
-        );
+                metadata);
     }
 
     /**
@@ -201,8 +196,7 @@ public class ApprovalWebSocketService {
                 "Carbon Credit đã được xác minh",
                 "Carbon Credit " + creditCode + " đã được xác minh và sẵn sàng sử dụng",
                 creditId,
-                true
-        );
+                true);
     }
 
     // ==================== PAYMENT CONFIRMATION ====================
@@ -217,8 +211,32 @@ public class ApprovalWebSocketService {
                 "Thanh toán đã được xác nhận",
                 "Thanh toán " + amount + " VND đã được xác nhận thành công",
                 paymentId,
-                true
-        );
+                true);
+    }
+
+    // ==================== TREE HEALTH NOTIFICATION ====================
+
+    /**
+     * Thông báo khi có vấn đề về sức khỏe cây trồng (Sâu bệnh, chết, ...)
+     */
+    public void notifyTreeHealthIssue(UUID userId, Integer batchId, String batchCode, String status, String notes) {
+        log.info("Sending health issue notification for batch {}: status={}", batchCode, status);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type", "TREE_HEALTH_ISSUE");
+        payload.put("notificationType", NotificationType.HEALTH_ALERT);
+        payload.put("title", "Cảnh báo sức khỏe cây trồng");
+        payload.put("message", "Lô cây " + batchCode + " có tình trạng: " + status + ". Ghi chú: " + notes);
+        payload.put("referenceId", batchId);
+        payload.put("timestamp", OffsetDateTime.now());
+
+        // Send to specific user (Farmer)
+        messagingTemplate.convertAndSendToUser(
+                userId.toString(),
+                "/queue/notifications",
+                (Object) payload);
+
+        // Also broadcast to Admins
+        messagingTemplate.convertAndSend("/topic/alerts", (Object) payload);
     }
 }
-

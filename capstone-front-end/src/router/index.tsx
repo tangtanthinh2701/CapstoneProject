@@ -100,7 +100,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/farms/new',
-    element: <ProtectedRoute requiredRoles={['ADMIN']}><FarmFormPage /></ProtectedRoute>,
+    element: <ProtectedRoute requiredRoles={['ADMIN', 'FARMER']}><FarmFormPage /></ProtectedRoute>,
   },
   {
     path: '/farms/:id',
@@ -108,7 +108,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/farms/:id/edit',
-    element: <ProtectedRoute requiredRoles={['ADMIN']}><FarmFormPage /></ProtectedRoute>,
+    element: <ProtectedRoute requiredRoles={['ADMIN', 'FARMER']}><FarmFormPage /></ProtectedRoute>,
   },
 
   // TREE SPECIES
@@ -136,7 +136,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/tree-batches/new',
-    element: <ProtectedRoute requiredRoles={['ADMIN']}><TreeBatchFormPage /></ProtectedRoute>,
+    element: <ProtectedRoute requiredRoles={['ADMIN', 'FARMER']}><TreeBatchFormPage /></ProtectedRoute>,
   },
   {
     path: '/tree-batches/:id',
@@ -144,7 +144,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/tree-batches/:id/edit',
-    element: <ProtectedRoute requiredRoles={['ADMIN']}><TreeBatchFormPage /></ProtectedRoute>,
+    element: <ProtectedRoute requiredRoles={['ADMIN', 'FARMER']}><TreeBatchFormPage /></ProtectedRoute>,
   },
 
   // CONTRACTS

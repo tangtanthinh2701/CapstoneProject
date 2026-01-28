@@ -155,11 +155,9 @@ export default function ProjectListPage() {
           >
             <option value=''>Tất cả trạng thái</option>
             <option value='PLANNING'>PLANNING</option>
-            <option value='PLANTING'>PLANTING</option>
-            <option value='GROWING'>GROWING</option>
-            <option value='MATURE'>MATURE</option>
-            <option value='HARVESTING'>HARVESTING</option>
+            <option value='ACTIVE'>ACTIVE</option>
             <option value='COMPLETED'>COMPLETED</option>
+            <option value='CANCELLED'>CANCELLED</option>
           </select>
 
           <button

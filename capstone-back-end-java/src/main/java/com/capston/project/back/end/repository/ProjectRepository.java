@@ -35,24 +35,27 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
 	// Tìm theo manager
 	Page<Project> findByManagerId(UUID managerId, Pageable pageable);
 
-	// Tìm project public
-	Page<Project> findByIsPublicTrue(Pageable pageable);
-
+	// Pagination helpers
 	@Query("SELECT p.id FROM Project p")
 	Page<Integer> findAllProjectIds(Pageable pageable);
 
-	// Lấy projects với phases theo danh sách IDs
+	@Query("SELECT p.id FROM Project p WHERE p.managerId = :managerId")
+	Page<Integer> findProjectIdsByManager(@Param("managerId") UUID managerId, Pageable pageable);
+
 	@Query("SELECT DISTINCT p FROM Project p LEFT JOIN FETCH p.phases WHERE p.id IN :ids")
 	List<Project> findAllWithPhasesByIds(@Param("ids") List<Integer> ids);
 
-	// Search theo tên hoặc mô tả
 	@Query("SELECT p FROM Project p WHERE " +
-			"LOWER(p.name) LIKE LOWER(CONCAT('%', : keyword, '%')) OR " +
+			"LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
 			"LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
 	Page<Project> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
-	@Query("SELECT p.id FROM Project p WHERE p.isPublic = true")
-	Page<Integer> findPublicProjectIds(Pageable pageable);
+	@Query("SELECT p FROM Project p WHERE " +
+			"(LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+			"LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
+			"p.managerId = :managerId")
+	Page<Project> searchByKeywordAndManager(@Param("keyword") String keyword, @Param("managerId") UUID managerId,
+			Pageable pageable);
 
 	// Cập nhật computed fields
 	@Modifying

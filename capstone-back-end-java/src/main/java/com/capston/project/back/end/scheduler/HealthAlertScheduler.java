@@ -1,5 +1,6 @@
 package com.capston.project.back.end.scheduler;
 
+import com.capston.project.back.end.common.HealthStatus;
 import com.capston.project.back.end.common.NotificationType;
 import com.capston.project.back.end.common.ReferenceType;
 import com.capston.project.back.end.entity.TreeBatch;
@@ -26,7 +27,8 @@ import java.util.UUID;
  * Scheduler để quét và cảnh báo các lô cây không khỏe mạnh
  *
  * Nghiệp vụ: Chạy định kỳ quét bảng tree_growth_records
- * Nếu health_status là 'DISEASED' hoặc 'STRESSED', tạo notification cho quản lý dự án
+ * Nếu health_status là 'DISEASED' hoặc 'STRESSED', tạo notification cho quản lý
+ * dự án
  */
 @Component
 @RequiredArgsConstructor
@@ -79,15 +81,15 @@ public class HealthAlertScheduler {
 
         try {
             // Only check records from the last hour
-            List<TreeGrowthRecord> recentUnhealthy = growthRecordRepository.findByHealthStatus("DISEASED");
-            List<TreeGrowthRecord> stressedRecords = growthRecordRepository.findByHealthStatus("STRESSED");
+            List<TreeGrowthRecord> recentUnhealthy = growthRecordRepository.findByHealthStatus(HealthStatus.DISEASED);
+            List<TreeGrowthRecord> stressedRecords = growthRecordRepository.findByHealthStatus(HealthStatus.STRESSED);
 
             recentUnhealthy.addAll(stressedRecords);
 
             for (TreeGrowthRecord record : recentUnhealthy) {
                 // Only alert if this is a new issue (created within last hour)
                 if (record.getCreatedAt() != null &&
-                    record.getCreatedAt().isAfter(OffsetDateTime.now().minusHours(1))) {
+                        record.getCreatedAt().isAfter(OffsetDateTime.now().minusHours(1))) {
                     processUnhealthyRecord(record);
                 }
             }
@@ -116,7 +118,7 @@ public class HealthAlertScheduler {
             }
 
             // Create alert notification
-            String title = record.getHealthStatus().equals("DISEASED")
+            String title = record.getHealthStatus().equals(HealthStatus.DISEASED)
                     ? "🚨 Cảnh báo: Lô cây bị bệnh"
                     : "⚠️ Cảnh báo: Lô cây có dấu hiệu stress";
 
@@ -126,8 +128,7 @@ public class HealthAlertScheduler {
                     batch.getFarmId(),
                     record.getHealthStatus(),
                     record.getRecordedDate(),
-                    record.getHealthNotes() != null ? "Ghi chú: " + record.getHealthNotes() : ""
-            );
+                    record.getHealthNotes() != null ? "Ghi chú: " + record.getHealthNotes() : "");
 
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("batchId", batch.getId());
@@ -145,8 +146,7 @@ public class HealthAlertScheduler {
                     NotificationType.HEALTH_ALERT,
                     ReferenceType.TREE_BATCH,
                     batch.getId(),
-                    metadata
-            );
+                    metadata);
 
             log.info("Sent health alert for batch: {} to manager: {}", batch.getBatchCode(), managerId);
 
@@ -156,7 +156,7 @@ public class HealthAlertScheduler {
     }
 
     private void sendAlertToAdmins(TreeGrowthRecord record, TreeBatch batch) {
-        String title = record.getHealthStatus().equals("DISEASED")
+        String title = record.getHealthStatus().equals(HealthStatus.DISEASED)
                 ? "🚨 Cảnh báo: Lô cây bị bệnh"
                 : "⚠️ Cảnh báo: Lô cây có dấu hiệu stress";
 
@@ -165,16 +165,14 @@ public class HealthAlertScheduler {
                 batch.getBatchCode(),
                 batch.getFarmId(),
                 record.getHealthStatus(),
-                record.getRecordedDate()
-        );
+                record.getRecordedDate());
 
         notificationService.sendToAdmins(
                 title,
                 message,
                 NotificationType.HEALTH_ALERT,
                 ReferenceType.TREE_BATCH,
-                batch.getId()
-        );
+                batch.getId());
     }
 
     private UUID getProjectManagerId(TreeBatch batch) {

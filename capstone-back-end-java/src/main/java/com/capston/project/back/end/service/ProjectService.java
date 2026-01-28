@@ -7,6 +7,7 @@ import com.capston.project.back.end.response.ProjectPhaseResponse;
 import com.capston.project.back.end.response.ProjectResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.math.BigDecimal;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,8 +30,6 @@ public interface ProjectService {
 
 	Page<ProjectResponse> getProjectsByManager(UUID managerId, Pageable pageable);
 
-	Page<ProjectResponse> getPublicProjects(Pageable pageable);
-
 	Page<ProjectResponse> searchProjects(String keyword, Pageable pageable);
 
 	// Phase Management
@@ -47,13 +46,9 @@ public interface ProjectService {
 
 	void recalculateAllProjects();
 
-	// Farm and Partner Assignment
-	void assignFarmToProject(Integer projectId, Integer farmId, java.util.UUID assignedBy);
+	// Partner Assignment
+	void addPartnerToProject(Integer projectId, UUID partnerUserId, String partnerRole,
+			BigDecimal contributionAmount, String notes);
 
-	void removeFarmFromProject(Integer projectId, Integer farmId);
-
-	void addPartnerToProject(Integer projectId, java.util.UUID partnerUserId, String partnerRole,
-			java.math.BigDecimal contributionAmount, String notes);
-
-	void removePartnerFromProject(Integer projectId, java.util.UUID partnerUserId);
+	void removePartnerFromProject(Integer projectId, UUID partnerUserId);
 }

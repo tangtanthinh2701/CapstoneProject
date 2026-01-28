@@ -1,6 +1,5 @@
 package com.capston.project.back.end.repository;
 
-import com.capston.project.back.end.common.TransactionStatus;
 import com.capston.project.back.end.common.TransactionType;
 import com.capston.project.back.end.entity.CreditTransaction;
 import org.springframework.data.domain.Page;
@@ -68,6 +67,14 @@ public interface CreditTransactionRepository extends JpaRepository<CreditTransac
 	Integer sumPurchasedByUserIdAndCreditId(@Param("userId") UUID userId, @Param("creditId") Integer creditId);
 
 	@Query(value = "SELECT COALESCE(SUM(quantity), 0) FROM credit_transactions " +
-			"WHERE buyer_id = :userId AND credit_id = :creditId AND transaction_type = 'RETIREMENT'", nativeQuery = true)
+			"WHERE buyer_id = :userId AND transaction_type = 'RETIREMENT'", nativeQuery = true)
 	Integer sumRetiredByUserIdAndCreditId(@Param("userId") UUID userId, @Param("creditId") Integer creditId);
+
+	@Query(value = "SELECT COALESCE(SUM(quantity), 0) FROM credit_transactions " +
+			"WHERE buyer_id = :userId AND transaction_type = 'PURCHASE'", nativeQuery = true)
+	Integer sumPurchasedByUserId(@Param("userId") UUID userId);
+
+	@Query(value = "SELECT COALESCE(SUM(quantity), 0) FROM credit_transactions " +
+			"WHERE buyer_id = :userId AND transaction_type = 'RETIREMENT'", nativeQuery = true)
+	Integer sumRetiredByUserId(@Param("userId") UUID userId);
 }
