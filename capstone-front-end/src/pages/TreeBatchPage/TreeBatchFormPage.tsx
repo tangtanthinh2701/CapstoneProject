@@ -153,10 +153,13 @@ export default function TreeBatchFormPage() {
                         <div>
                             <label className="block text-sm mb-2 text-gray-300">Số lượng cây *</label>
                             <input
-                                type="number"
+                                type="text"
                                 className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B]"
-                                value={form.quantityPlanted}
-                                onChange={(e) => updateField('quantityPlanted', parseInt(e.target.value) || 0)}
+                                value={form.quantityPlanted === 0 ? '' : form.quantityPlanted}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9]/g, '');
+                                    updateField('quantityPlanted', val === '' ? 0 : parseInt(val));
+                                }}
                             />
                         </div>
                         <div>
@@ -174,10 +177,13 @@ export default function TreeBatchFormPage() {
                         <div>
                             <label className="block text-sm mb-2 text-gray-300">Diện tích (m2)</label>
                             <input
-                                type="number"
+                                type="text"
                                 className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B]"
-                                value={form.plantingAreaM2}
-                                onChange={(e) => updateField('plantingAreaM2', parseFloat(e.target.value) || 0)}
+                                value={form.plantingAreaM2 === 0 ? '' : form.plantingAreaM2}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                                    updateField('plantingAreaM2', val === '' ? 0 : parseFloat(val));
+                                }}
                             />
                         </div>
                         <div>
@@ -194,10 +200,13 @@ export default function TreeBatchFormPage() {
                         <div>
                             <label className="block text-sm mb-2 text-gray-300">Chi phí mỗi cây</label>
                             <input
-                                type="number"
+                                type="text"
                                 className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B]"
-                                value={form.unitCost}
-                                onChange={(e) => updateField('unitCost', parseFloat(e.target.value) || 0)}
+                                value={form.unitCost === 0 ? '' : form.unitCost}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                                    updateField('unitCost', val === '' ? 0 : parseFloat(val));
+                                }}
                             />
                         </div>
                         <div>

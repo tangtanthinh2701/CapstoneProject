@@ -36,19 +36,13 @@ public class TreeSpeciesController {
 	public ResponseEntity<ApiResponse<TreeSpeciesResponse>> create(@Valid @RequestBody TreeSpeciesRequest request) {
 		TreeSpeciesResponse response = treeSpeciesService.create(request);
 		return ResponseEntity.status(HttpStatus.CREATED)
-		                     .body(ApiResponse.success("Tree species created successfully", response));
-	}
-
-	@GetMapping("/{id}")
-	public ResponseEntity<ApiResponse<TreeSpeciesResponse>> getById(@PathVariable Integer id) {
-		TreeSpeciesResponse response = treeSpeciesService.getById(id);
-		return ResponseEntity.ok(ApiResponse.success(response));
+				.body(ApiResponse.success("Tree species created successfully", response));
 	}
 
 	@PutMapping("/{id}")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<TreeSpeciesResponse>> update(@PathVariable Integer id,
-	                                                               @Valid @RequestBody TreeSpeciesRequest request) {
+			@Valid @RequestBody TreeSpeciesRequest request) {
 		TreeSpeciesResponse response = treeSpeciesService.update(id, request);
 		return ResponseEntity.ok(ApiResponse.success("Tree species updated successfully", response));
 	}
@@ -62,33 +56,33 @@ public class TreeSpeciesController {
 
 	@GetMapping
 	public ResponseEntity<ApiResponse<List<TreeSpeciesResponse>>> getAll(@RequestParam(defaultValue = "0") int page,
-	                                                                     @RequestParam(defaultValue = "10") int size,
-	                                                                     @RequestParam(defaultValue = "name") String sortBy,
-	                                                                     @RequestParam(defaultValue = "asc") String sortDir) {
+			@RequestParam(defaultValue = "10") int size,
+			@RequestParam(defaultValue = "name") String sortBy,
+			@RequestParam(defaultValue = "asc") String sortDir) {
 
 		Sort sort = sortDir.equalsIgnoreCase("asc")
-		            ? Sort.by(sortBy).ascending()
-		            : Sort.by(sortBy).descending();
+				? Sort.by(sortBy).ascending()
+				: Sort.by(sortBy).descending();
 		Pageable pageable = PageRequest.of(page, size, sort);
 
 		Page<TreeSpeciesResponse> speciesPage = treeSpeciesService.getAll(pageable);
 
 		return ResponseEntity.ok(ApiResponse.success("Tree species retrieved successfully",
-		                                             speciesPage.getContent(),
-		                                             buildPageInfo(speciesPage)));
+				speciesPage.getContent(),
+				buildPageInfo(speciesPage)));
 	}
 
 	@GetMapping("/search")
 	public ResponseEntity<ApiResponse<List<TreeSpeciesResponse>>> search(@RequestParam String keyword,
-	                                                                     @RequestParam(defaultValue = "0") int page,
-	                                                                     @RequestParam(defaultValue = "10") int size) {
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
 
 		Pageable pageable = PageRequest.of(page, size);
 		Page<TreeSpeciesResponse> speciesPage = treeSpeciesService.search(keyword, pageable);
 
 		return ResponseEntity.ok(ApiResponse.success("Search completed",
-		                                             speciesPage.getContent(),
-		                                             buildPageInfo(speciesPage)));
+				speciesPage.getContent(),
+				buildPageInfo(speciesPage)));
 	}
 
 	@GetMapping("/all")
@@ -98,19 +92,34 @@ public class TreeSpeciesController {
 	}
 
 	@GetMapping("/top-carbon")
-	public ResponseEntity<ApiResponse<List<TreeSpeciesResponse>>> getTopByCarbonAbsorption(@RequestParam(defaultValue = "10") int limit) {
+	public ResponseEntity<ApiResponse<List<TreeSpeciesResponse>>> getTopByCarbonAbsorption(
+			@RequestParam(defaultValue = "10") int limit) {
 		List<TreeSpeciesResponse> species = treeSpeciesService.getTopByCarbonAbsorption(limit);
 		return ResponseEntity.ok(ApiResponse.success("Top carbon absorbing species", species));
 	}
 
+	@GetMapping("/{id:[0-9]+}")
+	public ResponseEntity<ApiResponse<TreeSpeciesResponse>> getById(@PathVariable Integer id) {
+		TreeSpeciesResponse response = treeSpeciesService.getById(id);
+		return ResponseEntity.ok(ApiResponse.success(response));
+	}
+
+	@PostMapping("/calculator")
+	public ResponseEntity<ApiResponse<com.capston.project.back.end.response.CarbonCalculatorResponse>> calculateSequestration(
+			@Valid @RequestBody com.capston.project.back.end.request.CarbonCalculatorRequest request) {
+		com.capston.project.back.end.response.CarbonCalculatorResponse response = treeSpeciesService
+				.estimateCarbonSequestration(request);
+		return ResponseEntity.ok(ApiResponse.success("Carbon sequestration estimate calculated", response));
+	}
+
 	private ApiResponse.PageInfo buildPageInfo(Page<?> page) {
 		return ApiResponse.PageInfo.builder()
-		                           .page(page.getNumber())
-		                           .size(page.getSize())
-		                           .totalElements(page.getTotalElements())
-		                           .totalPages(page.getTotalPages())
-		                           .hasNext(page.hasNext())
-		                           .hasPrevious(page.hasPrevious())
-		                           .build();
+				.page(page.getNumber())
+				.size(page.getSize())
+				.totalElements(page.getTotalElements())
+				.totalPages(page.getTotalPages())
+				.hasNext(page.hasNext())
+				.hasPrevious(page.hasPrevious())
+				.build();
 	}
 }

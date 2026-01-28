@@ -288,19 +288,25 @@ export default function ProjectFormPage() {
             <div>
               <label className="block text-sm mb-2 text-gray-300">Ngân sách (VND)</label>
               <input
-                type="number"
+                type="text"
                 className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                value={form.totalBudget}
-                onChange={(e) => updateField('totalBudget', parseFloat(e.target.value) || 0)}
+                value={form.totalBudget === 0 ? '' : form.totalBudget}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, '');
+                  updateField('totalBudget', val === '' ? 0 : parseFloat(val));
+                }}
               />
             </div>
             <div>
               <label className="block text-sm mb-2 text-gray-300">Mục tiêu CO₂ (kg)</label>
               <input
-                type="number"
+                type="text"
                 className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                value={form.targetCo2Kg}
-                onChange={(e) => updateField('targetCo2Kg', parseFloat(e.target.value) || 0)}
+                value={form.targetCo2Kg === 0 ? '' : form.targetCo2Kg}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, '');
+                  updateField('targetCo2Kg', val === '' ? 0 : parseFloat(val));
+                }}
               />
             </div>
           </div>

@@ -153,6 +153,7 @@ public class AdminServiceImpl implements AdminService {
         stats.put("totalUsers", userRepository.count());
         stats.put("activeUsers", userRepository.countByIsActiveTrue());
         stats.put("adminCount", userRepository.countByRole(Role.ADMIN));
+        stats.put("farmerCount", userRepository.countByRole(Role.FARMER));
         stats.put("userCount", userRepository.countByRole(Role.USER));
 
         // Project statistics

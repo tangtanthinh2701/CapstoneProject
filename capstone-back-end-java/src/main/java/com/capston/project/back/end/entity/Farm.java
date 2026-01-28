@@ -100,7 +100,7 @@ public class Farm {
 			return BigDecimal.ZERO;
 		}
 		return usableArea.divide(area, 4, java.math.RoundingMode.HALF_UP)
-		                 .multiply(BigDecimal.valueOf(100));
+				.multiply(BigDecimal.valueOf(100));
 	}
 
 	public boolean isActive() {

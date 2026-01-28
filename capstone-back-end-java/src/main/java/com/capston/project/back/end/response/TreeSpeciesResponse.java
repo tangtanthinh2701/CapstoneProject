@@ -16,6 +16,7 @@ public class TreeSpeciesResponse {
 	private Integer id;
 	private String name;
 	private String scientificName;
+	private BigDecimal baseCarbonRate;
 	private BigDecimal carbonAbsorptionRate;
 	private String description;
 	private String imageUrl;

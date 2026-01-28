@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
-import { farmApi, type Farm } from '../../models/farm.api';
+import { farmApi } from '../../models/farm.api';
 
 const statusOptions = [
   { value: 'ACTIVE', label: 'Hoạt động' },
   { value: 'INACTIVE', label: 'Ngưng hoạt động' },
-  { value: 'MAINTENANCE', label: 'Bảo trì' },
+  { value: 'CLOSED', label: 'Đóng cửa' },
 ];
 
 interface FormData {
@@ -17,8 +17,8 @@ interface FormData {
   location: string;
   latitude: number;
   longitude: number;
-  area: number;
-  usableArea: number;
+  area: number | string;
+  usableArea: number | string;
   soilType: string;
   climateZone: string;
   avgRainfall: number;
@@ -34,8 +34,8 @@ const defaultForm: FormData = {
   location: '',
   latitude: 0,
   longitude: 0,
-  area: 0,
-  usableArea: 0,
+  area: '',
+  usableArea: '',
   soilType: '',
   climateZone: '',
   avgRainfall: 0,
@@ -53,6 +53,7 @@ export default function FarmFormPage() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(isEdit);
   const [error, setError] = useState<string | null>(null);
+  const [fetchingAddress, setFetchingAddress] = useState(false);
 
   // Load existing data for edit
   useEffect(() => {
@@ -104,10 +105,20 @@ export default function FarmFormPage() {
       setLoading(true);
       setError(null);
 
+      // Backend only needs these fields for create/update
+      const payload = {
+        name: form.name,
+        description: form.description,
+        location: form.location,
+        area: parseFloat(String(form.area)) || 0,
+        usableArea: parseFloat(String(form.usableArea)) || 0,
+        farmStatus: form.farmStatus,
+      };
+
       if (isEdit) {
-        await farmApi.update(id!, form);
+        await farmApi.update(id!, payload);
       } else {
-        await farmApi.create(form);
+        await farmApi.create(payload);
       }
 
       navigate('/farms');
@@ -142,12 +153,22 @@ export default function FarmFormPage() {
           ]}
         />
 
-        <h1 className="text-3xl font-bold mb-2">
-          {isEdit ? 'Cập nhật Nông trại' : 'Tạo Nông trại Mới'}
-        </h1>
-        <p className="text-gray-400 mb-8">
-          Điền đầy đủ thông tin để {isEdit ? 'cập nhật' : 'tạo'} nông trại.
-        </p>
+        <div className="flex justify-between items-end mb-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">
+              {isEdit ? 'Cập nhật Nông trại' : 'Tạo Nông trại Mới'}
+            </h1>
+            <p className="text-gray-400">
+              {isEdit ? 'Thông tin chi tiết và chỉnh sửa nông trại.' : 'Điền đầy đủ thông tin để tạo nông trại mới.'}
+            </p>
+          </div>
+          {isEdit && (
+            <div className="px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <p className="text-xs text-green-500 uppercase font-bold">Mã nông trại</p>
+              <p className="font-mono text-white">{form.code}</p>
+            </div>
+          )}
+        </div>
 
         {error && (
           <div className="mb-6 bg-red-900/20 border border-red-500 text-red-200 px-4 py-3 rounded-xl flex items-center gap-2">
@@ -156,198 +177,206 @@ export default function FarmFormPage() {
           </div>
         )}
 
-        {/* BASIC INFO */}
-        <section className="mb-8 bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span className="material-icons text-green-500">info</span>
-            Thông tin cơ bản
-          </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            {/* BASIC INFO */}
+            <section className="bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span className="material-icons text-green-500">info</span>
+                Thông tin cơ bản
+              </h2>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm mb-2 text-gray-300">
-                  Mã nông trại
-                </label>
-                <input
-                  className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="FARM-001"
-                  value={form.code}
-                  onChange={(e) => updateField('code', e.target.value)}
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm mb-2 text-gray-300">
+                    Tên nông trại <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Nhập tên nông trại"
+                    value={form.name}
+                    onChange={(e) => updateField('name', e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-2 text-gray-300">Mô tả</label>
+                  <textarea
+                    rows={4}
+                    className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Mô tả về nông trại..."
+                    value={form.description}
+                    onChange={(e) => updateField('description', e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm mb-2 text-gray-300">Trạng thái</label>
+                    <select
+                      className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
+                      value={form.farmStatus}
+                      onChange={(e) => updateField('farmStatus', e.target.value)}
+                    >
+                      {statusOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-2 text-gray-300">Tổng diện tích (m²)</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
+                      value={form.area || ''}
+                      placeholder="VD: 1000"
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.]/g, '');
+                        updateField('area', val);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-2 text-gray-300">Diện tích sử dụng (m²)</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
+                      value={form.usableArea || ''}
+                      placeholder="VD: 800"
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.]/g, '');
+                        updateField('usableArea', val);
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm mb-2 text-gray-300">
-                  Tên nông trại <span className="text-red-400">*</span>
-                </label>
-                <input
-                  className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Nông trại Rừng Xanh"
-                  value={form.name}
-                  onChange={(e) => updateField('name', e.target.value)}
-                />
-              </div>
-            </div>
+            </section>
 
-            <div>
-              <label className="block text-sm mb-2 text-gray-300">Mô tả</label>
-              <textarea
-                rows={3}
-                className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Mô tả về nông trại..."
-                value={form.description}
-                onChange={(e) => updateField('description', e.target.value)}
-              />
-            </div>
+            {/* LOCATION */}
+            <section className="bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <span className="material-icons text-blue-500">location_on</span>
+                  Vị trí địa lý
+                </h2>
+                <button
+                  onClick={() => {
+                    if (!navigator.geolocation) {
+                      setError('Trình duyệt không hỗ trợ Geolocation');
+                      return;
+                    }
+                    setFetchingAddress(true);
+                    navigator.geolocation.getCurrentPosition(
+                      async (position) => {
+                        const { latitude, longitude } = position.coords;
+                        // Still update these in state so they show up in 'Enriched' view if needed, 
+                        // but they won't be sent in payload
+                        updateField('latitude', latitude);
+                        updateField('longitude', longitude);
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm mb-2 text-gray-300">Trạng thái</label>
-                <select
-                  className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  value={form.farmStatus}
-                  onChange={(e) => updateField('farmStatus', e.target.value)}
+                        try {
+                          const res = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+                          );
+                          const data = await res.json();
+                          if (data.display_name) {
+                            updateField('location', data.display_name);
+                          }
+                        } catch (e) {
+                          console.error("Could not fetch address", e);
+                        } finally {
+                          setFetchingAddress(false);
+                        }
+                      },
+                      (err) => {
+                        setError('Không thể lấy vị trí: ' + err.message);
+                        setFetchingAddress(false);
+                      }
+                    );
+                  }}
+                  disabled={fetchingAddress}
+                  className="text-sm bg-blue-500/10 text-blue-400 px-4 py-2 rounded-lg border border-blue-500/20 hover:bg-blue-500/20 transition flex items-center gap-2 disabled:opacity-50"
                 >
-                  {statusOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+                  <span className={`material-icons text-sm ${fetchingAddress ? 'animate-spin' : ''}`}>
+                    {fetchingAddress ? 'sync' : 'my_location'}
+                  </span>
+                  {fetchingAddress ? 'Đang xác định...' : 'Lấy vị trí hiện tại'}
+                </button>
               </div>
-              <div>
-                <label className="block text-sm mb-2 text-gray-300">Ngày bắt đầu trồng</label>
-                <input
-                  type="date"
-                  className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  value={form.plantingDate}
-                  onChange={(e) => updateField('plantingDate', e.target.value)}
-                />
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm mb-2 text-gray-300">Địa chỉ cụ thể</label>
+                  <input
+                    className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Xã ABC, Tỉnh..."
+                    value={form.location}
+                    onChange={(e) => updateField('location', e.target.value)}
+                  />
+                  <p className="mt-3 text-xs text-gray-500 italic flex items-center gap-1">
+                    <span className="material-icons text-xs">info</span>
+                    Tọa độ và dữ liệu môi trường sẽ được hệ thống tự động xác định dựa trên địa chỉ này.
+                  </p>
+                </div>
               </div>
-            </div>
+            </section>
           </div>
-        </section>
 
-        {/* LOCATION */}
-        <section className="mb-8 bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span className="material-icons text-blue-500">location_on</span>
-            Vị trí
-          </h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm mb-2 text-gray-300">Địa chỉ</label>
-              <input
-                className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Xã ABC, Huyện XYZ, Tỉnh..."
-                value={form.location}
-                onChange={(e) => updateField('location', e.target.value)}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm mb-2 text-gray-300">Vĩ độ (Latitude)</label>
-                <input
-                  type="number"
-                  step="0.0001"
-                  className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  value={form.latitude}
-                  onChange={(e) => updateField('latitude', parseFloat(e.target.value) || 0)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-2 text-gray-300">Kinh độ (Longitude)</label>
-                <input
-                  type="number"
-                  step="0.0001"
-                  className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  value={form.longitude}
-                  onChange={(e) => updateField('longitude', parseFloat(e.target.value) || 0)}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* AREA */}
-        <section className="mb-8 bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span className="material-icons text-yellow-500">terrain</span>
-            Diện tích & Môi trường
-          </h2>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm mb-2 text-gray-300">Tổng diện tích (m²)</label>
-                <input
-                  type="number"
-                  className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  value={form.area}
-                  onChange={(e) => updateField('area', parseFloat(e.target.value) || 0)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-2 text-gray-300">Diện tích sử dụng (m²)</label>
-                <input
-                  type="number"
-                  className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  value={form.usableArea}
-                  onChange={(e) => updateField('usableArea', parseFloat(e.target.value) || 0)}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm mb-2 text-gray-300">Loại đất</label>
-                <input
-                  className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Đất phù sa"
-                  value={form.soilType}
-                  onChange={(e) => updateField('soilType', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-2 text-gray-300">Vùng khí hậu</label>
-                <input
-                  className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Nhiệt đới gió mùa"
-                  value={form.climateZone}
-                  onChange={(e) => updateField('climateZone', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* BUTTONS */}
-        <div className="flex justify-end gap-3 pt-6 border-t border-[#1E3A2B]">
-          <button
-            className="px-6 py-3 rounded-xl bg-[#0E2219] border border-[#1E3A2B] text-gray-300 hover:bg-[#13271F] transition"
-            onClick={() => navigate('/farms')}
-            disabled={loading}
-          >
-            Hủy
-          </button>
-
-          <button
-            className="px-6 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-black font-semibold flex items-center gap-2 transition disabled:opacity-50"
-            onClick={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
-                Đang lưu...
-              </>
-            ) : (
-              <>
-                <span className="material-icons">save</span>
-                {isEdit ? 'Cập nhật' : 'Tạo mới'}
-              </>
+          <div className="space-y-8">
+            {/* ENRICHED INFO (Read-only) */}
+            {isEdit && (
+              <section className="bg-green-500/5 p-6 rounded-xl border border-green-500/20">
+                <h2 className="text-lg font-bold mb-5 flex items-start gap-2 text-[#00D064]">
+                  <span className="material-icons text-xl">auto_awesome</span>
+                  <span>Dữ liệu môi trường</span>
+                </h2>
+                <div className="space-y-4">
+                  <div className="p-4 bg-black/40 rounded-xl border border-white/5 group hover:border-[#00D064]/30 transition-colors">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">Loại đất</p>
+                    <p className="font-semibold text-green-100">{form.soilType || 'Chưa cập nhật'}</p>
+                  </div>
+                  <div className="p-4 bg-black/40 rounded-xl border border-white/5 group hover:border-[#00D064]/30 transition-colors">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Khí hậu</p>
+                    <p className="font-semibold text-blue-200">{form.climateZone || 'Chưa cập nhật'}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-4 bg-black/40 rounded-xl border border-white/5 group hover:border-[#00D064]/30 transition-colors">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Lượng mưa</p>
+                      <p className="font-semibold text-yellow-200">{form.avgRainfall} mm</p>
+                    </div>
+                    <div className="p-4 bg-black/40 rounded-xl border border-white/5 group hover:border-[#00D064]/30 transition-colors">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Nhiệt độ</p>
+                      <p className="font-semibold text-red-300">{form.avgTemperature} °C</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
             )}
-          </button>
+
+            {/* ACTION BUTTONS */}
+            <div className="bg-[#0E2219] p-6 rounded-xl border border-[#1E3A2B]">
+              <button
+                className="w-full mb-3 px-6 py-4 rounded-xl bg-green-500 hover:bg-green-600 text-black font-bold flex items-center justify-center gap-2 transition disabled:opacity-50"
+                onClick={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? (
+                  <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
+                ) : (
+                  <span className="material-icons">save</span>
+                )}
+                {isEdit ? 'Cập nhật nông trại' : 'Lưu nông trại'}
+              </button>
+              <button
+                className="w-full px-6 py-4 rounded-xl bg-[#071811] border border-[#1E3A2B] text-gray-300 hover:bg-[#13271F] transition"
+                onClick={() => navigate('/farms')}
+                disabled={loading}
+              >
+                Hủy bỏ
+              </button>
+            </div>
+          </div>
         </div>
       </main>
     </div>

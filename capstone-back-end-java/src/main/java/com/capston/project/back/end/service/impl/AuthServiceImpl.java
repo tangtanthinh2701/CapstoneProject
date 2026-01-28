@@ -65,6 +65,7 @@ public class AuthServiceImpl implements AuthService {
         .address(request.getAddress())
         .dateOfBirth(request.getDateOfBirth())
         .sex(request.getSex())
+        .role(validateAndGetRole(request.getRole()))
         .isActive(true)
         .build();
 
@@ -158,6 +159,7 @@ public class AuthServiceImpl implements AuthService {
         .address(request.getAddress())
         .sex(request.getSex())
         .dateOfBirth(request.getDateOfBirth())
+        .role(request.getRole() != null ? request.getRole() : Role.USER)
         .isActive(true)
         .build();
 
@@ -268,5 +270,15 @@ public class AuthServiceImpl implements AuthService {
   // Clean up expired OTPs from memory
   private void cleanupExpiredOtps() {
     otpStorage.entrySet().removeIf(entry -> entry.getValue().isExpired());
+  }
+
+  private Role validateAndGetRole(Role requestedRole) {
+    if (requestedRole == null) {
+      return Role.USER;
+    }
+    if (requestedRole == Role.ADMIN) {
+      throw new RuntimeException("Không thể đăng ký với quyền ADMIN.");
+    }
+    return requestedRole;
   }
 }

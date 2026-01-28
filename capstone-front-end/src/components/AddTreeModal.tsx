@@ -35,7 +35,7 @@ export default function AddTreeModal({
 
   useEffect(() => {
     fetchTreeSpecies()
-      .then(setTreeSpeciesList)
+      .then((res: any) => setTreeSpeciesList(res.data || res))
       .catch((err) => console.error('Error loading tree species:', err));
   }, []);
 
@@ -115,59 +115,58 @@ export default function AddTreeModal({
               Số lượng cây <span className='text-red-400'>*</span>
             </label>
             <input
-              type='number'
-              min='1'
+              type='text'
               className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-white focus:outline-none focus:ring-2 focus:ring-green-500'
               placeholder='10000'
               value={form.numberTrees || ''}
-              onChange={(e) =>
-                updateField('numberTrees', parseInt(e.target.value) || 0)
-              }
-            />
-          </div>
-
-          {/* PLANTING DATE */}
-          <div>
-            <label className='block text-sm mb-2 text-gray-300'>
-              Ngày trồng
-            </label>
-            <input
-              type='date'
-              className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-white focus: outline-none focus:ring-2 focus:ring-green-500'
-              value={form.plantingDate}
-              onChange={(e) => updateField('plantingDate', e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9]/g, '');
+                updateField('numberTrees', val === '' ? 0 : parseInt(val));
+              }}
             />
           </div>
 
           {/* COORDINATES */}
-          <div className='grid grid-cols-2 gap-4'>
+          <div className='flex items-center justify-between'>
+            <label className='block text-sm text-gray-300'>Vị trí (Tọa độ)</label>
+            <button
+              onClick={() => {
+                if (!navigator.geolocation) return;
+                navigator.geolocation.getCurrentPosition((pos) => {
+                  updateField('latitude', pos.coords.latitude);
+                  updateField('longitude', pos.coords.longitude);
+                });
+              }}
+              className='text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1'
+            >
+              <span className='material-icons text-xs'>my_location</span>
+              Lấy vị trí hiện tại
+            </button>
+          </div>
+          <div className='grid grid-cols-2 gap-4 mt-2'>
             <div>
-              <label className='block text-sm mb-2 text-gray-300'>
-                Vĩ độ (Latitude)
-              </label>
+              <label className='block text-xs mb-1 text-gray-500'>Vĩ độ (Latitude)</label>
               <input
-                type='number'
-                step='0.0001'
+                type='text'
                 className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-white focus:outline-none focus:ring-2 focus:ring-green-500'
                 value={form.latitude}
-                onChange={(e) =>
-                  updateField('latitude', parseFloat(e.target.value) || 0)
-                }
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.-]/g, '');
+                  updateField('latitude', val === '' ? 0 : parseFloat(val));
+                }}
               />
             </div>
 
             <div>
-              <label className='block text-sm mb-2 text-gray-300'>
-                Kinh độ (Longitude)
-              </label>
+              <label className='block text-xs mb-1 text-gray-500'>Kinh độ (Longitude)</label>
               <input
-                type='number'
-                step='0.0001'
-                className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-white focus:outline-none focus:ring-2 focus: ring-green-500'
+                type='text'
+                className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-white focus:outline-none focus:ring-2 focus:ring-green-500'
                 value={form.longitude}
-                onChange={(e) =>
-                  updateField('longitude', parseFloat(e.target.value) || 0)
-                }
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.-]/g, '');
+                  updateField('longitude', val === '' ? 0 : parseFloat(val));
+                }}
               />
             </div>
           </div>
@@ -175,59 +174,44 @@ export default function AddTreeModal({
           {/* MEASUREMENTS */}
           <div className='grid grid-cols-3 gap-4'>
             <div>
-              <label className='block text-sm mb-2 text-gray-300'>
-                Chiều cao TB (cm)
-              </label>
+              <label className='block text-xs mb-1 text-gray-400'>Chiều cao TB (cm)</label>
               <input
-                type='number'
-                step='0.1'
+                type='text'
                 className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-white focus:outline-none focus:ring-2 focus:ring-green-500'
-                placeholder='250. 5'
+                placeholder='250.5'
                 value={form.currentAvgHeight || ''}
-                onChange={(e) =>
-                  updateField(
-                    'currentAvgHeight',
-                    parseFloat(e.target.value) || 0,
-                  )
-                }
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, '');
+                  updateField('currentAvgHeight', val === '' ? 0 : parseFloat(val));
+                }}
               />
             </div>
 
             <div>
-              <label className='block text-sm mb-2 text-gray-300'>
-                Đường kính thân (cm)
-              </label>
+              <label className='block text-xs mb-1 text-gray-400'>Đường kính thân (cm)</label>
               <input
-                type='number'
-                step='0.1'
+                type='text'
                 className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-white focus:outline-none focus:ring-2 focus:ring-green-500'
                 placeholder='8.2'
                 value={form.currentAvgTrunkDiameter || ''}
-                onChange={(e) =>
-                  updateField(
-                    'currentAvgTrunkDiameter',
-                    parseFloat(e.target.value) || 0,
-                  )
-                }
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, '');
+                  updateField('currentAvgTrunkDiameter', val === '' ? 0 : parseFloat(val));
+                }}
               />
             </div>
 
             <div>
-              <label className='block text-sm mb-2 text-gray-300'>
-                Đường kính tán (cm)
-              </label>
+              <label className='block text-xs mb-1 text-gray-400'>Đường kính tán (cm)</label>
               <input
-                type='number'
-                step='0.1'
-                className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-white focus:outline-none focus:ring-2 focus: ring-green-500'
+                type='text'
+                className='w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-white focus:outline-none focus:ring-2 focus:ring-green-500'
                 placeholder='180.0'
                 value={form.currentAvgCanopyDiameter || ''}
-                onChange={(e) =>
-                  updateField(
-                    'currentAvgCanopyDiameter',
-                    parseFloat(e.target.value) || 0,
-                  )
-                }
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, '');
+                  updateField('currentAvgCanopyDiameter', val === '' ? 0 : parseFloat(val));
+                }}
               />
             </div>
           </div>

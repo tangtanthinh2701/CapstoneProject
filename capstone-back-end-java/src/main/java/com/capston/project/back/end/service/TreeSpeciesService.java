@@ -1,7 +1,9 @@
 package com.capston.project.back.end.service;
 
+import com.capston.project.back.end.request.CarbonCalculatorRequest;
 import com.capston.project.back.end.request.TreeSpeciesRequest;
 
+import com.capston.project.back.end.response.CarbonCalculatorResponse;
 import com.capston.project.back.end.response.TreeSpeciesResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,4 +26,6 @@ public interface TreeSpeciesService {
 	List<TreeSpeciesResponse> getAllActive();
 
 	List<TreeSpeciesResponse> getTopByCarbonAbsorption(int limit);
+
+	CarbonCalculatorResponse estimateCarbonSequestration(CarbonCalculatorRequest request);
 }

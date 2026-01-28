@@ -34,7 +34,7 @@ public class TreeBatchController {
     // ==================== CRUD ====================
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
     public ResponseEntity<ApiResponse<TreeBatch>> createTreeBatch(@Valid @RequestBody TreeBatchRequest request) {
         TreeBatch batch = treeBatchService.createTreeBatch(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -54,7 +54,7 @@ public class TreeBatchController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
     public ResponseEntity<ApiResponse<TreeBatch>> updateTreeBatch(
             @PathVariable Integer id,
             @Valid @RequestBody TreeBatchRequest request) {
@@ -63,7 +63,7 @@ public class TreeBatchController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
     public ResponseEntity<ApiResponse<Void>> deleteTreeBatch(@PathVariable Integer id) {
         treeBatchService.deleteTreeBatch(id);
         return ResponseEntity.ok(ApiResponse.success("Tree batch deleted successfully", null));
@@ -88,8 +88,7 @@ public class TreeBatchController {
         return ResponseEntity.ok(ApiResponse.success(
                 "Tree batches retrieved successfully",
                 batchPage.getContent(),
-                buildPageInfo(batchPage)
-        ));
+                buildPageInfo(batchPage)));
     }
 
     @GetMapping("/farm/{farmId}")
@@ -137,4 +136,3 @@ public class TreeBatchController {
                 .build();
     }
 }
-

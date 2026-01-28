@@ -1,6 +1,6 @@
 # 📘 Complete API Test Guide - Carbon Credit Management System
 
-**Base URL:** `http://localhost:8080`
+**Base URL:** `http://localhost:8088`
 
 ---
 
@@ -34,9 +34,11 @@ POST /api/auth/register
   "phoneNumber": "0912345678",
   "address": "123 Le Loi, Ho Chi Minh City",
   "dateOfBirth": "1995-05-20",
-  "sex": true
+  "sex": true,
+  "role": "USER"
 }
 ```
+*(Valid roles: `USER`, `FARMER`. `ADMIN` cannot be registered here)*
 
 ### Login
 ```
@@ -147,7 +149,7 @@ POST /api/user/change-password
 
 ## 📁 3. Project Management (`/api/projects`)
 
-### [ADMIN] Create Project
+### [ADMIN/USER] Create Project
 ```
 POST /api/projects/create-projects
 ```
@@ -155,7 +157,6 @@ POST /api/projects/create-projects
 {
   "name": "Central Highlands Reforestation",
   "description": "Planting indigenous trees in Dak Lak.",
-  "isPublic": true,
   "phases": [
     {
       "phaseNumber": 1,
@@ -172,14 +173,9 @@ POST /api/projects/create-projects
 }
 ```
 
-### Get All Projects
+### Get My Projects (USER) / All Projects (ADMIN)
 ```
 GET /api/projects?page=0&size=10&sortBy=createdAt&sortDir=desc
-```
-
-### Get Public Projects
-```
-GET /api/projects/public?page=0&size=10
 ```
 
 ### Search Projects
@@ -192,7 +188,7 @@ GET /api/projects/search?keyword=forest&page=0&size=10
 GET /api/projects/{id}
 ```
 
-### [ADMIN] Update Project
+### [ADMIN/USER] Update Project
 ```
 PUT /api/projects/{id}
 ```
@@ -200,17 +196,16 @@ PUT /api/projects/{id}
 {
   "name": "Updated Project Name",
   "description": "Updated description",
-  "projectStatus": "ACTIVE",
-  "isPublic": true
+  "projectStatus": "ACTIVE"
 }
 ```
 
-### [ADMIN] Delete Project
+### [ADMIN/USER] Delete Project
 ```
 DELETE /api/projects/{id}
 ```
 
-### [ADMIN] Add Phase to Project
+### [ADMIN/USER] Add Phase to Project
 ```
 POST /api/projects/{projectId}/phases
 ```
@@ -222,21 +217,37 @@ POST /api/projects/{projectId}/phases
   "phaseStatus": "PLANNING",
   "plannedStartDate": "2027-01-01",
   "plannedEndDate": "2027-06-30",
-  "actualStartDate": "2027-01-01",
   "budget": 200000.00,
   "targetCo2Kg": 100000.00
 }
 ```
 
-### [ADMIN] Assign Farm to Project
+### Get Project Phases
 ```
-POST /api/projects/{projectId}/farms/{farmId}
+GET /api/projects/{projectId}/phases
 ```
 
-### [ADMIN] Remove Farm from Project
+### [ADMIN/USER] Update Project Phase
 ```
-DELETE /api/projects/{projectId}/farms/{farmId}
+PUT /api/projects/{projectId}/phases/{phaseId}
 ```
+
+### [ADMIN/USER] Delete Project Phase
+```
+DELETE /api/projects/{projectId}/phases/{phaseId}
+```
+
+### [ADMIN/USER] Recalculate Project Stats
+*   **Recalculates budget and CO2 totals from phases**
+```
+POST /api/projects/{projectId}/recalculate
+```
+
+### [ADMIN] Recalculate All Projects
+```
+POST /api/projects/recalculate-all
+```
+
 
 ### [ADMIN] Add Partner to Project
 ```
@@ -261,29 +272,31 @@ DELETE /api/projects/{projectId}/partners/{partnerUserId}
 
 ## 🚜 4. Farm Management (`/api/farms`)
 
-### [ADMIN] Create Farm
+### [ADMIN/FARMER] Create Farm
 ```
 POST /api/farms
 ```
 ```json
 {
-  "code": "FARM-DL-001",
   "name": "Dak Lak Highlands Farm",
   "description": "Main farm in central highlands",
   "location": "Buon Ma Thuot, Dak Lak",
   "area": 250.0,
   "usableArea": 230.0,
-  "soilType": "Basalt",
-  "climateZone": "Tropical",
-  "avgRainfall": 1800.0,
-  "avgTemperature": 24.5,
   "farmStatus": "ACTIVE"
 }
 ```
+*   **Note:** Latitude and longitude are **automatically fetched** based on the `location` address string (via Nominatim API) and cannot be entered manually.
+*   **Note:** Environmental data (`soilType`, `climateZone`, `avgRainfall`, `avgTemperature`) are **automatically fetched** from climate APIs based on location coordinates.
 
 ### Get All Farms
 ```
 GET /api/farms?page=0&size=10
+```
+
+### [FARMER] Get My Farms
+```
+GET /api/farms/my-farms?page=0&size=10
 ```
 
 ### Get Farm by ID
@@ -291,15 +304,21 @@ GET /api/farms?page=0&size=10
 GET /api/farms/{id}
 ```
 
-### [ADMIN] Update Farm
+### [ADMIN/FARMER] Update Farm
 ```
 PUT /api/farms/{id}
 ```
+*   **Note:** Farmers can only update farms they created.
 
-### [ADMIN] Delete Farm
+### [ADMIN/FARMER] Delete Farm
 ```
 DELETE /api/farms/{id}
 ```
+*   **Note:** Farmers can only delete farms they created.
+
+### Weather Data Integration
+*   The system automatically triggers a weather data sync when a farm is updated or when specific environmental records are created.
+*   Uses **Open-Meteo API** to fetch real-time temperature, humidity, and precipitation based on the farm's `latitude` and `longitude`.
 
 ---
 
@@ -318,7 +337,7 @@ POST /api/tree-species
 }
 ```
 
-### Get All Tree Species
+### Get All Tree Species (ADMIN/FARMER/USER)
 ```
 GET /api/tree-species?page=0&size=10
 ```
@@ -333,11 +352,26 @@ PUT /api/tree-species/{id}
 DELETE /api/tree-species/{id}
 ```
 
+
+### [NEW] Carbon Sequestration Calculator
+```
+POST /api/tree-species/calculator
+```
+```json
+{
+  "treeSpeciesId": 1,
+  "quantity": 1000,
+  "years": 10,
+  "environmentFactor": 1.0
+}
+```
+*   **Response:** Provides a detailed yearly breakdown and total estimated CO2 (Tons) and potential Carbon Credits.
+
 ---
 
 ## 🌱 6. Tree Batches (`/api/tree-batches`)
 
-### [ADMIN] Create Tree Batch
+### [ADMIN/FARMER] Create Tree Batch
 ```
 POST /api/tree-batches
 ```
@@ -348,7 +382,7 @@ POST /api/tree-batches
   "phaseId": 1,
   "quantityPlanted": 10000,
   "plantingDate": "2026-07-01",
-  "plantingAreaM2": 50000.0,
+  "plantingAreaM2": 500.0,
   "supplierName": "Local Nursery",
   "unitCost": 3.5,
   "batchStatus": "ACTIVE",
@@ -370,7 +404,7 @@ GET /api/user/allocations?page=0&size=10
 
 ## 📈 7. Tree Growth Records (`/api/tree-growth-records`)
 
-### [ADMIN] Create Growth Record
+### [ADMIN/FARMER] Create Growth Record
 ```
 POST /api/tree-growth-records
 ```
@@ -394,8 +428,13 @@ POST /api/tree-growth-records/{id}/calculate-co2
 
 ### Get CO2 Summary by Batch
 ```
-GET /api/tree-growth-records/batch/{batchId}/co2-summary
+GET /api/tree-growth-records/batch/{batchId}/total-co2
 ```
+
+### [NEW] Tree Health Alerts (WebSocket)
+*   When a record is created with `healthStatus` as **UNHEALTHY** or **STRESSED**, a real-time notification is sent via:
+    *   **Topic:** `/topic/alerts` (Admins)
+    *   **User Queue:** `/user/queue/notifications` (Farmer)
 
 ---
 
@@ -409,15 +448,15 @@ POST /api/contracts
 {
   "projectId": 1,
   "contractType": "OWNERSHIP",
-  "totalValue": 25000.0,
+  "unitPrice": 100.0,
+  "totalAmount": 25000.0,
   "startDate": "2026-01-01",
   "endDate": "2031-01-01",
-  "durationYears": 5,
-  "paymentTerms": "Monthly installments",
-  "carbonCreditPercentage": 10.0,
-  "isRenewable": true,
+  "contractTermYears": 5,
+  "autoRenewal": true,
   "maxRenewals": 2,
-  "transferAllowed": true
+  "transferAllowed": true,
+  "harvestRights": true
 }
 ```
 > **Valid contractType values:** `OWNERSHIP`, `INVESTMENT`, `SERVICE`, `CREDIT_PURCHASE`
@@ -526,7 +565,11 @@ POST /api/carbon-credits
   "creditsIssued": 500,
   "basePricePerCredit": 18.5,
   "currentPricePerCredit": 18.5,
-  "verificationStandard": "VCS"
+  "verificationStandard": "VCS",
+  "origins": [
+    { "farmId": 1, "batchId": 1, "quantity": 300 },
+    { "farmId": 2, "batchId": 5, "quantity": 200 }
+  ]
 }
 ```
 
@@ -568,32 +611,44 @@ POST /api/carbon-credits/retire
 GET /api/carbon-credits/summary
 ```
 
+### [NEW] User Specific Credit Info
+```
+GET /api/carbon-credits/my-balance
+```
+*   **Returns:** Total credits active in the user's wallet.
+
+```
+GET /api/carbon-credits/my-allocations
+```
+*   **Returns:** List of credits allocated through projects/contracts.
+
+```
+GET /api/carbon-credits/my-transactions
+```
+*   **Returns:** History of purchases and retirements.
+
 ---
 
 ## 💳 11. Payments (`/api/payments`)
 
 ### [USER] Create VNPay Payment
 ```
-POST /api/payments/vnpay/create
-```
-```json
-{
-  "amount": 5000000,
-  "contractId": 1,
-  "description": "Payment for contract CTR-001",
-  "bankCode": "NCB",
-  "ipAddress": "127.0.0.1"
-}
+POST /api/payments/vnpay/create-payment?amount=5000000&bankCode=NCB&orderInfo=TestPayment
 ```
 
 ### VNPay Return Callback
 ```
-GET /api/payments/vnpay/return?vnp_TxnRef=xxx&vnp_ResponseCode=00&...
+GET /api/payments/vnpay-return?vnp_TxnRef=xxx&vnp_ResponseCode=00&...
+```
+
+### VNPay IPN (Server-to-Server)
+```
+GET /api/payments/vnpay-ipn?...
 ```
 
 ### [USER] Get My Payment History
 ```
-GET /api/user/transactions?page=0&size=10
+GET /api/payments/my-payments?page=0&size=10
 ```
 
 ---

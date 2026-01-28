@@ -87,4 +87,8 @@ public class User {
     return Role.ADMIN.equals(this.role);
   }
 
+  public boolean isFarmer() {
+    return Role.FARMER.equals(this.role);
+  }
+
 }

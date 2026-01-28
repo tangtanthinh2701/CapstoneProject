@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface FarmRepository extends JpaRepository<Farm, Integer> {
@@ -21,11 +22,16 @@ public interface FarmRepository extends JpaRepository<Farm, Integer> {
 
 	Page<Farm> findByDeletedAtIsNull(Pageable pageable);
 
+	Page<Farm> findByCreatedByAndDeletedAtIsNull(UUID createdBy, Pageable pageable);
+
+	@Query("SELECT f FROM Farm f WHERE f.createdBy = :userId AND f.deletedAt IS NULL")
+	Page<Farm> findMyFarms(@Param("userId") java.util.UUID userId, Pageable pageable);
+
 	Page<Farm> findByFarmStatusAndDeletedAtIsNull(FarmStatus status, Pageable pageable);
 
 	@Query("SELECT f FROM Farm f WHERE f.deletedAt IS NULL " +
-	       "AND (LOWER(f.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-	       "OR LOWER(f.location) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+			"AND (LOWER(f.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+			"OR LOWER(f.location) LIKE LOWER(CONCAT('%', :keyword, '%')))")
 	List<Farm> searchByKeyword(@Param("keyword") String keyword);
 
 	@Query("SELECT f FROM Farm f WHERE f.deletedAt IS NULL")

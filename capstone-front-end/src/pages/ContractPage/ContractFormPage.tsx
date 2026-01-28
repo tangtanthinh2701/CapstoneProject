@@ -176,10 +176,13 @@ export default function ContractFormPage() {
               <div>
                 <label className="block text-sm mb-2 text-gray-300">Giá trị (VND)</label>
                 <input
-                  type="number"
+                  type="text"
                   className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  value={form.totalValue}
-                  onChange={(e) => updateField('totalValue', parseFloat(e.target.value) || 0)}
+                  value={form.totalValue === 0 ? '' : form.totalValue}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                    updateField('totalValue', val === '' ? 0 : parseFloat(val));
+                  }}
                 />
               </div>
             </div>
@@ -209,20 +212,25 @@ export default function ContractFormPage() {
               <div>
                 <label className="block text-sm mb-2 text-gray-300">Thời hạn (năm)</label>
                 <input
-                  type="number"
+                  type="text"
                   className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  value={form.durationYears}
-                  onChange={(e) => updateField('durationYears', parseInt(e.target.value) || 1)}
+                  value={form.durationYears === 0 ? '' : form.durationYears}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    updateField('durationYears', val === '' ? 0 : parseInt(val));
+                  }}
                 />
               </div>
               <div>
                 <label className="block text-sm mb-2 text-gray-300">% Tín chỉ carbon</label>
                 <input
-                  type="number"
-                  step="0.1"
+                  type="text"
                   className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  value={form.carbonCreditPercentage}
-                  onChange={(e) => updateField('carbonCreditPercentage', parseFloat(e.target.value) || 0)}
+                  value={form.carbonCreditPercentage === 0 ? '' : form.carbonCreditPercentage}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                    updateField('carbonCreditPercentage', val === '' ? 0 : parseFloat(val));
+                  }}
                 />
               </div>
             </div>

@@ -9,6 +9,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -47,5 +48,17 @@ public class CarbonCreditRequest {
 
 	private CreditStatus creditStatus;
 
+	private List<CreditOriginRequest> origins;
+
 	private OffsetDateTime expiresAt;
+
+	@Data
+	@Builder
+	@NoArgsConstructor
+	@AllArgsConstructor
+	public static class CreditOriginRequest {
+		private Integer farmId;
+		private Integer batchId;
+		private Integer quantity;
+	}
 }

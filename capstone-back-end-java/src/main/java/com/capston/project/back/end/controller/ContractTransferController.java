@@ -51,6 +51,14 @@ public class ContractTransferController {
 
     // ==================== GET TRANSFERS ====================
 
+    @GetMapping("/my-transfers")
+    public ResponseEntity<ApiResponse<List<ContractTransfer>>> getMyTransfers(
+            Authentication authentication) {
+        UUID userId = getUserIdFromAuth(authentication);
+        List<ContractTransfer> transfers = transferService.getTransfersByUserId(userId);
+        return ResponseEntity.ok(ApiResponse.success(transfers));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ContractTransfer>> getTransferById(@PathVariable Integer id) {
         ContractTransfer transfer = transferService.getTransferById(id);
@@ -91,14 +99,6 @@ public class ContractTransferController {
     public ResponseEntity<ApiResponse<List<ContractTransfer>>> getTransfersByContract(
             @PathVariable Integer contractId) {
         List<ContractTransfer> transfers = transferService.getTransfersByContractId(contractId);
-        return ResponseEntity.ok(ApiResponse.success(transfers));
-    }
-
-    @GetMapping("/my-transfers")
-    public ResponseEntity<ApiResponse<List<ContractTransfer>>> getMyTransfers(
-            Authentication authentication) {
-        UUID userId = getUserIdFromAuth(authentication);
-        List<ContractTransfer> transfers = transferService.getTransfersByUserId(userId);
         return ResponseEntity.ok(ApiResponse.success(transfers));
     }
 

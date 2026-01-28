@@ -5,6 +5,7 @@ import com.capston.project.back.end.common.ReferenceType;
 import com.capston.project.back.end.entity.Notification;
 import com.capston.project.back.end.repository.NotificationRepository;
 import com.capston.project.back.end.repository.UserRepository;
+import com.capston.project.back.end.util.SecurityUtils;
 import com.capston.project.back.end.response.NotificationResponse;
 import com.capston.project.back.end.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -29,11 +30,12 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final SecurityUtils securityUtils;
 
     @Override
     public NotificationResponse createAndSend(UUID userId, String title, String message,
-                                              NotificationType type, ReferenceType refType,
-                                              Integer refId, Map<String, Object> metadata) {
+            NotificationType type, ReferenceType refType,
+            Integer refId, Map<String, Object> metadata) {
         log.info("Creating notification for user: {}, type: {}", userId, type);
 
         Notification notification = Notification.builder()
@@ -58,7 +60,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendToMultipleUsers(List<UUID> userIds, String title, String message,
-                                    NotificationType type, ReferenceType refType, Integer refId) {
+            NotificationType type, ReferenceType refType, Integer refId) {
         for (UUID userId : userIds) {
             createAndSend(userId, title, message, type, refType, refId, null);
         }
@@ -66,7 +68,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendToAdmins(String title, String message, NotificationType type,
-                            ReferenceType refType, Integer refId) {
+            ReferenceType refType, Integer refId) {
         List<UUID> adminIds = userRepository.findAllAdminIds();
         sendToMultipleUsers(adminIds, title, message, type, refType, refId);
     }
@@ -96,6 +98,11 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void markAsRead(Integer notificationId) {
         notificationRepository.findById(notificationId).ifPresent(notification -> {
+            // Check ownership
+            if (!notification.getUserId().equals(securityUtils.getCurrentUserId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "You do not have permission to mark this notification as read");
+            }
             notification.markAsRead();
             notificationRepository.save(notification);
         });
@@ -108,7 +115,14 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void deleteNotification(Integer id) {
-        notificationRepository.deleteById(id);
+        notificationRepository.findById(id).ifPresent(notification -> {
+            // Check ownership
+            if (!notification.getUserId().equals(securityUtils.getCurrentUserId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "You do not have permission to delete this notification");
+            }
+            notificationRepository.delete(notification);
+        });
     }
 
     @Override
@@ -124,8 +138,7 @@ public class NotificationServiceImpl implements NotificationService {
             messagingTemplate.convertAndSendToUser(
                     userId.toString(),
                     "/queue/notifications",
-                    notification
-            );
+                    notification);
             log.debug("WebSocket notification sent to user: {}", userId);
         } catch (Exception e) {
             log.error("Failed to send WebSocket notification: {}", e.getMessage());
@@ -148,4 +161,3 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
     }
 }
-

@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,7 +22,6 @@ public class ProjectResponse {
 	private String description;
 	private ProjectStatus projectStatus;
 	private UUID managerId;
-	private Boolean isPublic;
 
 	private BigDecimal totalBudget;
 	private BigDecimal targetCo2Kg;

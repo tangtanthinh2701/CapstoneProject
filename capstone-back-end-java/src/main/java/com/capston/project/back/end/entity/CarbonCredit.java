@@ -6,11 +6,15 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -34,6 +38,10 @@ public class CarbonCredit {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "project_id", insertable = false, updatable = false)
 	private Project project;
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "origins", columnDefinition = "jsonb")
+	private List<Map<String, Object>> origins; // List of {farmId, batchId, quantity}
 
 	// Issuance details
 	@Column(name = "issuance_year", nullable = false)

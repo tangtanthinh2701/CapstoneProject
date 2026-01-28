@@ -7,8 +7,13 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -55,6 +60,10 @@ public class CreditTransaction {
 	@Enumerated(EnumType.STRING)
 	@Column(name = "transaction_type", nullable = false, length = 20)
 	private TransactionType transactionType; // PURCHASE, RETIREMENT
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "purchase_details", columnDefinition = "jsonb")
+	private List<Map<String, Object>> purchaseDetails; // [{creditId, quantity, unitPrice, origins: [...]}]
 
 	// Status
 	@Enumerated(EnumType.STRING)

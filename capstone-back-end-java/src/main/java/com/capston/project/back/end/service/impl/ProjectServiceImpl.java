@@ -3,17 +3,16 @@ package com.capston.project.back.end.service.impl;
 import com.capston.project.back.end.common.PhaseStatus;
 import com.capston.project.back.end.common.ProjectStatus;
 import com.capston.project.back.end.entity.Project;
-import com.capston.project.back.end.entity.ProjectFarm;
 import com.capston.project.back.end.entity.ProjectPartner;
 import com.capston.project.back.end.entity.ProjectPhase;
 import com.capston.project.back.end.exception.DuplicateResourceException;
 import com.capston.project.back.end.exception.ResourceNotFoundException;
-import com.capston.project.back.end.repository.ProjectFarmRepository;
 import com.capston.project.back.end.repository.ProjectPartnerRepository;
 import com.capston.project.back.end.repository.ProjectPhaseRepository;
 import com.capston.project.back.end.request.ProjectPhaseRequest;
 import com.capston.project.back.end.request.ProjectRequest;
 import com.capston.project.back.end.repository.ProjectRepository;
+import com.capston.project.back.end.util.SecurityUtils;
 import com.capston.project.back.end.response.ProjectPhaseResponse;
 import com.capston.project.back.end.response.ProjectResponse;
 import com.capston.project.back.end.service.ProjectService;
@@ -37,9 +36,9 @@ import java.util.stream.Collectors;
 public class ProjectServiceImpl implements ProjectService {
 	private final ProjectRepository projectRepository;
 	private final ProjectPhaseRepository projectPhaseRepository;
-	private final ProjectFarmRepository projectFarmRepository;
 	private final ProjectPartnerRepository projectPartnerRepository;
 	private final ModelMapper modelMapper;
+	private final SecurityUtils securityUtils;
 
 	@Override
 	public ProjectResponse createProject(ProjectRequest request, UUID managerId) {
@@ -99,6 +98,12 @@ public class ProjectServiceImpl implements ProjectService {
 		Project project = projectRepository.findByIdWithPhases(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Project", "id", id));
 
+		// Check ownership for non-admin users
+		if (!securityUtils.isAdmin() && !project.getManagerId().equals(securityUtils.getCurrentUserId())) {
+			throw new org.springframework.security.access.AccessDeniedException(
+					"You do not have permission to update this project");
+		}
+
 		// Update basic fields (không update computed fields)
 		if (request.getName() != null) {
 			project.setName(request.getName());
@@ -108,9 +113,6 @@ public class ProjectServiceImpl implements ProjectService {
 		}
 		if (request.getProjectStatus() != null) {
 			project.setProjectStatus(request.getProjectStatus());
-		}
-		if (request.getIsPublic() != null) {
-			project.setIsPublic(request.getIsPublic());
 		}
 
 		// Xử lý phases nếu có trong request
@@ -130,8 +132,13 @@ public class ProjectServiceImpl implements ProjectService {
 	public void deleteProject(Integer id) {
 		log.info("Deleting project with id: {}", id);
 
-		if (!projectRepository.existsById(id)) {
-			throw new ResourceNotFoundException("Project", "id", id);
+		Project project = projectRepository.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("Project", "id", id));
+
+		// Check ownership for non-admin users
+		if (!securityUtils.isAdmin() && !project.getManagerId().equals(securityUtils.getCurrentUserId())) {
+			throw new org.springframework.security.access.AccessDeniedException(
+					"You do not have permission to delete this project");
 		}
 
 		projectRepository.deleteById(id);
@@ -140,7 +147,13 @@ public class ProjectServiceImpl implements ProjectService {
 
 	@Override
 	public Page<ProjectResponse> getAllProjects(Pageable pageable) {
-		Page<Integer> idsPage = projectRepository.findAllProjectIds(pageable);
+		Page<Integer> idsPage;
+
+		if (securityUtils.isAdmin()) {
+			idsPage = projectRepository.findAllProjectIds(pageable);
+		} else {
+			idsPage = projectRepository.findProjectIdsByManager(securityUtils.getCurrentUserId(), pageable);
+		}
 
 		if (idsPage.isEmpty()) {
 			return Page.empty(pageable);
@@ -174,15 +187,14 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
-	public Page<ProjectResponse> getPublicProjects(Pageable pageable) {
-		return projectRepository.findByIsPublicTrue(pageable)
-				.map(this::mapToProjectResponseWithoutPhases);
-	}
-
-	@Override
 	public Page<ProjectResponse> searchProjects(String keyword, Pageable pageable) {
-		return projectRepository.searchByKeyword(keyword, pageable)
-				.map(this::mapToProjectResponseWithoutPhases);
+		if (securityUtils.isAdmin()) {
+			return projectRepository.searchByKeyword(keyword, pageable)
+					.map(this::mapToProjectResponseWithoutPhases);
+		} else {
+			return projectRepository.searchByKeywordAndManager(keyword, securityUtils.getCurrentUserId(), pageable)
+					.map(this::mapToProjectResponseWithoutPhases);
+		}
 	}
 
 	@Override
@@ -191,6 +203,12 @@ public class ProjectServiceImpl implements ProjectService {
 
 		Project project = projectRepository.findByIdWithPhases(projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
+
+		// Check ownership for non-admin users
+		if (!securityUtils.isAdmin() && !project.getManagerId().equals(securityUtils.getCurrentUserId())) {
+			throw new org.springframework.security.access.AccessDeniedException(
+					"You do not have permission to manage phases for this project");
+		}
 
 		// Check duplicate phase order
 		if (projectPhaseRepository.existsByProjectIdAndPhaseNumber(projectId, request.getPhaseNumber())) {
@@ -218,6 +236,12 @@ public class ProjectServiceImpl implements ProjectService {
 
 		Project project = projectRepository.findByIdWithPhases(projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
+
+		// Check ownership for non-admin users
+		if (!securityUtils.isAdmin() && !project.getManagerId().equals(securityUtils.getCurrentUserId())) {
+			throw new org.springframework.security.access.AccessDeniedException(
+					"You do not have permission to manage phases for this project");
+		}
 
 		ProjectPhase phase = projectPhaseRepository.findById(phaseId)
 				.orElseThrow(() -> new ResourceNotFoundException("ProjectPhase", "id", phaseId));
@@ -257,6 +281,11 @@ public class ProjectServiceImpl implements ProjectService {
 		Project project = projectRepository.findByIdWithPhases(projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
 
+		// Check ownership for non-admin users
+		if (!securityUtils.isAdmin() && !project.getManagerId().equals(securityUtils.getCurrentUserId())) {
+			throw new org.springframework.security.access.AccessDeniedException("You do not have permission to manage phases for this project");
+		}
+
 		ProjectPhase phase = projectPhaseRepository.findById(phaseId)
 				.orElseThrow(() -> new ResourceNotFoundException("ProjectPhase", "id", phaseId));
 
@@ -290,6 +319,15 @@ public class ProjectServiceImpl implements ProjectService {
 	@Override
 	public void recalculateProjectFields(Integer projectId) {
 		log.info("Recalculating fields for project:  {}", projectId);
+
+		Project project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
+
+		// Check ownership for non-admin users
+		if (!securityUtils.isAdmin() && !project.getManagerId().equals(securityUtils.getCurrentUserId())) {
+			throw new org.springframework.security.access.AccessDeniedException(
+					"You do not have permission to recalculate this project");
+		}
 
 		BigDecimal budget = projectPhaseRepository.sumBudgetByProjectId(projectId);
 		BigDecimal targetCarbon = projectPhaseRepository.sumTargetCarbonByProjectId(projectId);
@@ -446,7 +484,6 @@ public class ProjectServiceImpl implements ProjectService {
 				.description(project.getDescription())
 				.projectStatus(project.getProjectStatus())
 				.managerId(project.getManagerId())
-				.isPublic(project.getIsPublic())
 				.totalBudget(project.getTotalBudget())
 				.targetCo2Kg(project.getTargetCo2Kg())
 				.actualCo2Kg(project.getActualCo2Kg())
@@ -466,7 +503,6 @@ public class ProjectServiceImpl implements ProjectService {
 				.description(project.getDescription())
 				.projectStatus(project.getProjectStatus())
 				.managerId(project.getManagerId())
-				.isPublic(project.getIsPublic())
 				.totalBudget(project.getTotalBudget())
 				.targetCo2Kg(project.getTargetCo2Kg())
 				.actualCo2Kg(project.getActualCo2Kg())
@@ -496,28 +532,6 @@ public class ProjectServiceImpl implements ProjectService {
 				.createdAt(phase.getCreatedAt())
 				.updatedAt(phase.getUpdatedAt())
 				.build();
-	}
-
-	// ==================== FARM & PARTNER ASSIGNMENT ====================
-
-	@Override
-	public void assignFarmToProject(Integer projectId, Integer farmId, UUID assignedBy) {
-		log.info("Assigning farm {} to project {}", farmId, projectId);
-		if (!projectRepository.existsById(projectId)) {
-			throw new ResourceNotFoundException("Project", "id", projectId);
-		}
-		ProjectFarm projectFarm = ProjectFarm.builder()
-				.projectId(projectId)
-				.farmId(farmId)
-				.assignedBy(assignedBy)
-				.build();
-		projectFarmRepository.save(projectFarm);
-	}
-
-	@Override
-	public void removeFarmFromProject(Integer projectId, Integer farmId) {
-		log.info("Removing farm {} from project {}", farmId, projectId);
-		projectFarmRepository.deleteByProjectIdAndFarmId(projectId, farmId);
 	}
 
 	@Override

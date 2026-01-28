@@ -3,7 +3,7 @@ package com.capston.project.back.end.service.impl;
 import com.capston.project.back.end.common.NotificationType;
 import com.capston.project.back.end.common.PaymentStatus;
 import com.capston.project.back.end.common.ReferenceType;
-import com.capston.project.back.end.config.VNPayConfig;
+import com.capston.project.back.end.config.payment.VNPayConfig;
 import com.capston.project.back.end.entity.Payment;
 import com.capston.project.back.end.repository.PaymentRepository;
 import com.capston.project.back.end.request.VNPayRequest;
@@ -25,7 +25,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-@Service
+@Service("vnPayService")
 @RequiredArgsConstructor
 @Slf4j
 public class VNPayServiceImpl implements VNPayService {
@@ -63,16 +63,17 @@ public class VNPayServiceImpl implements VNPayService {
 
         // Build VNPay URL
         Map<String, String> vnpParams = new TreeMap<>();
-        vnpParams.put("vnp_Version", vnPayConfig.getVersion());
-        vnpParams.put("vnp_Command", vnPayConfig.getCommand());
-        vnpParams.put("vnp_TmnCode", vnPayConfig.getTmnCode());
+        vnpParams.put("vnp_Version", vnPayConfig.getVnp_Version());
+        vnpParams.put("vnp_Command", vnPayConfig.getVnp_Command());
+        vnpParams.put("vnp_TmnCode", vnPayConfig.getVnp_TmnCode());
         vnpParams.put("vnp_Amount", String.valueOf(request.getAmount().multiply(BigDecimal.valueOf(100)).longValue()));
         vnpParams.put("vnp_CurrCode", "VND");
         vnpParams.put("vnp_TxnRef", txnRef);
-        vnpParams.put("vnp_OrderInfo", request.getDescription() != null ? request.getDescription() : "Thanh toan don hang " + txnRef);
-        vnpParams.put("vnp_OrderType", vnPayConfig.getOrderType());
+        vnpParams.put("vnp_OrderInfo",
+                request.getDescription() != null ? request.getDescription() : "Thanh toan don hang " + txnRef);
+        vnpParams.put("vnp_OrderType", vnPayConfig.getVnp_OrderType());
         vnpParams.put("vnp_Locale", "vn");
-        vnpParams.put("vnp_ReturnUrl", vnPayConfig.getReturnUrl());
+        vnpParams.put("vnp_ReturnUrl", vnPayConfig.getVnp_ReturnUrl());
         vnpParams.put("vnp_IpAddr", request.getIpAddress() != null ? request.getIpAddress() : "127.0.0.1");
         vnpParams.put("vnp_CreateDate", OffsetDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")).format(DATE_FORMATTER));
 
@@ -82,8 +83,8 @@ public class VNPayServiceImpl implements VNPayService {
 
         // Build query string and hash
         String queryString = buildQueryString(vnpParams);
-        String secureHash = hmacSHA512(vnPayConfig.getHashSecret(), queryString);
-        String paymentUrl = vnPayConfig.getPayUrl() + "?" + queryString + "&vnp_SecureHash=" + secureHash;
+        String secureHash = hmacSHA512(vnPayConfig.getVnp_HashSecret(), queryString);
+        String paymentUrl = vnPayConfig.getVnp_PayUrl() + "?" + queryString + "&vnp_SecureHash=" + secureHash;
 
         log.info("VNPay payment URL created for txnRef: {}", txnRef);
 
@@ -107,7 +108,7 @@ public class VNPayServiceImpl implements VNPayService {
         params.remove("vnp_SecureHashType");
 
         String signValue = buildQueryString(new TreeMap<>(params));
-        String calculatedHash = hmacSHA512(vnPayConfig.getHashSecret(), signValue);
+        String calculatedHash = hmacSHA512(vnPayConfig.getVnp_HashSecret(), signValue);
 
         if (!calculatedHash.equals(vnpSecureHash)) {
             log.error("Invalid secure hash");
@@ -154,8 +155,7 @@ public class VNPayServiceImpl implements VNPayService {
                     NotificationType.PAYMENT_RECEIVED,
                     ReferenceType.PAYMENT,
                     payment.getId(),
-                    Map.of("amount", payment.getAmount(), "txnRef", txnRef)
-            );
+                    Map.of("amount", payment.getAmount(), "txnRef", txnRef));
         } else {
             payment.setPaymentStatus(PaymentStatus.FAILED);
 
@@ -166,8 +166,7 @@ public class VNPayServiceImpl implements VNPayService {
                     NotificationType.PAYMENT_FAILED,
                     ReferenceType.PAYMENT,
                     payment.getId(),
-                    Map.of("responseCode", responseCode)
-            );
+                    Map.of("responseCode", responseCode));
         }
 
         paymentRepository.save(payment);
@@ -193,7 +192,7 @@ public class VNPayServiceImpl implements VNPayService {
         params.remove("vnp_SecureHashType");
 
         String signValue = buildQueryString(new TreeMap<>(params));
-        String calculatedHash = hmacSHA512(vnPayConfig.getHashSecret(), signValue);
+        String calculatedHash = hmacSHA512(vnPayConfig.getVnp_HashSecret(), signValue);
 
         if (!calculatedHash.equals(vnpSecureHash)) {
             return "{\"RspCode\":\"97\",\"Message\":\"Invalid Checksum\"}";
@@ -290,4 +289,3 @@ public class VNPayServiceImpl implements VNPayService {
         }
     }
 }
-

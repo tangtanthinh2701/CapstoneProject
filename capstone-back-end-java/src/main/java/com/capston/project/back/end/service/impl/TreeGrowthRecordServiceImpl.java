@@ -5,7 +5,9 @@ import com.capston.project.back.end.entity.*;
 import com.capston.project.back.end.exception.ResourceNotFoundException;
 import com.capston.project.back.end.repository.*;
 import com.capston.project.back.end.request.TreeGrowthRecordRequest;
+import com.capston.project.back.end.service.ApprovalWebSocketService;
 import com.capston.project.back.end.service.TreeGrowthRecordService;
+import com.capston.project.back.end.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -35,6 +37,8 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
     private final FarmRepository farmRepository;
     private final ProjectRepository projectRepository;
     private final ProjectPhaseRepository projectPhaseRepository;
+    private final SecurityUtils securityUtils;
+    private final ApprovalWebSocketService webSocketService;
 
     // ==================== CRUD ====================
 
@@ -44,6 +48,16 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
 
         TreeBatch batch = treeBatchRepository.findById(request.getBatchId())
                 .orElseThrow(() -> new ResourceNotFoundException("Tree batch not found: " + request.getBatchId()));
+
+        // For FARMER role, verify they manage the farm of this batch
+        if (securityUtils.isFarmer()) {
+            Farm farm = farmRepository.findById(batch.getFarmId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Farm not found: " + batch.getFarmId()));
+            if (farm.getCreatedBy() == null || !farm.getCreatedBy().equals(securityUtils.getCurrentUserId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "You are not authorized to create records for this farm");
+            }
+        }
 
         BigDecimal environmentFactor = request.getEnvironmentFactor();
         if (environmentFactor == null) {
@@ -82,6 +96,19 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
 
         updateProjectCO2(batch);
 
+        // Notify if health issue detected
+        if (saved.getHealthStatus() != HealthStatus.HEALTHY) {
+            Farm farm = farmRepository.findById(batch.getFarmId()).orElse(null);
+            if (farm != null && farm.getCreatedBy() != null) {
+                webSocketService.notifyTreeHealthIssue(
+                        farm.getCreatedBy(),
+                        saved.getBatchId(),
+                        batch.getBatchCode(),
+                        saved.getHealthStatus().name(),
+                        saved.getHealthNotes());
+            }
+        }
+
         return saved;
     }
 
@@ -99,6 +126,16 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
         TreeGrowthRecord record = getGrowthRecordById(id);
         TreeBatch batch = treeBatchRepository.findById(record.getBatchId())
                 .orElseThrow(() -> new ResourceNotFoundException("Tree batch not found"));
+
+        // For FARMER role, verify access
+        if (securityUtils.isFarmer()) {
+            Farm farm = farmRepository.findById(batch.getFarmId()).orElse(null);
+            if (farm == null || farm.getCreatedBy() == null
+                    || !farm.getCreatedBy().equals(securityUtils.getCurrentUserId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "You are not authorized to update records for this farm");
+            }
+        }
 
         if (request.getRecordedDate() != null)
             record.setRecordedDate(request.getRecordedDate());
@@ -135,6 +172,19 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
         TreeGrowthRecord saved = growthRecordRepository.save(record);
         updateProjectCO2(batch);
 
+        // Notify if health issue detected
+        if (saved.getHealthStatus() != HealthStatus.HEALTHY) {
+            Farm farm = farmRepository.findById(batch.getFarmId()).orElse(null);
+            if (farm != null && farm.getCreatedBy() != null) {
+                webSocketService.notifyTreeHealthIssue(
+                        farm.getCreatedBy(),
+                        saved.getBatchId(),
+                        batch.getBatchCode(),
+                        saved.getHealthStatus().name(),
+                        saved.getHealthNotes());
+            }
+        }
+
         return saved;
     }
 
@@ -143,6 +193,18 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
         log.info("Deleting growth record: {}", id);
         TreeGrowthRecord record = getGrowthRecordById(id);
         TreeBatch batch = treeBatchRepository.findById(record.getBatchId()).orElse(null);
+
+        // For FARMER role, verify access
+        if (securityUtils.isFarmer()) {
+            if (batch != null) {
+                Farm farm = farmRepository.findById(batch.getFarmId()).orElse(null);
+                if (farm == null || farm.getCreatedBy() == null
+                        || !farm.getCreatedBy().equals(securityUtils.getCurrentUserId())) {
+                    throw new org.springframework.security.access.AccessDeniedException(
+                            "You are not authorized to delete records for this farm");
+                }
+            }
+        }
 
         growthRecordRepository.delete(record);
 
@@ -203,6 +265,16 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
         TreeBatch batch = treeBatchRepository.findById(record.getBatchId())
                 .orElseThrow(() -> new ResourceNotFoundException("Tree batch not found"));
 
+        // For FARMER role, verify access
+        if (securityUtils.isFarmer()) {
+            Farm farm = farmRepository.findById(batch.getFarmId()).orElse(null);
+            if (farm == null || farm.getCreatedBy() == null
+                    || !farm.getCreatedBy().equals(securityUtils.getCurrentUserId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "You are not authorized to perform calculations for this farm");
+            }
+        }
+
         BigDecimal co2 = calculateCO2Absorbed(batch, record);
         record.setCo2AbsorbedKg(co2);
         TreeGrowthRecord saved = growthRecordRepository.save(record);
@@ -258,6 +330,18 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
     @Override
     @Transactional(readOnly = true)
     public List<TreeGrowthRecord> getUnhealthyRecords() {
+        if (securityUtils.isFarmer()) {
+            // For Farmers, only return unhealthy records from their managed farms
+            return growthRecordRepository.findUnhealthyRecords().stream()
+                    .filter(record -> {
+                        TreeBatch batch = treeBatchRepository.findById(record.getBatchId()).orElse(null);
+                        if (batch == null)
+                            return false;
+                        Farm farm = farmRepository.findById(batch.getFarmId()).orElse(null);
+                        return farm != null && securityUtils.getCurrentUserId().equals(farm.getCreatedBy());
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+        }
         return growthRecordRepository.findUnhealthyRecords();
     }
 

@@ -38,6 +38,8 @@ public class CarbonCreditServiceImpl implements CarbonCreditService {
     private final CarbonCreditAllocationRepository allocationRepository;
     private final CreditTransactionRepository transactionRepository;
     private final ProjectRepository projectRepository;
+    private final FarmRepository farmRepository;
+    private final TreeBatchRepository treeBatchRepository;
     private final ContractRepository contractRepository;
     private final ModelMapper modelMapper;
     private final ApprovalWebSocketService webSocketService;
@@ -71,6 +73,19 @@ public class CarbonCreditServiceImpl implements CarbonCreditService {
                 .issuedBy(request.getIssuedBy())
                 .build();
 
+        // Map origins from request to entity
+        if (request.getOrigins() != null) {
+            List<java.util.Map<String, Object>> originMapList = request.getOrigins().stream()
+                    .map(o -> {
+                        java.util.Map<String, Object> m = new java.util.HashMap<>();
+                        m.put("farmId", o.getFarmId());
+                        m.put("batchId", o.getBatchId());
+                        m.put("quantity", o.getQuantity());
+                        return m;
+                    }).collect(Collectors.toList());
+            credit.setOrigins(originMapList);
+        }
+
         CarbonCredit saved = carbonCreditRepository.save(credit);
 
         // Notify admins for verification via WebSocket
@@ -103,12 +118,17 @@ public class CarbonCreditServiceImpl implements CarbonCreditService {
         CarbonCredit credit = carbonCreditRepository.findById(creditId)
                 .orElseThrow(() -> new ResourceNotFoundException("CarbonCredit", "id", creditId));
 
-        // Find OWNERSHIP contracts for this project
-        List<Contract> ownershipContracts = contractRepository.findByProjectIdAndContractTypeAndContractStatus(
-                credit.getProjectId(), ContractType.OWNERSHIP, ContractStatus.ACTIVE);
+        // Find contracts (OWNERSHIP or INVESTMENT) for this project that have credit
+        // rights
+        List<Contract> activeContracts = contractRepository.findByProjectId(credit.getProjectId())
+                .stream()
+                .filter(c -> c.getContractStatus() == ContractStatus.ACTIVE)
+                .filter(c -> c.getContractType() == ContractType.OWNERSHIP
+                        || c.getContractType() == ContractType.INVESTMENT)
+                .collect(Collectors.toList());
 
         int totalAllocated = 0;
-        for (Contract contract : ownershipContracts) {
+        for (Contract contract : activeContracts) {
             if (contract.getCarbonCreditPercentage() == null
                     || contract.getCarbonCreditPercentage().compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
@@ -147,6 +167,16 @@ public class CarbonCreditServiceImpl implements CarbonCreditService {
         log.info("Processing credit purchase for buyer: {}", buyerId);
         CarbonCredit credit = carbonCreditRepository.findById(request.getCreditId())
                 .orElseThrow(() -> new ResourceNotFoundException("CarbonCredit", "id", request.getCreditId()));
+
+        Project project = projectRepository.findById(credit.getProjectId())
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", credit.getProjectId()));
+
+        // Logic: Prevent purchase if project has reached its CO2 target
+        if (project.getActualCo2Kg() != null && project.getTargetCo2Kg() != null
+                && project.getActualCo2Kg().compareTo(project.getTargetCo2Kg()) >= 0) {
+            throw new IllegalStateException(
+                    "Carbon credits cannot be purchased for this project as it has reached or exceeded its CO2 target sequestration.");
+        }
 
         if (credit.getCreditsAvailable() < request.getQuantity()) {
             throw new IllegalArgumentException("Not enough credits available");
@@ -345,11 +375,47 @@ public class CarbonCreditServiceImpl implements CarbonCreditService {
                 .build();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Integer getMyCreditBalance(UUID userId) {
+        Integer allocated = allocationRepository.sumAllocatedCreditsByOwnerId(userId);
+        Integer purchased = transactionRepository.sumPurchasedByUserId(userId);
+        Integer retired = transactionRepository.sumRetiredByUserId(userId);
+
+        return (allocated != null ? allocated : 0)
+                + (purchased != null ? purchased : 0)
+                - (retired != null ? retired : 0);
+    }
+
     // ==================== MAPPING ====================
 
     private CarbonCreditResponse mapToResponse(CarbonCredit credit) {
         CarbonCreditResponse response = modelMapper.map(credit, CarbonCreditResponse.class);
         projectRepository.findById(credit.getProjectId()).ifPresent(p -> response.setProjectName(p.getName()));
+
+        if (credit.getOrigins() != null) {
+            List<CarbonCreditResponse.TreeOriginResponse> originResponses = credit.getOrigins().stream()
+                    .map(o -> {
+                        Integer fId = (Integer) o.get("farmId");
+                        Integer bId = (Integer) o.get("batchId");
+                        Integer qty = (Integer) o.get("quantity");
+
+                        CarbonCreditResponse.TreeOriginResponse tor = CarbonCreditResponse.TreeOriginResponse.builder()
+                                .farmId(fId)
+                                .batchId(bId)
+                                .quantity(qty)
+                                .build();
+
+                        if (fId != null) {
+                            farmRepository.findById(fId).ifPresent(f -> tor.setFarmName(f.getName()));
+                        }
+                        if (bId != null) {
+                            treeBatchRepository.findById(bId).ifPresent(b -> tor.setBatchCode(b.getBatchCode()));
+                        }
+                        return tor;
+                    }).collect(Collectors.toList());
+            response.setOrigins(originResponses);
+        }
         return response;
     }
 
@@ -373,6 +439,37 @@ public class CarbonCreditServiceImpl implements CarbonCreditService {
                 response.setProjectId(p.getId());
                 response.setProjectName(p.getName());
             });
+
+            // If transaction has specific purchase details (for aggregated purchases)
+            // For now, we reuse the credit's origins proportional to quantity
+            if (c.getOrigins() != null) {
+                List<CarbonCreditResponse.TreeOriginResponse> originResponses = c.getOrigins().stream()
+                        .map(o -> {
+                            Integer fId = (Integer) o.get("farmId");
+                            Integer bId = (Integer) o.get("batchId");
+                            Integer qtyInIssuance = (Integer) o.get("quantity");
+
+                            // Proportional quantity for this transaction
+                            double ratio = (double) txn.getQuantity() / c.getCreditsIssued();
+                            int txnQty = (int) Math.round(qtyInIssuance * ratio);
+
+                            CarbonCreditResponse.TreeOriginResponse tor = CarbonCreditResponse.TreeOriginResponse
+                                    .builder()
+                                    .farmId(fId)
+                                    .batchId(bId)
+                                    .quantity(txnQty)
+                                    .build();
+
+                            if (fId != null) {
+                                farmRepository.findById(fId).ifPresent(f -> tor.setFarmName(f.getName()));
+                            }
+                            if (bId != null) {
+                                treeBatchRepository.findById(bId).ifPresent(b -> tor.setBatchCode(b.getBatchCode()));
+                            }
+                            return tor;
+                        }).collect(Collectors.toList());
+                response.setOrigins(originResponses);
+            }
         });
         return response;
     }

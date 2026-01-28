@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.capston.project.back.end.util.SecurityUtils;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -32,12 +33,23 @@ public class TreeBatchServiceImpl implements TreeBatchService {
     private final FarmRepository farmRepository;
     private final TreeSpeciesRepository treeSpeciesRepository;
     private final ProjectPhaseRepository projectPhaseRepository;
+    private final SecurityUtils securityUtils;
 
     // ==================== CRUD ====================
 
     @Override
     public TreeBatch createTreeBatch(TreeBatchRequest request) {
         log.info("Creating tree batch for farm: {}", request.getFarmId());
+
+        // For FARMER role, verify they manage this farm
+        if (securityUtils.isFarmer()) {
+            Farm farm = farmRepository.findById(request.getFarmId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Farm not found: " + request.getFarmId()));
+            if (farm.getCreatedBy() == null || !farm.getCreatedBy().equals(securityUtils.getCurrentUserId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "You are not authorized to manage this farm");
+            }
+        }
 
         // Validate farm exists
         if (!farmRepository.existsById(request.getFarmId())) {
@@ -104,6 +116,16 @@ public class TreeBatchServiceImpl implements TreeBatchService {
 
         TreeBatch batch = getTreeBatchById(id);
 
+        // For FARMER role, verify they manage the farm of this batch
+        if (securityUtils.isFarmer()) {
+            Farm farm = farmRepository.findById(batch.getFarmId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Farm not found: " + batch.getFarmId()));
+            if (farm.getCreatedBy() == null || !farm.getCreatedBy().equals(securityUtils.getCurrentUserId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "You are not authorized to update batches in this farm");
+            }
+        }
+
         // Validate planting area if changed
         if (request.getPlantingAreaM2() != null &&
                 (batch.getPlantingAreaM2() == null ||
@@ -145,6 +167,16 @@ public class TreeBatchServiceImpl implements TreeBatchService {
         log.info("Deleting tree batch: {}", id);
 
         TreeBatch batch = getTreeBatchById(id);
+
+        // For FARMER role, verify access
+        if (securityUtils.isFarmer()) {
+            Farm farm = farmRepository.findById(batch.getFarmId()).orElse(null);
+            if (farm == null || farm.getCreatedBy() == null
+                    || !farm.getCreatedBy().equals(securityUtils.getCurrentUserId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "You are not authorized to delete batches in this farm");
+            }
+        }
         batch.setBatchStatus(BatchStatus.REMOVED);
         treeBatchRepository.save(batch);
 

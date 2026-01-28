@@ -33,6 +33,14 @@ public class GlobalExceptionHandler {
 				.body(ApiResponse.error(ex.getMessage()));
 	}
 
+	@ExceptionHandler(UnauthorizedException.class)
+	public ResponseEntity<ApiResponse<Void>> handleUnauthorizedException(UnauthorizedException ex) {
+		log.error("Unauthorized access: {}", ex.getMessage());
+		return ResponseEntity
+				.status(HttpStatus.FORBIDDEN)
+				.body(ApiResponse.error(ex.getMessage()));
+	}
+
 	@ExceptionHandler(HttpMessageNotReadableException.class)
 	public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
 		log.error("JSON parse error: {}", ex.getMessage());
@@ -45,7 +53,8 @@ public class GlobalExceptionHandler {
 			Throwable rootCause = cause.getCause();
 			if (rootCause instanceof DateTimeParseException) {
 				DateTimeParseException dtpe = (DateTimeParseException) rootCause;
-				userMessage = String.format("Invalid date value: '%s'. Please use a valid date (e.g., 2025-04-30 instead of 2025-04-31)",
+				userMessage = String.format(
+						"Invalid date value: '%s'. Please use a valid date (yyyy-mm-dd)",
 						dtpe.getParsedString());
 			} else if (cause.getMessage() != null && cause.getMessage().contains("LocalDate")) {
 				// Extract the invalid date from error message
@@ -76,10 +85,10 @@ public class GlobalExceptionHandler {
 		return ResponseEntity
 				.status(HttpStatus.BAD_REQUEST)
 				.body(ApiResponse.<Map<String, String>>builder()
-				                 .success(false)
-				                 .message("Validation failed")
-				                 .data(errors)
-				                 .build());
+						.success(false)
+						.message("Validation failed")
+						.data(errors)
+						.build());
 	}
 
 	@ExceptionHandler(IllegalArgumentException.class)

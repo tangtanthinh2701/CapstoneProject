@@ -19,7 +19,7 @@ CREATE TABLE users
     address       VARCHAR(200)     DEFAULT '',
     sex           BOOLEAN          DEFAULT FALSE,
     date_of_birth DATE,
-    role          VARCHAR(20) DEFAULT 'USER', -- ADMIN: Quản trị viên | USER: Người dùng (doanh nghiệp/cá nhân)
+    role          VARCHAR(20) DEFAULT 'USER', -- ADMIN: Quản trị viên | USER: Người dùng (doanh nghiệp/cá nhân) | FARMER: Nông dân
     is_active     BOOLEAN          DEFAULT TRUE,
     created_at    TIMESTAMPTZ      DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMPTZ      DEFAULT CURRENT_TIMESTAMP,
@@ -126,8 +126,6 @@ CREATE TABLE projects
     target_co2_kg NUMERIC(15, 2) DEFAULT 0, -- Lượng CO2 đã hấp thụ (kg) (tổng số target của phase)
     actual_co2_kg NUMERIC(15, 2) DEFAULT 0, -- Lượng CO2 đã hấp thụ hiện tại (kg) (tính từ cây)
 
-    -- Visibility
-    is_public               BOOLEAN        DEFAULT TRUE, -- Dự án công khai cho người dùng xem và mua tín chỉ
     -- Tracking
     created_at              TIMESTAMPTZ    DEFAULT CURRENT_TIMESTAMP,
     updated_at              TIMESTAMPTZ    DEFAULT CURRENT_TIMESTAMP
@@ -205,7 +203,7 @@ CREATE TABLE tree_batches
     planting_area_m2      NUMERIC(12, 2),
 
     -- Supplier/Cost info
-    supplier_name         VARCHAR(255),
+    supplier_name         VARCHAR(255),    -- Nhà cung cấp cây giống (name_farms): farms
     unit_cost             NUMERIC(15, 2),
     total_cost            NUMERIC(15, 2),  -- unit_cost * quantity_planted
 
@@ -379,7 +377,7 @@ CREATE TABLE carbon_credits
     id                       INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     credit_code              VARCHAR(50) UNIQUE NOT NULL,
     project_id               INTEGER            NOT NULL REFERENCES projects (id) ON DELETE RESTRICT,
-
+    origins                  JSONB,
     -- Issuance details
     issuance_year            INTEGER            NOT NULL,
     total_co2_tons           NUMERIC(15, 2)     NOT NULL,
@@ -443,7 +441,7 @@ CREATE TABLE credit_transactions
     id                         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     transaction_code           VARCHAR(50) UNIQUE NOT NULL,
     credit_id                  INTEGER            NOT NULL REFERENCES carbon_credits (id) ON DELETE RESTRICT,
-
+    purchase_details           JSONB,
     -- Parties
     seller_id                  UUID REFERENCES users (id),
     buyer_id                   UUID               NOT NULL REFERENCES users (id),
@@ -457,7 +455,7 @@ CREATE TABLE credit_transactions
     transaction_type           VARCHAR(20)        NOT NULL, -- PURCHASE, RETIREMENT
 
     -- Status
-    transaction_status         VARCHAR(20) DEFAULT 'COMPLETED',
+    transaction_status         VARCHAR(20) DEFAULT 'COMPLETED', -- COMPLETED, PENDING, PURCHASED, RETIRED, CANCELLED
 
     -- Retirement (if applicable)
     retirement_reason          TEXT,

@@ -35,7 +35,7 @@ public class ProjectController {
 	 * Create a new project with phases
 	 */
 	@PostMapping("/create-projects")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER')")
 	public ResponseEntity<ApiResponse<ProjectResponse>> createProject(@Valid @RequestBody ProjectRequest request,
 			Authentication authentication) {
 		String username = authentication.getName();
@@ -45,13 +45,6 @@ public class ProjectController {
 		ProjectResponse response = projectService.createProject(request, managerId);
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(ApiResponse.success("Project created successfully", response));
-	}
-
-	@GetMapping("/{id}")
-	public ResponseEntity<ApiResponse<ProjectResponse>> getProjectById(@PathVariable Integer id) {
-
-		ProjectResponse response = projectService.getProjectById(id);
-		return ResponseEntity.ok(ApiResponse.success(response));
 	}
 
 	/**
@@ -68,7 +61,7 @@ public class ProjectController {
 	 * Cập nhật project
 	 */
 	@PutMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER')")
 	public ResponseEntity<ApiResponse<ProjectResponse>> updateProject(@PathVariable Integer id,
 			@Valid @RequestBody ProjectRequest request) {
 		ProjectResponse response = projectService.updateProject(id, request);
@@ -79,7 +72,7 @@ public class ProjectController {
 	 * Xóa project
 	 */
 	@DeleteMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER')")
 	public ResponseEntity<ApiResponse<Void>> deleteProject(@PathVariable Integer id) {
 		projectService.deleteProject(id);
 		return ResponseEntity.ok(ApiResponse.success("Project deleted successfully", null));
@@ -137,22 +130,6 @@ public class ProjectController {
 	}
 
 	/**
-	 * Lấy public projects
-	 */
-	@GetMapping("/public")
-	public ResponseEntity<ApiResponse<List<ProjectResponse>>> getPublicProjects(
-			@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "10") int size) {
-
-		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-		Page<ProjectResponse> projectPage = projectService.getPublicProjects(pageable);
-
-		return ResponseEntity.ok(ApiResponse.success("Public projects retrieved successfully",
-				projectPage.getContent(),
-				buildPageInfo(projectPage)));
-	}
-
-	/**
 	 * Tìm kiếm projects
 	 */
 	@GetMapping("/search")
@@ -184,7 +161,7 @@ public class ProjectController {
 	 * Thêm phase vào project
 	 */
 	@PostMapping("/{projectId}/phases")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER')")
 	public ResponseEntity<ApiResponse<ProjectPhaseResponse>> addPhaseToProject(@PathVariable Integer projectId,
 			@Valid @RequestBody ProjectPhaseRequest request) {
 
@@ -197,7 +174,7 @@ public class ProjectController {
 	 * Cập nhật phase
 	 */
 	@PutMapping("/{projectId}/phases/{phaseId}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER')")
 	public ResponseEntity<ApiResponse<ProjectPhaseResponse>> updatePhase(@PathVariable Integer projectId,
 			@PathVariable Integer phaseId,
 			@Valid @RequestBody ProjectPhaseRequest request) {
@@ -210,7 +187,7 @@ public class ProjectController {
 	 * Xóa phase
 	 */
 	@DeleteMapping("/{projectId}/phases/{phaseId}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER')")
 	public ResponseEntity<ApiResponse<Void>> deletePhase(@PathVariable Integer projectId,
 			@PathVariable Integer phaseId) {
 		projectService.deletePhase(projectId, phaseId);
@@ -223,7 +200,7 @@ public class ProjectController {
 	 * Tính toán lại các trường computed của một project
 	 */
 	@PostMapping("/{projectId}/recalculate")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER')")
 	public ResponseEntity<ApiResponse<ProjectResponse>> recalculateProject(@PathVariable Integer projectId) {
 		projectService.recalculateProjectFields(projectId);
 		ProjectResponse response = projectService.getProjectById(projectId);
@@ -240,34 +217,7 @@ public class ProjectController {
 		return ResponseEntity.ok(ApiResponse.success("All projects recalculated successfully", null));
 	}
 
-	// ==================== FARM & PARTNER ASSIGNMENT ====================
-
-	/**
-	 * Gán Farm vào Project (Admin only)
-	 */
-	@PostMapping("/{projectId}/farms/{farmId}")
-	@PreAuthorize("hasRole('ADMIN')")
-	public ResponseEntity<ApiResponse<Void>> assignFarmToProject(
-			@PathVariable Integer projectId,
-			@PathVariable Integer farmId,
-			Authentication authentication) {
-		String username = authentication.getName();
-		User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
-		projectService.assignFarmToProject(projectId, farmId, user.getId());
-		return ResponseEntity.ok(ApiResponse.success("Farm assigned to project successfully", null));
-	}
-
-	/**
-	 * Xóa Farm khỏi Project (Admin only)
-	 */
-	@DeleteMapping("/{projectId}/farms/{farmId}")
-	@PreAuthorize("hasRole('ADMIN')")
-	public ResponseEntity<ApiResponse<Void>> removeFarmFromProject(
-			@PathVariable Integer projectId,
-			@PathVariable Integer farmId) {
-		projectService.removeFarmFromProject(projectId, farmId);
-		return ResponseEntity.ok(ApiResponse.success("Farm removed from project successfully", null));
-	}
+	// ==================== PARTNER ASSIGNMENT ====================
 
 	/**
 	 * Gán Partner vào Project (Admin only)
@@ -298,6 +248,12 @@ public class ProjectController {
 			@PathVariable UUID partnerUserId) {
 		projectService.removePartnerFromProject(projectId, partnerUserId);
 		return ResponseEntity.ok(ApiResponse.success("Partner removed from project successfully", null));
+	}
+
+	@GetMapping("/{id:[0-9]+}")
+	public ResponseEntity<ApiResponse<ProjectResponse>> getProjectById(@PathVariable Integer id) {
+		ProjectResponse response = projectService.getProjectById(id);
+		return ResponseEntity.ok(ApiResponse.success(response));
 	}
 
 	// ==================== PRIVATE METHODS ====================
