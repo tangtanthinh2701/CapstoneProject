@@ -85,7 +85,7 @@ export const reportService = {
 
   async exportReportExcel(type: 'CO2' | 'REVENUE' | 'CREDITS', year?: number): Promise<Blob> {
     const token = localStorage.getItem('token');
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8088/api';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
     const params = new URLSearchParams();
     params.append('type', type);
@@ -107,7 +107,7 @@ export const reportService = {
 
   async exportReportPDF(type: 'CO2' | 'REVENUE' | 'CREDITS', year?: number): Promise<Blob> {
     const token = localStorage.getItem('token');
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8088/api';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
     const params = new URLSearchParams();
     params.append('type', type);

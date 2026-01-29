@@ -1,7 +1,6 @@
 // Chatbot API - Fully compliant with the API guide
 import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:8088/api';
+import { API_BASE_URL } from '../utils/api';
 
 export interface ChatSession {
   id: number;

@@ -1,6 +1,6 @@
 import type { LoginRequest, RegisterRequest, AuthResponse } from '../models/user.model';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8088/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export interface ApiResponse<T> {
   success: boolean;

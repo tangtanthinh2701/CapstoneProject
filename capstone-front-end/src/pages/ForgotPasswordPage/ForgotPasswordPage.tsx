@@ -134,10 +134,10 @@ export default function ForgotPasswordPage() {
                         <div
                             key={s}
                             className={`w-3 h-3 rounded-full transition ${step === s
-                                    ? 'bg-green-500'
-                                    : i < ['email', 'otp', 'newPassword'].indexOf(step)
-                                        ? 'bg-green-500/50'
-                                        : 'bg-gray-600'
+                                ? 'bg-green-500'
+                                : i < ['email', 'otp', 'newPassword'].indexOf(step)
+                                    ? 'bg-green-500/50'
+                                    : 'bg-gray-600'
                                 }`}
                         />
                     ))}
