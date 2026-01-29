@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
+import { useAuth } from '../../contexts/AuthContext';
 import { projectApi, type Project, type ProjectPhase } from '../../models/project.api';
 
 const statusBadgeClass = (status: string) => {
@@ -42,10 +43,15 @@ const formatDate = (dateString?: string) => {
 export default function ProjectDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-
+  const { isAdmin } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
+
+  // Partner management state
+  const [partnerUserId, setPartnerUserId] = useState('');
+  const [partnerLoading, setPartnerLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -58,13 +64,52 @@ export default function ProjectDetailPage() {
       setLoading(true);
       setError(null);
       const res = await projectApi.getById(projectId);
-      // The API wrapper returns response.data directly via interceptor
-      setProject(res as unknown as Project);
+      const data = (res as any)?.data || res;
+      setProject(data as Project);
     } catch (err: any) {
       console.error('Error loading project:', err);
       setError('Không thể tải thông tin dự án.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRecalculate = async () => {
+    if (!project) return;
+    try {
+      setRecalculating(true);
+      await projectApi.recalculate(project.id);
+      alert('Đã cập nhật lại các chỉ số tính toán!');
+      loadProject(project.id.toString());
+    } catch (err: any) {
+      alert('Tính toán lại thất bại: ' + (err.message || 'Lỗi hệ thống'));
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
+  const handleAddPartner = async () => {
+    if (!project || !partnerUserId.trim()) return;
+    try {
+      setPartnerLoading(true);
+      await projectApi.addPartner(project.id, { partnerUserId });
+      setPartnerUserId('');
+      alert('Đã thêm đối tác!');
+      loadProject(project.id.toString());
+    } catch (err: any) {
+      alert('Thêm đối tác thất bại: ' + (err.message || 'Lỗi hệ thống'));
+    } finally {
+      setPartnerLoading(false);
+    }
+  };
+
+  const handleRemovePartner = async (pUid: string) => {
+    if (!project || !window.confirm('Xóa đối tác này khỏi dự án?')) return;
+    try {
+      await projectApi.removePartner(project.id, pUid);
+      loadProject(project.id.toString());
+    } catch (err: any) {
+      alert('Xóa đối tác thất bại');
     }
   };
 
@@ -136,8 +181,17 @@ export default function ProjectDetailPage() {
 
           <div className='flex gap-3 shrink-0'>
             <button
+              onClick={handleRecalculate}
+              disabled={recalculating}
+              className='px-6 py-3 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 text-blue-400 font-bold rounded-xl flex items-center gap-2 transition-all disabled:opacity-50'
+              title='Tính toán lại các chỉ số'
+            >
+              <span className={`material-icons ${recalculating ? 'animate-spin' : ''}`}>sync</span>
+              {recalculating ? 'Đang tính...' : 'Tính lại'}
+            </button>
+            <button
               onClick={() => navigate(`/projects/${project.id}/edit`)}
-              className='px-6 py-3 bg-[#0E2219] border border-[#1E3A2B] hover:border-green-500/50 text-white font-bold rounded-xl flex items-center gap-2 transition-all'
+              className='px-6 py-3 bg-green-500 text-black font-bold rounded-xl flex items-center gap-2 hover:bg-green-600 transition-all'
             >
               <span className='material-icons'>edit</span>
               Chỉnh sửa
@@ -301,6 +355,47 @@ export default function ProjectDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* PARTNER MANAGEMENT (ADMIN ONLY) */}
+            {isAdmin && (
+              <div className='bg-[#0E2219] p-8 rounded-3xl border border-[#1E3A2B]'>
+                <h3 className='text-sm font-bold text-gray-500 uppercase tracking-widest mb-6 border-b border-[#1E3A2B] pb-4'>Quản lý Đối tác</h3>
+
+                <div className='flex flex-wrap gap-2 mb-6'>
+                  {(project as any).partners?.map((partner: any) => (
+                    <div key={partner.userId} className='px-3 py-1 bg-[#13271F] border border-[#1E3A2B] rounded-full flex items-center gap-2 text-xs'>
+                      <span>{partner.fullname || partner.userId}</span>
+                      <button
+                        onClick={() => handleRemovePartner(partner.userId)}
+                        className='text-red-400 hover:text-red-300'
+                      >
+                        <span className='material-icons text-[14px]'>close</span>
+                      </button>
+                    </div>
+                  ))}
+                  {(!(project as any).partners || (project as any).partners.length === 0) && (
+                    <p className='text-xs text-gray-500'>Chưa có đối tác</p>
+                  )}
+                </div>
+
+                <div className='flex gap-2'>
+                  <input
+                    type='text'
+                    placeholder='User ID đối tác...'
+                    value={partnerUserId}
+                    onChange={(e) => setPartnerUserId(e.target.value)}
+                    className='flex-1 px-3 py-2 bg-[#071811] border border-[#1E3A2B] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-green-500'
+                  />
+                  <button
+                    onClick={handleAddPartner}
+                    disabled={partnerLoading}
+                    className='px-3 py-2 bg-green-500 hover:bg-green-600 text-black font-bold rounded-lg text-xs transition-all disabled:opacity-50'
+                  >
+                    {partnerLoading ? '...' : 'Thêm'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>

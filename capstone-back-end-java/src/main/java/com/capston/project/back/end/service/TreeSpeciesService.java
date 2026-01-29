@@ -13,6 +13,8 @@ import java.util.List;
 public interface TreeSpeciesService {
 	TreeSpeciesResponse create(TreeSpeciesRequest request);
 
+	List<TreeSpeciesResponse> createBulk(List<TreeSpeciesRequest> requests);
+
 	TreeSpeciesResponse getById(Integer id);
 
 	TreeSpeciesResponse update(Integer id, TreeSpeciesRequest request);

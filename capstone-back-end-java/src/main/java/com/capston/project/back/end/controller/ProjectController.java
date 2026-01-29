@@ -116,18 +116,18 @@ public class ProjectController {
 	/**
 	 * Lấy projects theo manager
 	 */
-	@GetMapping("/manager/{managerId}")
-	public ResponseEntity<ApiResponse<List<ProjectResponse>>> getProjectsByManager(@PathVariable UUID managerId,
-			@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "10") int size) {
-
-		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-		Page<ProjectResponse> projectPage = projectService.getProjectsByManager(managerId, pageable);
-
-		return ResponseEntity.ok(ApiResponse.success("Projects retrieved successfully",
-				projectPage.getContent(),
-				buildPageInfo(projectPage)));
-	}
+//	@GetMapping("/manager/{managerId}")
+//	public ResponseEntity<ApiResponse<List<ProjectResponse>>> getProjectsByManager(@PathVariable UUID managerId,
+//			@RequestParam(defaultValue = "0") int page,
+//			@RequestParam(defaultValue = "10") int size) {
+//
+//		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+//		Page<ProjectResponse> projectPage = projectService.getProjectsByManager(managerId, pageable);
+//
+//		return ResponseEntity.ok(ApiResponse.success("Projects retrieved successfully",
+//				projectPage.getContent(),
+//				buildPageInfo(projectPage)));
+//	}
 
 	/**
 	 * Tìm kiếm projects

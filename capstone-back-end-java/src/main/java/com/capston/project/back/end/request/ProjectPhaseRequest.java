@@ -1,7 +1,6 @@
 package com.capston.project.back.end.request;
 
 import com.capston.project.back.end.common.PhaseStatus;
-import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,8 +17,6 @@ import java.util.UUID;
 public class ProjectPhaseRequest {
 	private Integer id;
 
-	@NotNull(message = "Phase order is required")
-	@Positive(message = "Phase order must be positive")
 	private Integer phaseNumber;
 
 	private String phaseName;
@@ -32,7 +29,6 @@ public class ProjectPhaseRequest {
 
 	private LocalDate plannedEndDate;
 
-	@NotNull(message = "Actual start date is required")
 	private LocalDate actualStartDate;
 
 	private LocalDate actualEndDate;

@@ -9,6 +9,8 @@ const roleBadge = (role: string) => {
             return 'bg-purple-500/20 text-purple-400';
         case 'USER':
             return 'bg-blue-500/20 text-blue-400';
+        case 'FARMER':
+            return 'bg-green-500/20 text-green-400';
         default:
             return 'bg-gray-500/20 text-gray-400';
     }
@@ -49,8 +51,8 @@ export default function UserManagementPage() {
         }
     };
 
-    const handleChangeRole = async (user: User) => {
-        const newRole = user.role === 'ADMIN' ? 'USER' : 'ADMIN';
+    const handleUpdateRole = async (user: User, newRole: string) => {
+        if (user.role === newRole) return;
         if (!window.confirm(`Chuyển vai trò của ${user.fullname} thành ${newRole}?`)) return;
 
         try {
@@ -120,22 +122,23 @@ export default function UserManagementPage() {
                         <p>Không tìm thấy người dùng nào</p>
                     </div>
                 ) : (
-                    <div className="bg-[#0E2219] rounded-xl border border-[#1E3A2B] overflow-hidden">
-                        <table className="w-full">
+                    <div className="bg-[#0E2219] rounded-xl border border-[#1E3A2B] overflow-x-auto">
+                        <table className="w-full min-w-[1000px]">
                             <thead>
                                 <tr className="border-b border-[#1E3A2B]">
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Người dùng</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Email</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">SĐT</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Vai trò</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Trạng thái</th>
-                                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-400">Thao tác</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400 whitespace-nowrap">Người dùng</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400 whitespace-nowrap">User ID (UUID)</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400 whitespace-nowrap">Email</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400 whitespace-nowrap">SĐT</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400 whitespace-nowrap">Vai trò</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400 whitespace-nowrap">Trạng thái</th>
+                                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-400 whitespace-nowrap">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filtered.map((user) => (
                                     <tr key={user.id} className="border-b border-[#1E3A2B] hover:bg-[#13271F] transition">
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
                                                     <span className="material-icons text-green-500 text-sm">person</span>
@@ -146,33 +149,58 @@ export default function UserManagementPage() {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-gray-300">{user.email}</td>
-                                        <td className="px-6 py-4 text-gray-300">{user.phoneNumber || '-'}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 text-xs rounded-full ${roleBadge(user.role)}`}>
-                                                {user.role}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <code className="text-[10px] text-gray-500 font-mono bg-[#071811] px-2 py-1 rounded border border-[#1E3A2B] max-w-[150px] truncate block" title={String(user.id)}>
+                                                    {user.id}
+                                                </code>
+                                                <button
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(String(user.id));
+                                                        alert('Đã sao chép UUID!');
+                                                    }}
+                                                    className="p-1.5 bg-[#1E3A2B] hover:bg-[#2A4D39] text-gray-400 hover:text-white rounded transition"
+                                                    title="Sao chép UUID"
+                                                >
+                                                    <span className="material-icons text-xs">content_copy</span>
+                                                </button>
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 text-xs rounded-full ${user.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                                        <td className="px-6 py-4 text-gray-300 whitespace-nowrap">{user.email}</td>
+                                        <td className="px-6 py-4 text-gray-300 whitespace-nowrap">{user.phoneNumber || '-'}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="relative inline-block group">
+                                                <select
+                                                    value={user.role}
+                                                    onChange={(e) => handleUpdateRole(user, e.target.value)}
+                                                    className={`
+                                                        appearance-none pr-8 pl-3 py-1.5 text-xs font-bold rounded-lg border border-[#1E3A2B] 
+                                                        bg-[#071811] hover:bg-[#13271F] transition-all cursor-pointer outline-none focus:ring-1 focus:ring-green-500/50
+                                                        ${roleBadge(user.role)}
+                                                    `}
+                                                >
+                                                    <option value="USER" className="bg-[#071811] text-blue-400">USER</option>
+                                                    <option value="FARMER" className="bg-[#071811] text-green-400">FARMER</option>
+                                                    <option value="ADMIN" className="bg-[#071811] text-purple-400">ADMIN</option>
+                                                </select>
+                                                <span className="material-icons absolute right-2 top-1/2 -translate-y-1/2 text-[14px] pointer-events-none opacity-50">
+                                                    expand_more
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 py-1 text-xs rounded-full inline-block ${user.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                                                 }`}>
                                                 {user.isActive ? 'Hoạt động' : 'Đã khóa'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-6 py-4 text-right whitespace-nowrap">
                                             <div className="flex justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleChangeRole(user)}
-                                                    className="p-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition"
-                                                    title="Đổi vai trò"
-                                                >
-                                                    <span className="material-icons text-sm">admin_panel_settings</span>
-                                                </button>
                                                 <button
                                                     onClick={() => handleToggleStatus(user)}
                                                     className={`p-2 rounded-lg transition ${user.isActive
-                                                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                                                            : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                                                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                                        : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
                                                         }`}
                                                     title={user.isActive ? 'Khóa tài khoản' : 'Kích hoạt'}
                                                 >

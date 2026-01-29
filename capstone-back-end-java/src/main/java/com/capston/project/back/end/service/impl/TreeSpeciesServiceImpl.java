@@ -52,6 +52,35 @@ public class TreeSpeciesServiceImpl implements TreeSpeciesService {
 	}
 
 	@Override
+	@Transactional
+	public List<TreeSpeciesResponse> createBulk(List<TreeSpeciesRequest> requests) {
+		log.info("Creating {} tree species in bulk", requests.size());
+
+		return requests.stream()
+				.map(request -> {
+					// Check if exists, if so skip or update? User didn't specify.
+					// I will check and throw if exists to be consistent with single create,
+					// but maybe better to just filter out.
+					if (treeSpeciesRepository.existsByNameIgnoreCase(request.getName())) {
+						log.warn("Tree species with name '{}' already exists, skipping", request.getName());
+						return null;
+					}
+
+					TreeSpecies species = TreeSpecies.builder()
+							.name(request.getName())
+							.scientificName(request.getScientificName())
+							.baseCarbonRate(request.getBaseCarbonRate())
+							.description(request.getDescription())
+							.imageUrl(request.getImageUrl())
+							.build();
+					return treeSpeciesRepository.save(species);
+				})
+				.filter(java.util.Objects::nonNull)
+				.map(this::mapToResponse)
+				.collect(Collectors.toList());
+	}
+
+	@Override
 	public TreeSpeciesResponse getById(Integer id) {
 		TreeSpecies treeSpecies = treeSpeciesRepository.findById(id)
 				.filter(ts -> ts.getDeletedAt() == null)
@@ -71,7 +100,8 @@ public class TreeSpeciesServiceImpl implements TreeSpeciesService {
 		// Check duplicate name
 		if (request.getName() != null && !request.getName().equalsIgnoreCase(treeSpecies.getName())) {
 			if (treeSpeciesRepository.existsByNameIgnoreCase(request.getName())) {
-				throw new DuplicateResourceException("Tree species with name '" + request.getName() + "' already exists");
+				throw new DuplicateResourceException(
+						"Tree species with name '" + request.getName() + "' already exists");
 			}
 			treeSpecies.setName(request.getName());
 		}

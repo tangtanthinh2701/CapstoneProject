@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { projectApi, type Project } from '../../models/project.api';
 
 interface PageInfo {
@@ -55,33 +56,37 @@ const formatCarbon = (amount?: number) => {
 // ========== COMPONENT ==========
 export default function ProjectListPage() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [page, setPage] = useState(0);
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [recalculatingAll, setRecalculatingAll] = useState(false);
 
   // ========== FETCH ==========
-  const fetchProjects = async (pageNumber: number) => {
+  const fetchProjects = async (currentPage = page) => {
     try {
       setLoading(true);
       setError(null);
 
-      const res = await projectApi.getAll({
-        page: pageNumber,
+      const params = {
+        page: currentPage,
         size: PAGE_SIZE,
-        keyword: search || undefined,
-        // status: statusFilter || undefined // Add if API supports it
-      });
+      };
 
-      // Assuming API wrapper returns the data directly or the full response object
-      // Based on interceptor in api.ts, it returns response.data
-      // My API model for getAll returns api.get('/projects', ...).
-      // If backend returns standard ApiResponse structure:
+      let res;
+      if (search.trim()) {
+        res = await projectApi.search(search, params);
+      } else if (statusFilter && statusFilter !== 'ALL') {
+        res = await projectApi.getByStatus(statusFilter, params);
+      } else {
+        res = await projectApi.getAll(params);
+      }
+
       const result = res as any;
-
-      if (result.success !== false) { // flexible check
+      if (result.success !== false) {
         setResponse(result);
       } else {
         throw new Error(result.message || 'API Error');
@@ -92,6 +97,20 @@ export default function ProjectListPage() {
       setError(err.message || 'Có lỗi xảy ra khi tải dữ liệu.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRecalculateAll = async () => {
+    if (!window.confirm('Tính toán lại toàn bộ dự án có thể mất thời gian. Tiếp tục?')) return;
+    try {
+      setRecalculatingAll(true);
+      await projectApi.recalculateAll();
+      alert('Đã bắt đầu tính toán lại toàn bộ dự án!');
+      fetchProjects(0);
+    } catch (err: any) {
+      alert('Lỗi: ' + (err.message || 'Không thể tính toán lại'));
+    } finally {
+      setRecalculatingAll(false);
     }
   };
 
@@ -111,16 +130,17 @@ export default function ProjectListPage() {
 
   // ========== EFFECTS ==========
   useEffect(() => {
+    setPage(0);
+    fetchProjects(0);
+  }, [search, statusFilter]);
+
+  useEffect(() => {
     fetchProjects(page);
-  }, [page, search]); // Re-fetch on search change? Or use a button. Let's keep it simple.
+  }, [page]);
 
   // ========== FILTER ==========
   const projects = response?.data ?? [];
-  // Client-side status filter if API doesn't support it or just to be safe
-  const filteredProjects = projects.filter((p) => {
-    const matchStatus = statusFilter ? p.projectStatus === statusFilter : true;
-    return matchStatus;
-  });
+  // No client-side filtering needed as we use API now
 
   // ========== RENDER ==========
   return (
@@ -135,38 +155,56 @@ export default function ProjectListPage() {
           ]}
         />
 
-        <h1 className='text-3xl font-bold mb-2'>Quản lý Dự án</h1>
-        <p className='text-gray-400 mb-6'>Danh sách các dự án trồng rừng.</p>
+        <div className='flex justify-between items-end mb-6'>
+          <div>
+            <h1 className='text-3xl font-bold mb-2'>Quản lý Dự án</h1>
+            <p className='text-gray-400'>Danh sách các dự án trồng rừng.</p>
+          </div>
+          <div className='flex gap-3'>
+            {isAdmin && (
+              <button
+                onClick={handleRecalculateAll}
+                disabled={recalculatingAll}
+                className='px-5 py-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 font-semibold hover:bg-blue-500/20 transition disabled:opacity-50 flex items-center gap-2'
+              >
+                <span className={`material-icons text-lg ${recalculatingAll ? 'animate-spin' : ''}`}>sync</span>
+                Tính toán lại tất cả
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/projects/new')}
+              className='bg-green-500 hover:bg-green-600 text-black px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition'
+            >
+              <span className='material-icons text-lg'>add</span>
+              Thêm mới dự án
+            </button>
+          </div>
+        </div>
 
         {/* SEARCH + FILTER */}
         <div className='flex flex-wrap items-center gap-4 mb-6'>
-          <input
-            type='text'
-            placeholder='Tìm kiếm theo tên dự án...'
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className='flex-1 min-w-[250px] px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500'
-          />
+          <div className='flex-1 relative'>
+            <span className='material-icons absolute left-4 top-1/2 -translate-y-1/2 text-gray-500'>search</span>
+            <input
+              type='text'
+              placeholder='Tìm kiếm theo tên dự án...'
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className='w-full pl-12 pr-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500'
+            />
+          </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className='px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl text-gray-100 focus:outline-none focus: ring-2 focus:ring-green-500'
           >
-            <option value=''>Tất cả trạng thái</option>
+            <option value='ALL'>Tất cả trạng thái</option>
             <option value='PLANNING'>PLANNING</option>
             <option value='ACTIVE'>ACTIVE</option>
             <option value='COMPLETED'>COMPLETED</option>
             <option value='CANCELLED'>CANCELLED</option>
           </select>
-
-          <button
-            onClick={() => navigate('/projects/new')}
-            className='bg-green-500 hover:bg-green-600 text-black px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition'
-          >
-            <span className='material-icons text-lg'>add</span>
-            Thêm mới dự án
-          </button>
         </div>
 
         {/* ERROR */}
@@ -198,7 +236,7 @@ export default function ProjectListPage() {
           )}
 
           {/* EMPTY */}
-          {!loading && filteredProjects.length === 0 && (
+          {!loading && projects.length === 0 && (
             <div className='px-6 py-12 text-center text-gray-400'>
               <span className='material-icons text-5xl mb-2 opacity-50'>
                 inbox
@@ -209,7 +247,7 @@ export default function ProjectListPage() {
 
           {/* ROWS */}
           {!loading &&
-            filteredProjects.map((p) => {
+            projects.map((p) => {
               const target = p.targetCo2Kg || 0;
               const current = p.actualCo2Kg || 0;
 
@@ -309,7 +347,7 @@ export default function ProjectListPage() {
         {response?.pageInfo && response.pageInfo.totalPages > 0 && (
           <div className='flex justify-between items-center mt-6 text-gray-300 text-sm'>
             <span>
-              Hiển thị <strong>{filteredProjects.length}</strong> /{' '}
+              Hiển thị <strong>{projects.length}</strong> /{' '}
               <strong>{response.pageInfo.totalElements}</strong> dự án
             </span>
 

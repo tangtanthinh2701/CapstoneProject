@@ -46,15 +46,15 @@ public class FarmServiceImpl implements FarmService {
 		String code = generateFarmCode();
 
 		Farm farm = Farm.builder()
-		                .code(code)
-		                .name(request.getName())
-		                .description(request.getDescription())
-		                .location(request.getLocation())
-		                .area(request.getArea())
-		                .usableArea(request.getUsableArea())
-		                .farmStatus(request.getFarmStatus())
-		                .createdBy(createdBy)
-		                .build();
+				.code(code)
+				.name(request.getName())
+				.description(request.getDescription())
+				.location(request.getLocation())
+				.area(request.getArea())
+				.usableArea(request.getUsableArea())
+				.farmStatus(request.getFarmStatus())
+				.createdBy(createdBy)
+				.build();
 
 		// Auto-fetch coordinates if location is provided
 		if (farm.getLocation() != null) {
@@ -75,16 +75,16 @@ public class FarmServiceImpl implements FarmService {
 	@Override
 	public FarmResponse getFarmById(Integer id) {
 		Farm farm = farmRepository.findById(id)
-		                          .filter(f -> f.getDeletedAt() == null)
-		                          .orElseThrow(() -> new ResourceNotFoundException("Farm", "id", id));
+				.filter(f -> f.getDeletedAt() == null)
+				.orElseThrow(() -> new ResourceNotFoundException("Farm", "id", id));
 		return mapToFarmResponse(farm);
 	}
 
 	@Override
 	public FarmResponse getFarmByCode(String code) {
 		Farm farm = farmRepository.findByCode(code)
-		                          .filter(f -> f.getDeletedAt() == null)
-		                          .orElseThrow(() -> new ResourceNotFoundException("Farm", "code", code));
+				.filter(f -> f.getDeletedAt() == null)
+				.orElseThrow(() -> new ResourceNotFoundException("Farm", "code", code));
 		return mapToFarmResponse(farm);
 	}
 
@@ -94,7 +94,7 @@ public class FarmServiceImpl implements FarmService {
 		log.info("Updating farm: {}", id);
 
 		Farm farm = farmRepository.findById(id).filter(f -> f.getDeletedAt() == null)
-		                          .orElseThrow(() -> new ResourceNotFoundException("Farm", "id", id));
+				.orElseThrow(() -> new ResourceNotFoundException("Farm", "id", id));
 
 		// Role Check: Only owner or ADMIN can update
 		if (!securityUtils.isAdmin() && !farm.getCreatedBy().equals(securityUtils.getCurrentUserId())) {
@@ -139,7 +139,7 @@ public class FarmServiceImpl implements FarmService {
 		log.info("Soft deleting farm: {}", id);
 
 		Farm farm = farmRepository.findById(id)
-		                          .orElseThrow(() -> new ResourceNotFoundException("Farm", "id", id));
+				.orElseThrow(() -> new ResourceNotFoundException("Farm", "id", id));
 
 		// Role Check: Only owner or ADMIN can delete
 		if (!securityUtils.isAdmin() && !farm.getCreatedBy().equals(securityUtils.getCurrentUserId())) {
@@ -154,27 +154,40 @@ public class FarmServiceImpl implements FarmService {
 	@Override
 	public Page<FarmResponse> getAllFarms(Pageable pageable) {
 		return farmRepository.findByDeletedAtIsNull(pageable)
-		                     .map(this::mapToFarmResponse);
+				.map(this::mapToFarmResponse);
 	}
 
 	@Override
 	public Page<FarmResponse> getFarmsByStatus(FarmStatus status, Pageable pageable) {
-		return farmRepository.findByFarmStatusAndDeletedAtIsNull(status, pageable)
-		                     .map(this::mapToFarmResponse);
+		if (securityUtils.isAdmin()) {
+			return farmRepository.findByFarmStatusAndDeletedAtIsNull(status, pageable)
+					.map(this::mapToFarmResponse);
+		} else {
+			return farmRepository
+					.findByFarmStatusAndCreatedByAndDeletedAtIsNull(status, securityUtils.getCurrentUserId(), pageable)
+					.map(this::mapToFarmResponse);
+		}
 	}
 
 	@Override
 	public List<FarmResponse> searchFarms(String keyword) {
-		return farmRepository.searchByKeyword(keyword)
-		                     .stream()
-		                     .map(this::mapToFarmResponse)
-		                     .collect(Collectors.toList());
+		if (securityUtils.isAdmin()) {
+			return farmRepository.searchByKeyword(keyword)
+					.stream()
+					.map(this::mapToFarmResponse)
+					.collect(Collectors.toList());
+		} else {
+			return farmRepository.searchByKeywordAndCreatedBy(keyword, securityUtils.getCurrentUserId())
+					.stream()
+					.map(this::mapToFarmResponse)
+					.collect(Collectors.toList());
+		}
 	}
 
 	@Override
 	public Page<FarmResponse> getMyFarms(UUID userId, Pageable pageable) {
 		return farmRepository.findByCreatedByAndDeletedAtIsNull(userId, pageable)
-		                     .map(this::mapToFarmResponse);
+				.map(this::mapToFarmResponse);
 	}
 
 	// ==================== HELPER METHODS ====================
@@ -213,18 +226,22 @@ public class FarmServiceImpl implements FarmService {
 
 		try {
 			// Get soil data
-			SoilApiService.SoilData soilData = soilApiService.getSoilProperties(farm.getLatitude(), farm.getLongitude());
+			SoilApiService.SoilData soilData = soilApiService.getSoilProperties(farm.getLatitude(),
+					farm.getLongitude());
 			farm.setSoilType(soilData.soilType());
 
 			// Get climate data
-			WeatherApiService.ClimateData climateData = weatherApiService.getClimateData(farm.getLatitude(), farm.getLongitude());
+			WeatherApiService.ClimateData climateData = weatherApiService.getClimateData(farm.getLatitude(),
+					farm.getLongitude());
 			farm.setClimateZone(climateData.climateZone());
 			farm.setAvgRainfall(climateData.avgRainfall());
 			farm.setAvgTemperature(climateData.avgTemperature());
 
-			log.info("Successfully fetched environment data: soil={}, climate={}", soilData.soilType(), climateData.climateZone());
+			log.info("Successfully fetched environment data: soil={}, climate={}", soilData.soilType(),
+					climateData.climateZone());
 		} catch (Exception e) {
-			log.error("Failed to fetch environment data for coordinates: {}, {}", farm.getLatitude(), farm.getLongitude(), e);
+			log.error("Failed to fetch environment data for coordinates: {}, {}", farm.getLatitude(),
+					farm.getLongitude(), e);
 		}
 	}
 
@@ -235,25 +252,25 @@ public class FarmServiceImpl implements FarmService {
 		int totalTrees = batches.stream().mapToInt(TreeBatch::getQuantityPlanted).sum();
 
 		return FarmResponse.builder()
-		                   .id(farm.getId())
-		                   .code(farm.getCode())
-		                   .name(farm.getName())
-		                   .description(farm.getDescription())
-		                   .location(farm.getLocation())
-		                   .latitude(farm.getLatitude())
-		                   .longitude(farm.getLongitude())
-		                   .area(farm.getArea())
-		                   .usableArea(farm.getUsableArea())
-		                   .soilType(farm.getSoilType())
-		                   .climateZone(farm.getClimateZone())
-		                   .avgRainfall(farm.getAvgRainfall())
-		                   .avgTemperature(farm.getAvgTemperature())
-		                   .farmStatus(farm.getFarmStatus())
-		                   .totalBatches(totalBatches)
-		                   .totalTrees(totalTrees)
-		                   .createdBy(farm.getCreatedBy())
-		                   .createdAt(farm.getCreatedAt())
-		                   .updatedAt(farm.getUpdatedAt())
-		                   .build();
+				.id(farm.getId())
+				.code(farm.getCode())
+				.name(farm.getName())
+				.description(farm.getDescription())
+				.location(farm.getLocation())
+				.latitude(farm.getLatitude())
+				.longitude(farm.getLongitude())
+				.area(farm.getArea())
+				.usableArea(farm.getUsableArea())
+				.soilType(farm.getSoilType())
+				.climateZone(farm.getClimateZone())
+				.avgRainfall(farm.getAvgRainfall())
+				.avgTemperature(farm.getAvgTemperature())
+				.farmStatus(farm.getFarmStatus())
+				.totalBatches(totalBatches)
+				.totalTrees(totalTrees)
+				.createdBy(farm.getCreatedBy())
+				.createdAt(farm.getCreatedAt())
+				.updatedAt(farm.getUpdatedAt())
+				.build();
 	}
 }

@@ -1,5 +1,6 @@
 package com.capston.project.back.end.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -51,6 +52,7 @@ public class TreeSpecies {
 	// Relationships
 	@OneToMany(mappedBy = "treeSpecies", fetch = FetchType.LAZY)
 	@Builder.Default
+	@JsonIgnore
 	private List<TreeBatch> treeBatches = new ArrayList<>();
 
 	/**

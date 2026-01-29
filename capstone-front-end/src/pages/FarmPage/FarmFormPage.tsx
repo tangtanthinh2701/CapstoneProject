@@ -123,7 +123,8 @@ export default function FarmFormPage() {
 
       navigate('/farms');
     } catch (err: any) {
-      setError(err.message || 'Lưu thất bại');
+      const backendMsg = err.response?.data?.message;
+      setError(backendMsg || err.message || 'Lưu thất bại');
     } finally {
       setLoading(false);
     }

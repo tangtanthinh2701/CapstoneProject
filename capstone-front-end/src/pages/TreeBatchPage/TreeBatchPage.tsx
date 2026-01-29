@@ -4,6 +4,7 @@ import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
 import { useAuth } from '../../contexts/AuthContext';
 import { treeBatchApi, type TreeBatch } from '../../models/treeBatch.api';
+import { farmApi } from '../../models/farm.api';
 
 const statusBadge = (status: string) => {
     switch (status) {
@@ -20,9 +21,11 @@ const statusBadge = (status: string) => {
 
 export default function TreeBatchPage() {
     const navigate = useNavigate();
-    const { isAdmin } = useAuth();
+    const { isAdmin, hasRole, user } = useAuth();
+    const isFarmer = hasRole(['FARMER']);
 
     const [batches, setBatches] = useState<TreeBatch[]>([]);
+    const [farms, setFarms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
@@ -31,10 +34,20 @@ export default function TreeBatchPage() {
         try {
             setLoading(true);
             setError(null);
-            // Fetch all for now, ideally backend supports filtering
-            const response = await treeBatchApi.getAll({ page: 0, size: 100 });
-            const data = (response as any)?.data || response || [];
-            setBatches(Array.isArray(data) ? data : []);
+            const [batchRes, farmRes] = await Promise.all([
+                treeBatchApi.getAll({ page: 0, size: 100 }),
+                farmApi.getAll({ page: 0, size: 100 })
+            ]);
+
+            const batchData = (batchRes as any)?.data || batchRes || [];
+            setBatches(Array.isArray(batchData) ? batchData : []);
+
+            const farmData = (farmRes as any)?.data || farmRes || [];
+            if (isFarmer) {
+                setFarms(Array.isArray(farmData) ? farmData.filter((f: any) => f.createdBy === user?.id) : []);
+            } else {
+                setFarms(Array.isArray(farmData) ? farmData : []);
+            }
         } catch (err: any) {
             setError(err.message || 'Không tải được danh sách lô cây');
         } finally {
@@ -45,6 +58,17 @@ export default function TreeBatchPage() {
     useEffect(() => {
         loadData();
     }, []);
+
+    const handleDelete = async (id: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!window.confirm('Bạn có chắc muốn xóa lô cây này?')) return;
+        try {
+            await treeBatchApi.delete(id);
+            await loadData();
+        } catch (err: any) {
+            alert(err.message || 'Xóa thất bại');
+        }
+    };
 
     const filtered = batches.filter(
         (b) =>
@@ -70,7 +94,7 @@ export default function TreeBatchPage() {
                         <p className="text-gray-400">Theo dõi các lô cây được trồng tại các nông trại.</p>
                     </div>
 
-                    {isAdmin && (
+                    {(isAdmin || isFarmer) && (
                         <button
                             onClick={() => navigate('/tree-batches/new')}
                             className="bg-green-500 hover:bg-green-600 text-black px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition"
@@ -81,16 +105,20 @@ export default function TreeBatchPage() {
                     )}
                 </div>
 
-                {/* SEARCH */}
-                <div className="mb-6 max-w-md relative">
-                    <span className="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-                    <input
-                        type="text"
-                        placeholder="Tìm theo mã lô, nhà cung cấp..."
-                        className="w-full pl-12 pr-4 py-3 rounded-xl bg-[#0E2219] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
+
+
+                {/* FILTERS */}
+                <div className="flex flex-wrap gap-4 mb-6">
+                    <div className="flex-1 min-w-[300px] relative">
+                        <span className="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+                        <input
+                            type="text"
+                            placeholder="Tìm theo mã lô, nhà cung cấp..."
+                            className="w-full pl-12 pr-4 py-3 rounded-xl bg-[#0E2219] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
                 </div>
 
                 {/* CONTENT */}
@@ -114,6 +142,7 @@ export default function TreeBatchPage() {
                             <thead>
                                 <tr className="border-b border-[#1E3A2B]">
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Mã lô</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Nông trại</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Số lượng</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Ngày trồng</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Trạng thái</th>
@@ -128,6 +157,9 @@ export default function TreeBatchPage() {
                                         onClick={() => navigate(`/tree-batches/${batch.id}`)}
                                     >
                                         <td className="px-6 py-4 font-mono text-green-400">{batch.batchCode}</td>
+                                        <td className="px-6 py-4 text-xs text-gray-400">
+                                            {farms.find(f => f.id === batch.farmId)?.name || `ID: ${batch.farmId}`}
+                                        </td>
                                         <td className="px-6 py-4">{batch.quantityPlanted}</td>
                                         <td className="px-6 py-4 text-gray-300">
                                             {new Date(batch.plantingDate).toLocaleDateString('vi-VN')}
@@ -138,9 +170,22 @@ export default function TreeBatchPage() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button className="text-blue-400 hover:text-blue-300">
-                                                <span className="material-icons">visibility</span>
-                                            </button>
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); navigate(`/tree-batches/${batch.id}/edit`); }}
+                                                    className="p-2 text-yellow-400 hover:bg-yellow-400/10 rounded transition"
+                                                    title="Chỉnh sửa"
+                                                >
+                                                    <span className="material-icons text-sm">edit</span>
+                                                </button>
+                                                <button
+                                                    onClick={(e) => handleDelete(batch.id, e)}
+                                                    className="p-2 text-red-500 hover:bg-red-500/10 rounded transition"
+                                                    title="Xóa"
+                                                >
+                                                    <span className="material-icons text-sm">delete</span>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

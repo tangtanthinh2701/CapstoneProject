@@ -29,10 +29,18 @@ public interface FarmRepository extends JpaRepository<Farm, Integer> {
 
 	Page<Farm> findByFarmStatusAndDeletedAtIsNull(FarmStatus status, Pageable pageable);
 
+	Page<Farm> findByFarmStatusAndCreatedByAndDeletedAtIsNull(FarmStatus status, UUID createdBy, Pageable pageable);
+
 	@Query("SELECT f FROM Farm f WHERE f.deletedAt IS NULL " +
 			"AND (LOWER(f.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
 			"OR LOWER(f.location) LIKE LOWER(CONCAT('%', :keyword, '%')))")
 	List<Farm> searchByKeyword(@Param("keyword") String keyword);
+
+	@Query("SELECT f FROM Farm f WHERE f.deletedAt IS NULL " +
+			"AND f.createdBy = :createdBy " +
+			"AND (LOWER(f.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+			"OR LOWER(f.location) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+	List<Farm> searchByKeywordAndCreatedBy(@Param("keyword") String keyword, @Param("createdBy") UUID createdBy);
 
 	@Query("SELECT f FROM Farm f WHERE f.deletedAt IS NULL")
 	List<Farm> findAllActive();

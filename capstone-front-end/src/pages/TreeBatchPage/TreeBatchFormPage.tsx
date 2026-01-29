@@ -5,10 +5,13 @@ import Breadcrumbs from '../../components/Breadcrumbs';
 import { treeBatchApi } from '../../models/treeBatch.api';
 import { farmApi } from '../../models/farm.api';
 import { getTreeSpeciesList } from '../../models/treeSpecies.api';
+import { useAuth } from '../../contexts/AuthContext';
+import api from '../../utils/api';
 
 interface FormData {
     farmId: number;
     treeSpeciesId: number;
+    phaseId: number;
     quantityPlanted: number;
     plantingDate: string;
     plantingAreaM2: number;
@@ -21,6 +24,7 @@ interface FormData {
 const defaultForm: FormData = {
     farmId: 0,
     treeSpeciesId: 0,
+    phaseId: 0,
     quantityPlanted: 0,
     plantingDate: new Date().toISOString().split('T')[0],
     plantingAreaM2: 0,
@@ -34,10 +38,13 @@ export default function TreeBatchFormPage() {
     const navigate = useNavigate();
     const { id } = useParams();
     const isEdit = Boolean(id);
-
+    const { hasRole, user: authUser } = useAuth();
+    const isFarmer = hasRole(['FARMER']);
     const [form, setForm] = useState<FormData>(defaultForm);
     const [farms, setFarms] = useState<any[]>([]);
     const [species, setSpecies] = useState<any[]>([]);
+    const [projects, setProjects] = useState<any[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -46,13 +53,23 @@ export default function TreeBatchFormPage() {
         const initData = async () => {
             try {
                 setLoading(true);
-                const [farmRes, speciesRes] = await Promise.all([
+                const [farmRes, speciesRes, projectRes] = await Promise.all([
                     farmApi.getAll({ page: 0, size: 100 }),
                     getTreeSpeciesList({ page: 0, size: 100 }),
+                    api.get('/projects', { params: { page: 0, size: 100 } }),
                 ]);
 
-                setFarms((farmRes as any)?.data || farmRes || []);
+                const projectData = (projectRes as any)?.data || projectRes || [];
+                const farmData = (farmRes as any)?.data || farmRes || [];
+
+                if (isFarmer) {
+                    setFarms(Array.isArray(farmData) ? farmData.filter((f: any) => f.createdBy === authUser?.id) : []);
+                } else {
+                    setFarms(Array.isArray(farmData) ? farmData : []);
+                }
+
                 setSpecies((speciesRes as any)?.data || speciesRes || []);
+                setProjects(projectData);
 
                 if (isEdit && id) {
                     const res = await treeBatchApi.getById(id);
@@ -60,6 +77,7 @@ export default function TreeBatchFormPage() {
                     setForm({
                         farmId: data.farmId,
                         treeSpeciesId: data.treeSpeciesId,
+                        phaseId: data.phaseId || 0,
                         quantityPlanted: data.quantityPlanted,
                         plantingDate: data.plantingDate?.split('T')[0] || '',
                         plantingAreaM2: data.plantingAreaM2 || 0,
@@ -68,6 +86,14 @@ export default function TreeBatchFormPage() {
                         batchStatus: data.batchStatus || 'ACTIVE',
                         notes: data.notes || '',
                     });
+
+                    // Tự động chọn project dựa trên phaseId
+                    if (data.phaseId) {
+                        const project = projectData.find((p: any) =>
+                            p.phases?.some((ph: any) => ph.id === data.phaseId)
+                        );
+                        if (project) setSelectedProjectId(project.id);
+                    }
                 }
             } catch (err: any) {
                 setError(err.message || 'Lỗi tải dữ liệu');
@@ -83,18 +109,32 @@ export default function TreeBatchFormPage() {
     };
 
     const handleSubmit = async () => {
-        if (!form.farmId || !form.treeSpeciesId) {
-            setError('Vui lòng chọn nông trại và loài cây');
+        if (!form.farmId || !form.treeSpeciesId || !form.phaseId) {
+            setError('Vui lòng chọn đầy đủ nông trại, loài cây và giai đoạn dự án');
             return;
         }
 
         try {
             setSaving(true);
             setError(null);
-            await treeBatchApi.create(form);
+
+            const payload = {
+                ...form,
+                id: isEdit ? parseInt(id as string) : undefined
+            };
+
+            if (isEdit && id) {
+                await treeBatchApi.update(id, payload);
+                alert('Cập nhật lô cây thành công');
+            } else {
+                await treeBatchApi.create(payload);
+                alert('Tạo mới lô cây thành công');
+            }
+
             navigate('/tree-batches');
         } catch (err: any) {
-            setError(err.message || 'Lưu thất bại');
+            const backendMsg = err.response?.data?.message;
+            setError(backendMsg || err.message || 'Lưu thất bại');
         } finally {
             setSaving(false);
         }
@@ -210,6 +250,43 @@ export default function TreeBatchFormPage() {
                             />
                         </div>
                         <div>
+                            <label className="block text-sm mb-2 text-gray-300">Dự án đầu tư</label>
+                            <select
+                                className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B]"
+                                value={selectedProjectId}
+                                onChange={(e) => {
+                                    const pId = parseInt(e.target.value);
+                                    setSelectedProjectId(pId);
+                                    updateField('phaseId', 0); // Reset phase khi đổi project
+                                }}
+                            >
+                                <option value={0}>Chọn dự án...</option>
+                                {projects.map((p) => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm mb-2 text-gray-300">Giai đoạn dự án *</label>
+                            <select
+                                className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B]"
+                                value={form.phaseId}
+                                onChange={(e) => updateField('phaseId', parseInt(e.target.value))}
+                                disabled={!selectedProjectId}
+                            >
+                                <option value={0}>
+                                    {!selectedProjectId ? 'Vui lòng chọn dự án trước' : 'Chọn giai đoạn...'}
+                                </option>
+                                {projects
+                                    .find((p) => p.id === selectedProjectId)
+                                    ?.phases?.map((ph: any) => (
+                                        <option key={ph.id} value={ph.id}>
+                                            {ph.phaseName}
+                                        </option>
+                                    ))}
+                            </select>
+                        </div>
+                        <div>
                             <label className="block text-sm mb-2 text-gray-300">Trạng thái</label>
                             <select
                                 className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B]"
@@ -221,6 +298,16 @@ export default function TreeBatchFormPage() {
                                 <option value="REMOVED">Đã hủy</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm mb-2 text-gray-300">Ghi chú</label>
+                        <textarea
+                            className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] h-32"
+                            value={form.notes}
+                            onChange={(e) => updateField('notes', e.target.value)}
+                            placeholder="Nhập ghi chú thêm cho lô cây này..."
+                        />
                     </div>
 
                     <div className="flex justify-end pt-4">

@@ -9,6 +9,7 @@ import com.capston.project.back.end.repository.ProjectPhaseRepository;
 import com.capston.project.back.end.repository.TreeBatchRepository;
 import com.capston.project.back.end.repository.TreeSpeciesRepository;
 import com.capston.project.back.end.request.TreeBatchRequest;
+import com.capston.project.back.end.response.TreeBatchResponse;
 import com.capston.project.back.end.service.TreeBatchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +39,7 @@ public class TreeBatchServiceImpl implements TreeBatchService {
     // ==================== CRUD ====================
 
     @Override
-    public TreeBatch createTreeBatch(TreeBatchRequest request) {
+    public TreeBatchResponse createTreeBatch(TreeBatchRequest request) {
         log.info("Creating tree batch for farm: {}", request.getFarmId());
 
         // For FARMER role, verify they manage this farm
@@ -86,35 +87,38 @@ public class TreeBatchServiceImpl implements TreeBatchService {
                 .unitCost(request.getUnitCost())
                 .totalCost(request.getTotalCost())
                 .notes(request.getNotes())
-                .createdBy(request.getCreatedBy())
+                .createdBy(securityUtils.getCurrentUserId()) // Set correctly from context
                 .batchStatus(BatchStatus.ACTIVE)
                 .build();
 
         TreeBatch saved = treeBatchRepository.save(batch);
         log.info("Tree batch created: {}", saved.getBatchCode());
 
-        return saved;
+        return mapToResponse(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public TreeBatch getTreeBatchById(Integer id) {
-        return treeBatchRepository.findById(id)
+    public TreeBatchResponse getTreeBatchById(Integer id) {
+        TreeBatch batch = treeBatchRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tree batch not found: " + id));
+        return mapToResponse(batch);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public TreeBatch getTreeBatchByCode(String batchCode) {
-        return treeBatchRepository.findByBatchCode(batchCode)
+    public TreeBatchResponse getTreeBatchByCode(String batchCode) {
+        TreeBatch batch = treeBatchRepository.findByBatchCode(batchCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Tree batch not found: " + batchCode));
+        return mapToResponse(batch);
     }
 
     @Override
-    public TreeBatch updateTreeBatch(Integer id, TreeBatchRequest request) {
+    public TreeBatchResponse updateTreeBatch(Integer id, TreeBatchRequest request) {
         log.info("Updating tree batch: {}", id);
 
-        TreeBatch batch = getTreeBatchById(id);
+        TreeBatch batch = treeBatchRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Tree batch not found: " + id));
 
         // For FARMER role, verify they manage the farm of this batch
         if (securityUtils.isFarmer()) {
@@ -134,6 +138,27 @@ public class TreeBatchServiceImpl implements TreeBatchService {
         }
 
         // Update fields
+        if (request.getFarmId() != null && !request.getFarmId().equals(batch.getFarmId())) {
+            if (!farmRepository.existsById(request.getFarmId())) {
+                throw new ResourceNotFoundException("Farm not found: " + request.getFarmId());
+            }
+            batch.setFarmId(request.getFarmId());
+        }
+
+        if (request.getTreeSpeciesId() != null && !request.getTreeSpeciesId().equals(batch.getTreeSpeciesId())) {
+            if (!treeSpeciesRepository.existsById(request.getTreeSpeciesId())) {
+                throw new ResourceNotFoundException("Tree species not found: " + request.getTreeSpeciesId());
+            }
+            batch.setTreeSpeciesId(request.getTreeSpeciesId());
+        }
+
+        if (request.getPhaseId() != null && !request.getPhaseId().equals(batch.getPhaseId())) {
+            if (!projectPhaseRepository.existsById(request.getPhaseId())) {
+                throw new ResourceNotFoundException("Project phase not found: " + request.getPhaseId());
+            }
+            batch.setPhaseId(request.getPhaseId());
+        }
+
         if (request.getQuantityPlanted() != null) {
             batch.setQuantityPlanted(request.getQuantityPlanted());
         }
@@ -159,14 +184,15 @@ public class TreeBatchServiceImpl implements TreeBatchService {
         TreeBatch saved = treeBatchRepository.save(batch);
         log.info("Tree batch updated: {}", saved.getBatchCode());
 
-        return saved;
+        return mapToResponse(saved);
     }
 
     @Override
     public void deleteTreeBatch(Integer id) {
         log.info("Deleting tree batch: {}", id);
 
-        TreeBatch batch = getTreeBatchById(id);
+        TreeBatch batch = treeBatchRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Tree batch not found: " + id));
 
         // For FARMER role, verify access
         if (securityUtils.isFarmer()) {
@@ -183,31 +209,35 @@ public class TreeBatchServiceImpl implements TreeBatchService {
         log.info("Tree batch marked as REMOVED: {}", batch.getBatchCode());
     }
 
-    // ==================== LIST & FILTER ====================
-
     @Override
     @Transactional(readOnly = true)
-    public Page<TreeBatch> getAllTreeBatches(Pageable pageable) {
-        return treeBatchRepository.findAll(pageable);
+    public Page<TreeBatchResponse> getAllTreeBatches(Pageable pageable) {
+        return treeBatchRepository.findAll(pageable).map(this::mapToResponse);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<TreeBatch> getTreeBatchesByFarmId(Integer farmId) {
-        return treeBatchRepository.findByFarmId(farmId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<TreeBatch> getTreeBatchesByPhaseId(Integer phaseId) {
-        return treeBatchRepository.findByPhaseId(phaseId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<TreeBatch> getTreeBatchesBySpeciesId(Integer speciesId) {
-        return treeBatchRepository.findByTreeSpeciesId(speciesId);
-    }
+    // @Override
+    // @Transactional(readOnly = true)
+    // public List<TreeBatchResponse> getTreeBatchesByFarmId(Integer farmId) {
+    // return treeBatchRepository.findByFarmId(farmId).stream()
+    // .map(this::mapToResponse)
+    // .collect(java.util.stream.Collectors.toList());
+    // }
+    //
+    // @Override
+    // @Transactional(readOnly = true)
+    // public List<TreeBatchResponse> getTreeBatchesByPhaseId(Integer phaseId) {
+    // return treeBatchRepository.findByPhaseId(phaseId).stream()
+    // .map(this::mapToResponse)
+    // .collect(java.util.stream.Collectors.toList());
+    // }
+    //
+    // @Override
+    // @Transactional(readOnly = true)
+    // public List<TreeBatchResponse> getTreeBatchesBySpeciesId(Integer speciesId) {
+    // return treeBatchRepository.findByTreeSpeciesId(speciesId).stream()
+    // .map(this::mapToResponse)
+    // .collect(java.util.stream.Collectors.toList());
+    // }
 
     // ==================== STATISTICS ====================
 
@@ -255,28 +285,52 @@ public class TreeBatchServiceImpl implements TreeBatchService {
 
         BigDecimal usableArea = farm.getUsableArea() != null ? farm.getUsableArea() : farm.getArea();
 
-        // Calculate current used area (excluding the batch being updated)
-        BigDecimal currentUsedArea = treeBatchRepository.sumPlantingAreaByFarmId(farmId);
-        if (currentUsedArea == null)
-            currentUsedArea = BigDecimal.ZERO;
-
-        // If updating, subtract the old area of this batch
+        // 1. Kiểm tra Mật độ (Density check) - Một quy tắc "hợp lý" về nông nghiệp
+        // Giả sử mật độ tối đa không nên vượt quá 20 cây / m2 (rất dày)
+        // Nếu vượt quá mức này, khả năng cao là người dùng nhập nhầm đơn vị hoặc số
+        // liệu
+        Integer currentQuantity = 0;
         if (excludeBatchId != null) {
             TreeBatch existingBatch = treeBatchRepository.findById(excludeBatchId).orElse(null);
-            if (existingBatch != null && existingBatch.getPlantingAreaM2() != null) {
-                currentUsedArea = currentUsedArea.subtract(existingBatch.getPlantingAreaM2());
+            if (existingBatch != null)
+                currentQuantity = existingBatch.getQuantityPlanted();
+        }
+
+        if (newArea.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal treesPerM2 = new BigDecimal(currentQuantity).divide(newArea, 2, java.math.RoundingMode.HALF_UP);
+            if (treesPerM2.compareTo(new BigDecimal("20")) > 0) {
+                throw new IllegalArgumentException(String.format(
+                        "Mật độ trồng quá dày (%s cây/m²). Với %s cây, diện tích %s m² là không hợp lý. Vui lòng kiểm tra và nhập lại diện tích thực tế.",
+                        treesPerM2, currentQuantity, newArea));
             }
         }
 
-        BigDecimal totalAfterAdd = currentUsedArea.add(newArea);
+        // 2. Kiểm tra Tổng diện tích trang trại (Capacity check)
+        BigDecimal totalUsedArea = treeBatchRepository.sumPlantingAreaByFarmId(farmId);
+        if (totalUsedArea == null)
+            totalUsedArea = BigDecimal.ZERO;
 
-        if (totalAfterAdd.compareTo(usableArea) > 0) {
-            throw new IllegalArgumentException(
-                    String.format("Planting area exceeds available space. Usable: %s m², Used: %s m², Requested: %s m²",
-                            usableArea, currentUsedArea, newArea));
+        BigDecimal oldArea = BigDecimal.ZERO;
+        if (excludeBatchId != null) {
+            TreeBatch existingBatch = treeBatchRepository.findById(excludeBatchId).orElse(null);
+            if (existingBatch != null && existingBatch.getPlantingAreaM2() != null) {
+                oldArea = existingBatch.getPlantingAreaM2();
+            }
         }
 
-        log.info("Planting area validation passed. Available: {} m²", usableArea.subtract(currentUsedArea));
+        BigDecimal usedByOthers = totalUsedArea.subtract(oldArea);
+        BigDecimal totalAfterUpdate = usedByOthers.add(newArea);
+
+        if (totalAfterUpdate.compareTo(usableArea) > 0) {
+            String advice = (newArea.compareTo(oldArea) < 0)
+                    ? "Mặc dù bạn đã giảm diện tích, nhưng tổng diện tích trang trại vẫn đang quá tải. "
+                    : "Diện tích này vượt quá khả năng của trang trại. ";
+
+            throw new IllegalArgumentException(String.format(
+                    "%sHiện tại: %s/%s m². Vui lòng cập nhật lại diện tích trang trại hoặc điều chỉnh các lô cây khác trước khi lưu.",
+                    advice, totalAfterUpdate.setScale(1, java.math.RoundingMode.HALF_UP),
+                    usableArea.setScale(1, java.math.RoundingMode.HALF_UP)));
+        }
     }
 
     // ==================== HELPER ====================
@@ -284,5 +338,49 @@ public class TreeBatchServiceImpl implements TreeBatchService {
     private String generateBatchCode(Integer farmId) {
         long count = treeBatchRepository.countByFarmId(farmId);
         return String.format("BATCH-%d-%04d", farmId, count + 1);
+    }
+
+    private TreeBatchResponse mapToResponse(TreeBatch entity) {
+        TreeBatchResponse response = TreeBatchResponse.builder()
+                .id(entity.getId())
+                .batchCode(entity.getBatchCode())
+                .farmId(entity.getFarmId())
+                .treeSpeciesId(entity.getTreeSpeciesId())
+                .phaseId(entity.getPhaseId())
+                .quantityPlanted(entity.getQuantityPlanted())
+                .plantingDate(entity.getPlantingDate())
+                .plantingAreaM2(entity.getPlantingAreaM2())
+                .supplierName(entity.getSupplierName())
+                .unitCost(entity.getUnitCost())
+                .totalCost(entity.getTotalCost())
+                .batchStatus(entity.getBatchStatus())
+                .notes(entity.getNotes())
+                .createdBy(entity.getCreatedBy())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .build();
+
+        // Populate names if entities are loaded or fetch if needed
+        if (entity.getFarm() != null) {
+            response.setFarmName(entity.getFarm().getName());
+        } else {
+            farmRepository.findById(entity.getFarmId()).ifPresent(f -> response.setFarmName(f.getName()));
+        }
+
+        if (entity.getTreeSpecies() != null) {
+            response.setTreeSpeciesName(entity.getTreeSpecies().getName());
+        } else {
+            treeSpeciesRepository.findById(entity.getTreeSpeciesId())
+                    .ifPresent(ts -> response.setTreeSpeciesName(ts.getName()));
+        }
+
+        if (entity.getPhase() != null) {
+            response.setPhaseName(entity.getPhase().getPhaseName());
+        } else if (entity.getPhaseId() != null) {
+            projectPhaseRepository.findById(entity.getPhaseId())
+                    .ifPresent(p -> response.setPhaseName(p.getPhaseName()));
+        }
+
+        return response;
     }
 }
