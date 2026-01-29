@@ -80,3 +80,6 @@ server.servlet.session:
   cookie:
     secure: true
     http-only: true
+# CORS Configuration
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
