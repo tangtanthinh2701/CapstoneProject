@@ -1,0 +1,32 @@
+﻿
+> environment-front-end@0.0.0 build
+> tsc -b && vite build
+
+src/pages/ContractPage/ContractApprovalPage.tsx(53,21): error TS2339: Property 'success' does not exist on type 'AxiosResponse<Contract, any, {}>'.
+src/pages/ContractPage/ContractDetailPage.tsx(60,25): error TS2339: Property 'approve' does not exist on type '{ getAll: (params?: any) => Promise<AxiosResponse<any, any, {}>>; getMyContracts: (params?: any) => Promise<AxiosResponse<any, any, {}>>; ... 7 more ...; approveRenewal: (renewalId: string | number, data?: any) => Promise<...>; }'.
+src/pages/ContractPage/ContractRenewalPage.tsx(63,21): error TS2339: Property 'success' does not exist on type 'AxiosResponse<Contract, any, {}>'.
+src/pages/ContractPage/ContractRenewalPage.tsx(71,26): error TS2339: Property 'canRenew' does not exist on type 'Contract'.
+src/pages/ContractPage/ContractTerminatePage.tsx(49,21): error TS2339: Property 'success' does not exist on type 'AxiosResponse<Contract, any, {}>'.
+src/pages/ContractPage/ContractWorkflowPage.tsx(52,25): error TS2339: Property 'approve' does not exist on type '{ getAll: (params?: any) => Promise<AxiosResponse<any, any, {}>>; getMyContracts: (params?: any) => Promise<AxiosResponse<any, any, {}>>; ... 7 more ...; approveRenewal: (renewalId: string | number, data?: any) => Promise<...>; }'.
+src/pages/DashboardPage/DashboardPage.tsx(23,3): error TS6133: 'PieChart' is declared but its value is never read.
+src/pages/DashboardPage/DashboardPage.tsx(24,3): error TS6133: 'Pie' is declared but its value is never read.
+src/pages/DashboardPage/DashboardPage.tsx(25,3): error TS6133: 'Cell' is declared but its value is never read.
+src/pages/DashboardPage/DashboardPage.tsx(49,7): error TS6133: 'COLORS' is declared but its value is never read.
+src/pages/DashboardPage/DashboardPage.tsx(167,9): error TS6133: 'projectsPieData' is declared but its value is never read.
+src/pages/FarmPage/FarmPage.tsx(35,16): error TS6133: 'setSize' is declared but its value is never read.
+src/pages/ProfilePage/ProfilePage.tsx(9,11): error TS6133: 'navigate' is declared but its value is never read.
+src/pages/ReportPage/DashboardPage.tsx(82,29): error TS2339: Property 'pendingContracts' does not exist on type 'DashboardSummary'.
+src/pages/ReportPage/DashboardPage.tsx(91,29): error TS2339: Property 'totalCO2Kg' does not exist on type 'DashboardSummary'.
+src/pages/ReportPage/DashboardPage.tsx(102,29): error TS2339: Property 'creditsSold' does not exist on type 'DashboardSummary'.
+src/pages/ReportPage/DashboardPage.tsx(107,29): error TS2551: Property 'creditsAvailable' does not exist on type 'DashboardSummary'. Did you mean 'totalCreditsAvailable'?
+src/pages/ReportPage/DashboardPage.tsx(122,29): error TS2551: Property 'monthlyRevenue' does not exist on type 'DashboardSummary'. Did you mean 'monthlyRevenueData'?
+src/pages/ReportPage/DashboardPage.tsx(133,29): error TS2551: Property 'totalFarmArea' does not exist on type 'DashboardSummary'. Did you mean 'totalFarms'?
+src/pages/ReportPage/DashboardPage.tsx(170,40): error TS2339: Property 'totalCO2Kg' does not exist on type 'DashboardSummary'.
+src/pages/ReportPage/DashboardPage.tsx(170,74): error TS2551: Property 'targetCO2Kg' does not exist on type 'DashboardSummary'. Did you mean 'targetCo2'?
+src/pages/ReportPage/DashboardPage.tsx(173,30): error TS2339: Property 'co2AchievementRate' does not exist on type 'DashboardSummary'.
+src/pages/ReportPage/DashboardPage.tsx(180,50): error TS2339: Property 'co2AchievementRate' does not exist on type 'DashboardSummary'.
+src/pages/TreeBatchPage/TreeBatchDetailPage.tsx(22,11): error TS6133: 'navigate' is declared but its value is never read.
+src/pages/TreeBatchPage/TreeBatchDetailPage.tsx(24,11): error TS6133: 'isAdmin' is declared but its value is never read.
+src/pages/TreeBatchPage/TreeBatchDetailPage.tsx(29,12): error TS6133: 'error' is declared but its value is never read.
+src/router/index.tsx(47,1): error TS6133: 'TransactionPage' is declared but its value is never read.
+

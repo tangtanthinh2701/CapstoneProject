@@ -32,7 +32,7 @@ export default function FarmPage() {
 
   // Pagination state
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(10);
+  const [size] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 

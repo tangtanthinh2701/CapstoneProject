@@ -20,9 +20,6 @@ import {
   Line,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -46,7 +43,6 @@ const formatNumber = (value: number | undefined | null): string => {
   return value.toLocaleString('vi-VN');
 };
 
-const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
 // Default summary for fallback
 const defaultSummary: DashboardSummary = {
@@ -164,10 +160,6 @@ export default function DashboardPage() {
     count: m.count || 0,
   }));
 
-  const projectsPieData = topProjects.slice(0, 5).map((p) => ({
-    name: p.projectName || p.name || 'N/A',
-    value: p.totalCo2Absorbed || p.co2Absorbed || 0,
-  }));
 
   // Loading state
   if (loading) {

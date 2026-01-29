@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import type {
-  ProjectPartnerRequest,
+import {
+  type ProjectPartnerRequest,
   PartnerRole,
   PartnerRoleLabels,
 } from '../../models/partner.model';
@@ -93,9 +93,8 @@ export const ProjectPartnerModal: React.FC<ProjectPartnerModalProps> = ({
               onChange={(e) =>
                 setFormData({ ...formData, partnerId: Number(e.target.value) })
               }
-              className={`w-full px-4 py-2 bg-gray-700 border ${
-                errors.partnerId ? 'border-red-500' : 'border-gray-600'
-              } rounded-lg text-white focus:outline-none focus:border-green-500 transition-colors`}
+              className={`w-full px-4 py-2 bg-gray-700 border ${errors.partnerId ? 'border-red-500' : 'border-gray-600'
+                } rounded-lg text-white focus:outline-none focus:border-green-500 transition-colors`}
             >
               <option value={0}>-- Chọn đối tác --</option>
               {partners.map((partner) => (

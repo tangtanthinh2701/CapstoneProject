@@ -43,8 +43,6 @@ import ContractWorkflowPage from '../pages/ContractPage/ContractWorkflowPage';
 // Carbon Credits  
 import CarbonCreditPage from '../pages/CarbonCreditPage/CarbonCreditPage';
 
-// Transactions
-import TransactionPage from '../pages/TransactionPage/TransactionPage';
 
 // Admin
 import UserManagementPage from '../pages/UserPage/UserManagementPage';

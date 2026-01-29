@@ -1,41 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { projectApi, type Project } from '../../models/project.api';
-
-// MOCK DATA để trang đẹp khi chưa có dữ liệu thật
-const MOCK_PROJECTS = [
-  {
-    id: 991,
-    code: 'PRJ-2025-001',
-    name: 'Rừng Ngập Mặn Cà Mau',
-    description: 'Dự án khôi phục rừng ngập mặn ven biển, tăng cường khả năng hấp thụ Carbon và bảo vệ đa dạng sinh học.',
-    imageUrl: 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=2074&auto=format&fit=crop',
-    location: 'Cà Mau, Việt Nam',
-    target: '500,000 tấn CO₂',
-    status: 'ACTIVE'
-  },
-  {
-    id: 992,
-    code: 'PRJ-2025-002',
-    name: 'Phủ Xanh Đồi Trọc Tây Nguyên',
-    description: 'Trồng cây keo lai và bạch đàn trên các vùng đồi trọc, chống xói mòn và tạo sinh kế cho người dân.',
-    imageUrl: 'https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    location: 'Đắk Lắk, Việt Nam',
-    target: '1,200,000 tấn CO₂',
-    status: 'ACTIVE'
-  },
-  {
-    id: 993,
-    code: 'PRJ-2025-003',
-    name: 'Rừng Phòng Hộ Đầu Nguồn',
-    description: 'Bảo vệ và phát triển rừng phòng hộ tại thượng nguồn các con sông lớn, điều hòa nguồn nước.',
-    imageUrl: 'https://images.unsplash.com/photo-1511497584788-876760111969?q=80&w=1932&auto=format&fit=crop',
-    location: 'Hòa Bình, Việt Nam',
-    target: '800,000 tấn CO₂',
-    status: 'UPCOMING'
-  }
-];
 
 // MOCK TESTIMONIALS
 const TESTIMONIALS = [
@@ -61,8 +26,8 @@ const TESTIMONIALS = [
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout } = useAuth();
-  const [projects, setProjects] = useState<any[]>([]);
+  const { isAuthenticated, logout } = useAuth();
+  const [projects] = useState<any[]>([]);
 
   // ... (giữ nguyên phần useEffect)
 
