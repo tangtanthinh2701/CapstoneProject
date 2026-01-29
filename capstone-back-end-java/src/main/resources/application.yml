@@ -23,7 +23,7 @@ spring:
 
 # CORS Configuration
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:3000}
 
 # JWT Configuration (same for all environments)
 jwt:
@@ -56,8 +56,8 @@ github:
   models:
     api:
       token: ${GITHUB_MODELS_TOKEN:}
-      url: ${GITHUB_MODELS_URL:https://models.github.ai/inference/chat/completions}
-    model: ${GITHUB_MODELS_MODEL:openai/gpt-4o}
+      url: ${GITHUB_MODELS_URL:https://models.inference.ai.azure.com/chat/completions}
+    model: ${GITHUB_MODELS_MODEL:gpt-4o}
 
 # Chatbot System Prompt
 openai:
