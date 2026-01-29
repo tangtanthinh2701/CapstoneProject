@@ -1,31 +1,36 @@
 package com.capston.project.back.end.service;
 
-import com.capston.project.back.end.request.ChatRequest;
-import com.capston.project.back.end.response.ChatResponse;
-import com.capston.project.back.end.response.ChatSessionResponse;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.capston.project.back.end.entity.ChatMessage;
 
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Service interface for AI Chatbot functionality
+ */
 public interface ChatbotService {
 
-    // Session management
-    ChatSessionResponse createSession(UUID userId, String userAgent, String ipAddress);
-    ChatSessionResponse getSession(String sessionCode);
-    void closeSession(String sessionCode);
-    Page<ChatSessionResponse> getUserSessions(UUID userId, Pageable pageable);
+    /**
+     * Send a message to the chatbot and get AI response
+     * 
+     * @param userId      User sending the message
+     * @param userMessage Message content
+     * @return AI-generated response
+     */
+    String sendMessage(UUID userId, String userMessage);
 
-    // Chat
-    ChatResponse chat(ChatRequest request);
+    /**
+     * Get chat history for a user's active session
+     * 
+     * @param userId User ID
+     * @return List of chat messages
+     */
+    List<ChatMessage> getChatHistory(UUID userId);
 
-    // Get chat history
-    List<ChatResponse> getChatHistory(String sessionCode);
-
-    // Feedback
-    void submitFeedback(Integer messageId, Boolean isHelpful, String note);
-
-    // Project recommendation
-    ChatResponse recommendProjects(String query, UUID userId);
+    /**
+     * Close the current active chat session
+     * 
+     * @param userId User ID
+     */
+    void closeSession(UUID userId);
 }

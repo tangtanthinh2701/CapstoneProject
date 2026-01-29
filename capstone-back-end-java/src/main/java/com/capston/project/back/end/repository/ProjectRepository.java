@@ -32,6 +32,8 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
 	// Tìm theo status
 	Page<Project> findByProjectStatus(ProjectStatus status, Pageable pageable);
 
+	Page<Project> findByProjectStatusAndManagerId(ProjectStatus status, UUID managerId, Pageable pageable);
+
 	// Tìm theo manager
 	Page<Project> findByManagerId(UUID managerId, Pageable pageable);
 
@@ -64,7 +66,7 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
 			"p.targetCo2Kg = :targetCarbon, " +
 			"p.actualCo2Kg = :currentCarbon, " +
 			"p.updatedAt = CURRENT_TIMESTAMP " +
-			"WHERE p. id = :projectId")
+			"WHERE p.id = :projectId")
 	void updateComputedFields(@Param("projectId") Integer projectId,
 			@Param("budget") BigDecimal budget,
 			@Param("targetCarbon") BigDecimal targetCarbon,
@@ -77,7 +79,7 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
 	@Query("SELECT COUNT(p) FROM Project p WHERE p.projectStatus = :status")
 	Long countByProjectStatus(@Param("status") ProjectStatus status);
 
-	@Query("SELECT COALESCE(SUM(p. targetCo2Kg), 0) FROM Project p")
+	@Query("SELECT COALESCE(SUM(p.targetCo2Kg), 0) FROM Project p")
 	BigDecimal sumTargetCo2Kg();
 
 	@Query("SELECT p FROM Project p ORDER BY p.actualCo2Kg DESC LIMIT :limit")
@@ -93,35 +95,4 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
 	@Query("SELECT COUNT(p) FROM Project p " +
 			"WHERE p.projectStatus NOT IN ('PLANNING', 'COMPLETED')")
 	Long countActiveInProgressProjects();
-
-	// ==================== SUM QUERIES ====================
-
-	// @Query("SELECT COALESCE(SUM(p.targetCo2), 0) FROM Project p")
-	// Double getTotalTargetCo2();
-	//
-	// @Query("SELECT COALESCE(SUM(p.totalCo2Absorbed), 0) FROM Project p")
-	// Double getTotalCo2Absorbed();
-
-	// ==================== FIND QUERIES ====================
-
-	// @Query("SELECT p FROM Project p WHERE p.farm.id = :farmId")
-	// List<Project> findByFarmId(@Param("farmId") Integer farmId);
-	//
-	// @Query("SELECT p FROM Project p WHERE p. projectStatus = :status")
-	// Page<Project> findByStatus(@Param("status") ProjectStatus status, Pageable
-	// pageable);
-	//
-	// @Query("SELECT p FROM Project p " +
-	// "WHERE LOWER(p.projectName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-	// "OR LOWER(p.projectCode) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-	// List<Project> searchProjects(@Param("keyword") String keyword);
-	//
-	// @Query("SELECT p FROM Project p " +
-	// "LEFT JOIN FETCH p.farm " +
-	// "WHERE p.id = :id")
-	// Optional<Project> findByIdWithFarm(@Param("id") Integer id);
-	//
-	// // Derived query methods
-	// Optional<Project> findByProjectCode(String projectCode);
-	// List<Project> findByProjectStatus(ProjectStatus status);
 }

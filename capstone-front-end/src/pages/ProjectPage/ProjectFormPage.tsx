@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
-import { projectApi, type Project, type ProjectPhase } from '../../models/project.api';
+import { projectApi } from '../../models/project.api';
 
 const statusOptions = [
   { value: 'PLANNING', label: 'Lập kế hoạch' },
@@ -11,24 +11,19 @@ const statusOptions = [
   { value: 'CANCELLED', label: 'Đã hủy' },
 ];
 
-const phaseStatusOptions = [
-  { value: 'PLANNING', label: 'Lập kế hoạch' },
-  { value: 'PLANTING', label: 'Đang trồng' },
-  { value: 'GROWING', label: 'Sinh trưởng' },
-  { value: 'MATURE', label: 'Trưởng thành' },
-  { value: 'HARVESTING', label: 'Thu hoạch' },
-  { value: 'COMPLETED', label: 'Hoàn thành' },
-];
-
 interface PhaseForm {
+  id?: number;
   phaseNumber: number;
   phaseName: string;
   description: string;
   phaseStatus: string;
   plannedStartDate: string;
   plannedEndDate: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
   targetCo2Kg: number;
   budget: number;
+  notes?: string;
 }
 
 interface FormData {
@@ -60,8 +55,11 @@ const defaultPhase: PhaseForm = {
   phaseStatus: 'PLANNING',
   plannedStartDate: '',
   plannedEndDate: '',
+  actualStartDate: '',
+  actualEndDate: '',
   targetCo2Kg: 0,
   budget: 0,
+  notes: '',
 };
 
 export default function ProjectFormPage() {
@@ -93,14 +91,18 @@ export default function ProjectFormPage() {
           targetCo2Kg: data.targetCo2Kg || 0,
           isPublic: data.isPublic || false,
           phases: (data.phases || []).map((p: any, idx: number) => ({
+            id: p.id,
             phaseNumber: p.phaseNumber || idx + 1,
             phaseName: p.phaseName || '',
             description: p.description || '',
             phaseStatus: p.phaseStatus || 'PLANNING',
             plannedStartDate: p.plannedStartDate || '',
             plannedEndDate: p.plannedEndDate || '',
+            actualStartDate: p.actualStartDate || '',
+            actualEndDate: p.actualEndDate || '',
             targetCo2Kg: p.targetCo2Kg || 0,
             budget: p.budget || 0,
+            notes: p.notes || '',
           })),
         });
       } catch (err: any) {
@@ -148,12 +150,25 @@ export default function ProjectFormPage() {
       setSaving(true);
       setError(null);
 
+      // Filter out empty strings for dates - Backend fails on ""
+      const cleanPhases = form.phases.map((p, idx) => ({
+        ...p,
+        phaseNumber: idx + 1,
+        plannedStartDate: p.plannedStartDate || null,
+        plannedEndDate: p.plannedEndDate || null,
+        actualStartDate: p.actualStartDate || null,
+        actualEndDate: p.actualEndDate || null,
+      }));
+
       const payload = {
-        ...form,
-        phases: form.phases.map((p, idx) => ({
-          ...p,
-          phaseNumber: idx + 1,
-        })),
+        name: form.name,
+        description: form.description,
+        projectStatus: form.projectStatus,
+        totalBudget: form.totalBudget,
+        targetCo2Kg: form.targetCo2Kg,
+        isPublic: form.isPublic,
+        code: form.code,
+        phases: cleanPhases,
       };
 
       if (isEdit) {
@@ -164,7 +179,8 @@ export default function ProjectFormPage() {
 
       navigate('/projects');
     } catch (err: any) {
-      setError(err.message || 'Lưu thất bại');
+      const backendMsg = err.response?.data?.message;
+      setError(backendMsg || err.message || 'Lưu thất bại');
     } finally {
       setSaving(false);
     }
@@ -361,13 +377,33 @@ export default function ProjectFormPage() {
                         value={phase.phaseStatus}
                         onChange={(e) => updatePhaseField(index, 'phaseStatus', e.target.value)}
                       >
-                        {phaseStatusOptions.map((opt) => (
+                        {statusOptions.map((opt) => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
                       </select>
                     </div>
+
                     <div>
-                      <label className="block text-xs mb-1 text-gray-400">Ngày bắt đầu</label>
+                      <label className="block text-xs mb-1 text-gray-400">Ngân sách (VND)</label>
+                      <input
+                        type="number"
+                        className="w-full px-3 py-2 rounded-lg bg-[#0E2219] border border-[#1E3A2B] text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        value={phase.budget}
+                        onChange={(e) => updatePhaseField(index, 'budget', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1 text-gray-400">Mục tiêu CO₂ (kg)</label>
+                      <input
+                        type="number"
+                        className="w-full px-3 py-2 rounded-lg bg-[#0E2219] border border-[#1E3A2B] text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        value={phase.targetCo2Kg}
+                        onChange={(e) => updatePhaseField(index, 'targetCo2Kg', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs mb-1 text-gray-400">Ngày bắt đầu dự kiến</label>
                       <input
                         type="date"
                         className="w-full px-3 py-2 rounded-lg bg-[#0E2219] border border-[#1E3A2B] text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -376,7 +412,7 @@ export default function ProjectFormPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs mb-1 text-gray-400">Ngày kết thúc</label>
+                      <label className="block text-xs mb-1 text-gray-400">Ngày kết thúc dự kiến</label>
                       <input
                         type="date"
                         className="w-full px-3 py-2 rounded-lg bg-[#0E2219] border border-[#1E3A2B] text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -384,6 +420,34 @@ export default function ProjectFormPage() {
                         onChange={(e) => updatePhaseField(index, 'plannedEndDate', e.target.value)}
                       />
                     </div>
+
+                    <div>
+                      <label className="block text-xs mb-1 text-gray-400">Ngày bắt đầu thực tế</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 rounded-lg bg-[#0E2219] border border-[#1E3A2B] text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        value={phase.actualStartDate}
+                        onChange={(e) => updatePhaseField(index, 'actualStartDate', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1 text-gray-400">Ngày kết thúc thực tế</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 rounded-lg bg-[#0E2219] border border-[#1E3A2B] text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        value={phase.actualEndDate}
+                        onChange={(e) => updatePhaseField(index, 'actualEndDate', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-xs mb-1 text-gray-400">Ghi chú</label>
+                    <textarea
+                      rows={2}
+                      className="w-full px-3 py-2 rounded-lg bg-[#0E2219] border border-[#1E3A2B] text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                      value={phase.notes}
+                      onChange={(e) => updatePhaseField(index, 'notes', e.target.value)}
+                    />
                   </div>
                 </div>
               ))}

@@ -1,45 +1,33 @@
-server:
-  port: 8088
+# =====================================================
+# BASE CONFIGURATION - Common settings for all profiles
+# =====================================================
+# Active profile: Set via environment variable or command line
+# Run with: mvn spring-boot:run -Dspring-boot.run.profiles=dev
+# Or set: SPRING_PROFILES_ACTIVE=dev
+
 spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/mypostgresdb
-    driver-class-name: org.postgresql.Driver
-    username: postgres
-    password: 123
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}  # Default to 'dev' if not specified
+  
+  # Common JPA settings
   jpa:
-    show-sql: true
-    hibernate:
-      ddl-auto: none
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
+  
+  # File upload limits
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: YOUR_EMAIL@gmail.com
-    password: YOUR_APP_PASSWORD
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+
+# JWT Configuration (same for all environments)
 jwt:
-  expiration: 2592000 #30 days = 30 * 24 * 60 * 60
-  expiration-refresh-token: 5184000 #60 days = 60 * 24 * 60 * 60
-  secretKey: "bXktc3VwZXItc2VjdXJlLXNlY3JldC1rZXktMzJieXRlcy0xMjM0NTY3ODkw"
+  expiration: 2592000          # 30 days
+  expiration-refresh-token: 5184000  # 60 days
+  secretKey: ${JWT_SECRET_KEY:bXktc3VwZXItc2VjdXJlLXNlY3JldC1rZXktMzJieXRlcy0xMjM0NTY3ODkw}
 
-logging:
-  level:
-    org:
-      springframework.security: DEBUG
-
-# swagger-ui custom path
+# Swagger/OpenAPI
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -47,62 +35,27 @@ springdoc:
     path: /api-docs
   show-actuator: true
 
+# WebSocket
 websocket:
   endpoint: /ws
   topic: /topic
   queue: /queue
 
-# VNPay Configuration (Sandbox)
+# VNPay Configuration
 vnpay:
-  pay-url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
-  return-url: http://localhost:8088/api/payments/vnpay-return
-  ipn-url: http://localhost:8088/api/payments/vnpay-ipn
-  tmn-code: YOUR_TMN_CODE  # Thay bằng mã merchant test
-  hash-secret: YOUR_HASH_SECRET  # Thay bằng secret key test
   version: "2.1.0"
   command: pay
   order-type: other
 
-# OpenAI Configuration for AI Chatbot
+# GitHub Models AI Chatbot
+github:
+  models:
+    api:
+      token: ${GITHUB_MODELS_TOKEN:}
+      url: ${GITHUB_MODELS_URL:https://models.github.ai/inference/chat/completions}
+    model: ${GITHUB_MODELS_MODEL:openai/gpt-4o}
+
+# Chatbot System Prompt
 openai:
-  api-key: YOUR_OPENAI_API_KEY  # Thay bằng API key của bạn
-  model: gpt-3.5-turbo  # hoặc gpt-4
-  max-tokens: 1000
-  temperature: 0.7
-  system-prompt: |
-    Bạn là trợ lý AI của hệ thống Carbon Credit. Bạn giúp người dùng:
-    1. Tìm hiểu về các dự án trồng cây và tín chỉ carbon
-    2. Gợi ý dự án phù hợp dựa trên nhu cầu (năng suất CO2, giá cả, vị trí...)
-    3. Giải đáp thắc mắc về quy trình mua tín chỉ, hợp đồng
-    4. Hướng dẫn sử dụng hệ thống
-    Hãy trả lời ngắn gọn, chính xác và thân thiện bằng tiếng Việt.
-
-# ==========================================
-# EXTERNAL API CONFIGURATIONS (ALL FREE!)
-# ==========================================
-
-# Geocoding: OpenStreetMap Nominatim (FREE, no API key needed)
-# Rate limit: 1 request/second
-# Docs: https://nominatim.org/release-docs/latest/api/Overview/
-geocoding:
-  use-mock: true  # Set to false to use real OpenStreetMap API (FREE!)
-
-# Weather: Open-Meteo (FREE, no API key needed, no rate limits)
-# Perfect for educational projects!
-# Docs: https://open-meteo.com/en/docs
-weather:
-  use-mock: true  # Set to false to use real Open-Meteo API (FREE!)
-
-# Soil: SoilGrids REST API by ISRIC (FREE, no API key needed)
-# Docs: https://rest.isric.org/
-soil:
-  use-mock: true  # Set to false to use real SoilGrids API (FREE!)
-
-# ==========================================
-# NOTES:
-# ==========================================
-# ✅ OpenStreetMap Nominatim: FREE - Just respect 1 req/sec limit
-# ✅ Open-Meteo: FREE - No limits for non-commercial use
-# ✅ SoilGrids: FREE - No API key needed
-# ❌ Google Maps: PAID (removed)
-# ❌ OpenWeatherMap: PAID for historical data (removed)
+  system:
+    prompt: Bạn là trợ lý AI chuyên về thị trường carbon và trồng cây bù đắp khí thải. Nhiệm vụ - Tư vấn về carbon offsetting, carbon credits, hướng dẫn cách trồng cây hấp thụ CO2, giải đáp về quy trình mua/bán tín chỉ carbon. Trả lời bằng tiếng Việt, ngắn gọn, dễ hiểu, chuyên nghiệp.

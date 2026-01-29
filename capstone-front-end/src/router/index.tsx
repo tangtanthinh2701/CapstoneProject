@@ -82,7 +82,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/projects/new',
-    element: <ProtectedRoute requiredRoles={['ADMIN']}><ProjectFormPage /></ProtectedRoute>,
+    element: <ProtectedRoute requiredRoles={['ADMIN', 'USER']}><ProjectFormPage /></ProtectedRoute>,
   },
   {
     path: '/projects/:id',
@@ -90,7 +90,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/projects/:id/edit',
-    element: <ProtectedRoute requiredRoles={['ADMIN']}><ProjectFormPage /></ProtectedRoute>,
+    element: <ProtectedRoute requiredRoles={['ADMIN', 'USER']}><ProjectFormPage /></ProtectedRoute>,
   },
 
   // FARMS

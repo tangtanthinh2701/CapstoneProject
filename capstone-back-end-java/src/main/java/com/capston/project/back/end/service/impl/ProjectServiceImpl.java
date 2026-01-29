@@ -176,15 +176,21 @@ public class ProjectServiceImpl implements ProjectService {
 
 	@Override
 	public Page<ProjectResponse> getProjectsByStatus(ProjectStatus status, Pageable pageable) {
-		return projectRepository.findByProjectStatus(status, pageable)
-				.map(this::mapToProjectResponseWithoutPhases);
+		if (securityUtils.isAdmin()) {
+			return projectRepository.findByProjectStatus(status, pageable)
+					.map(this::mapToProjectResponseWithoutPhases);
+		} else {
+			return projectRepository.findByProjectStatusAndManagerId(status, securityUtils.getCurrentUserId(), pageable)
+					.map(this::mapToProjectResponseWithoutPhases);
+		}
 	}
 
-	@Override
-	public Page<ProjectResponse> getProjectsByManager(UUID managerId, Pageable pageable) {
-		return projectRepository.findByManagerId(managerId, pageable)
-				.map(this::mapToProjectResponseWithoutPhases);
-	}
+	// @Override
+	// public Page<ProjectResponse> getProjectsByManager(UUID managerId, Pageable
+	// pageable) {
+	// return projectRepository.findByManagerId(managerId, pageable)
+	// .map(this::mapToProjectResponseWithoutPhases);
+	// }
 
 	@Override
 	public Page<ProjectResponse> searchProjects(String keyword, Pageable pageable) {
@@ -211,7 +217,7 @@ public class ProjectServiceImpl implements ProjectService {
 		}
 
 		// Check duplicate phase order
-		if (projectPhaseRepository.existsByProjectIdAndPhaseNumber(projectId, request.getPhaseNumber())) {
+		if (projectPhaseRepository.existsByProject_IdAndPhaseNumber(projectId, request.getPhaseNumber())) {
 			throw new DuplicateResourceException(
 					String.format("Phase number %d already exists in project %d",
 							request.getPhaseNumber(), projectId));
@@ -254,7 +260,7 @@ public class ProjectServiceImpl implements ProjectService {
 		// Check duplicate phase order (nếu thay đổi)
 		if (request.getPhaseNumber() != null &&
 				!request.getPhaseNumber().equals(phase.getPhaseNumber()) &&
-				projectPhaseRepository.existsByProjectIdAndPhaseNumber(projectId, request.getPhaseNumber())) {
+				projectPhaseRepository.existsByProject_IdAndPhaseNumber(projectId, request.getPhaseNumber())) {
 			throw new DuplicateResourceException(
 					String.format("Phase number %d already exists in project %d",
 							request.getPhaseNumber(), projectId));
@@ -283,7 +289,8 @@ public class ProjectServiceImpl implements ProjectService {
 
 		// Check ownership for non-admin users
 		if (!securityUtils.isAdmin() && !project.getManagerId().equals(securityUtils.getCurrentUserId())) {
-			throw new org.springframework.security.access.AccessDeniedException("You do not have permission to manage phases for this project");
+			throw new org.springframework.security.access.AccessDeniedException(
+					"You do not have permission to manage phases for this project");
 		}
 
 		ProjectPhase phase = projectPhaseRepository.findById(phaseId)
@@ -310,7 +317,7 @@ public class ProjectServiceImpl implements ProjectService {
 			throw new ResourceNotFoundException("Project", "id", projectId);
 		}
 
-		return projectPhaseRepository.findByProjectIdOrderByPhaseNumberAsc(projectId)
+		return projectPhaseRepository.findByProject_IdOrderByPhaseNumberAsc(projectId)
 				.stream()
 				.map(this::mapToPhaseResponse)
 				.collect(Collectors.toList());
@@ -381,12 +388,13 @@ public class ProjectServiceImpl implements ProjectService {
 				.phaseStatus(request.getPhaseStatus() != null ? request.getPhaseStatus() : PhaseStatus.PLANNING)
 				.plannedStartDate(request.getPlannedStartDate())
 				.plannedEndDate(request.getPlannedEndDate())
-				.actualStartDate(request.getActualStartDate())
+				.actualStartDate(request.getActualStartDate() != null ? request.getActualStartDate()
+						: request.getPlannedStartDate())
 				.actualEndDate(request.getActualEndDate())
 				.budget(request.getBudget() != null ? request.getBudget() : BigDecimal.ZERO)
 				.targetCo2Kg(request.getTargetCo2Kg() != null ? request.getTargetCo2Kg() : BigDecimal.ZERO)
 				.notes(request.getNotes())
-				.createdBy(request.getCreatedBy())
+				.createdBy(request.getCreatedBy() != null ? request.getCreatedBy() : securityUtils.getCurrentUserId())
 				.actualCost(BigDecimal.ZERO)
 				.actualCo2Kg(BigDecimal.ZERO)
 				.build();
@@ -429,41 +437,57 @@ public class ProjectServiceImpl implements ProjectService {
 		}
 		if (request.getCreatedBy() != null) {
 			phase.setCreatedBy(request.getCreatedBy());
+		} else if (phase.getCreatedBy() == null) {
+			phase.setCreatedBy(securityUtils.getCurrentUserId());
 		}
 		// Không update actualCost và actualCo2Kg - computed fields
 	}
 
 	private void updateProjectPhases(Project project, List<ProjectPhaseRequest> phaseRequests) {
-		// Tạo map của existing phases by id
-		var existingPhasesById = project.getPhases().stream()
+		// Map existing phases by ID and by Number for matching
+		Map<Integer, ProjectPhase> existingById = project.getPhases().stream()
 				.filter(p -> p.getId() != null)
 				.collect(Collectors.toMap(ProjectPhase::getId, p -> p));
 
-		List<ProjectPhase> newPhases = new ArrayList<>();
+		Map<Integer, ProjectPhase> existingByNumber = project.getPhases().stream()
+				.collect(Collectors.toMap(ProjectPhase::getPhaseNumber, p -> p));
+
+		List<ProjectPhase> finalPhases = new ArrayList<>();
 
 		for (ProjectPhaseRequest request : phaseRequests) {
-			if (request.getId() != null && existingPhasesById.containsKey(request.getId())) {
-				// Update existing phase
-				ProjectPhase existingPhase = existingPhasesById.get(request.getId());
-				updatePhaseFromRequest(existingPhase, request);
-				newPhases.add(existingPhase);
-				existingPhasesById.remove(request.getId());
+			ProjectPhase phaseToUpdate = null;
+
+			// Priority 1: Match by ID
+			if (request.getId() != null && existingById.containsKey(request.getId())) {
+				phaseToUpdate = existingById.get(request.getId());
+			}
+			// Priority 2: Match by Phase Number (natural key within project)
+			else if (request.getPhaseNumber() != null && existingByNumber.containsKey(request.getPhaseNumber())) {
+				phaseToUpdate = existingByNumber.get(request.getPhaseNumber());
+			}
+
+			if (phaseToUpdate != null) {
+				updatePhaseFromRequest(phaseToUpdate, request);
+				finalPhases.add(phaseToUpdate);
+				// Mark as handled to avoid deletion
+				existingById.remove(phaseToUpdate.getId());
+				existingByNumber.remove(phaseToUpdate.getPhaseNumber());
 			} else {
 				// Create new phase
 				ProjectPhase newPhase = mapToPhaseEntity(request);
 				newPhase.setProject(project);
-				newPhases.add(newPhase);
+				finalPhases.add(newPhase);
 			}
 		}
 
-		// Remove phases không còn trong request
-		for (ProjectPhase phaseToRemove : existingPhasesById.values()) {
+		// Remove phases that weren't included in the request
+		for (ProjectPhase phaseToRemove : existingById.values()) {
 			project.removePhase(phaseToRemove);
 		}
 
-		// Clear và add all phases
+		// Rebuild the project's phase list
 		project.getPhases().clear();
-		for (ProjectPhase phase : newPhases) {
+		for (ProjectPhase phase : finalPhases) {
 			project.addPhase(phase);
 		}
 	}

@@ -4,22 +4,25 @@ import com.capston.project.back.end.common.MessageRole;
 import com.capston.project.back.end.common.SessionStatus;
 import com.capston.project.back.end.entity.ChatMessage;
 import com.capston.project.back.end.entity.ChatSession;
-import com.capston.project.back.end.exception.ResourceNotFoundException;
 import com.capston.project.back.end.repository.ChatMessageRepository;
 import com.capston.project.back.end.repository.ChatSessionRepository;
-import com.capston.project.back.end.repository.ProjectRepository;
-import com.capston.project.back.end.request.ChatRequest;
-import com.capston.project.back.end.response.ChatResponse;
-import com.capston.project.back.end.response.ChatSessionResponse;
 import com.capston.project.back.end.service.ChatbotService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.*;
 
@@ -29,282 +32,214 @@ import java.util.*;
 @Transactional
 public class ChatbotServiceImpl implements ChatbotService {
 
-    private final ChatSessionRepository chatSessionRepository;
-    private final ChatMessageRepository chatMessageRepository;
-    private final ProjectRepository projectRepository;
+    @Value("${github.models.api.token}")
+    private String githubToken;
 
-    @Value("${openai.api.key:}")
-    private String openAiApiKey;
+    @Value("${github.models.api.url:https://models.inference.ai.azure.com/chat/completions}")
+    private String apiUrl;
 
-    @Value("${openai.model:gpt-3.5-turbo}")
-    private String openAiModel;
+    @Value("${github.models.model:gpt-4o}")
+    private String model;
 
-    // ==================== SESSION MANAGEMENT ====================
+    @Value("${openai.system.prompt}")
+    private String systemPrompt;
 
-    @Override
-    public ChatSessionResponse createSession(UUID userId, String userAgent, String ipAddress) {
-        log.info("Creating new chat session for user: {}", userId);
+    private final ChatSessionRepository sessionRepository;
+    private final ChatMessageRepository messageRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-        String sessionCode = generateSessionCode();
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        log.info("=== CHATBOT SERVICE INITIALIZED ===");
+        log.info("API URL: {}", apiUrl);
+        log.info("Model: {}", model);
+        log.info("Token loaded: {}",
+                githubToken != null && !githubToken.isEmpty() ? "YES (length: " + githubToken.length() + ")"
+                        : "NO/EMPTY");
 
-        ChatSession session = ChatSession.builder()
-                .sessionCode(sessionCode)
-                .userId(userId)
-                .sessionStatus(SessionStatus.ACTIVE)
-                .userAgent(userAgent)
-                .ipAddress(ipAddress)
-                .startedAt(OffsetDateTime.now())
-                .lastMessageAt(OffsetDateTime.now())
-                .build();
+        // Set Java DNS cache TTL to 60 seconds (default is forever)
+        java.security.Security.setProperty("networkaddress.cache.ttl", "60");
+        java.security.Security.setProperty("networkaddress.cache.negative.ttl", "10");
 
-        ChatSession saved = chatSessionRepository.save(session);
-        log.info("Chat session created: {}", sessionCode);
-
-        return mapToSessionResponse(saved);
+        // Test DNS resolution at startup
+        try {
+            InetAddress[] addresses = InetAddress.getAllByName("models.inference.ai.azure.com");
+            log.info("DNS resolved: {} addresses found", addresses.length);
+            for (InetAddress addr : addresses) {
+                log.info("  - {}", addr.getHostAddress());
+            }
+        } catch (Exception e) {
+            log.warn("DNS resolution failed at startup: {}", e.getMessage());
+        }
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public ChatSessionResponse getSession(String sessionCode) {
-        ChatSession session = chatSessionRepository.findBySessionCode(sessionCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found: " + sessionCode));
-        return mapToSessionResponse(session);
+    public String sendMessage(UUID userId, String userMessage) {
+        log.info("Processing chatbot message from user: {}", userId);
+
+        // 1. Tìm hoặc tạo session
+        ChatSession session = sessionRepository
+                .findByUserIdAndSessionStatus(userId, SessionStatus.ACTIVE)
+                .orElseGet(() -> createNewSession(userId));
+
+        // 2. Lưu tin nhắn user
+        saveMessage(session, MessageRole.USER, userMessage);
+
+        // 3. Gọi ChatGPT API
+        String botResponse = callChatGPT(session.getId(), userMessage);
+
+        // 4. Lưu phản hồi bot
+        saveMessage(session, MessageRole.ASSISTANT, botResponse);
+
+        return botResponse;
     }
 
     @Override
-    public void closeSession(String sessionCode) {
-        log.info("Closing chat session: {}", sessionCode);
+    public List<ChatMessage> getChatHistory(UUID userId) {
+        ChatSession session = sessionRepository
+                .findByUserIdAndSessionStatus(userId, SessionStatus.ACTIVE)
+                .orElse(null);
 
-        ChatSession session = chatSessionRepository.findBySessionCode(sessionCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found: " + sessionCode));
-
-        session.close();
-        chatSessionRepository.save(session);
-
-        log.info("Chat session closed: {}", sessionCode);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ChatSessionResponse> getUserSessions(UUID userId, Pageable pageable) {
-        return chatSessionRepository.findByUserIdOrderByStartedAtDesc(userId, pageable)
-                .map(this::mapToSessionResponse);
-    }
-
-    // ==================== CHAT ====================
-
-    @Override
-    public ChatResponse chat(ChatRequest request) {
-        log.info("Processing chat message for session: {}", request.getSessionCode());
-        long startTime = System.currentTimeMillis();
-
-        // Find session
-        ChatSession session = chatSessionRepository.findBySessionCode(request.getSessionCode())
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found: " + request.getSessionCode()));
-
-        if (session.getSessionStatus() != SessionStatus.ACTIVE) {
-            throw new IllegalStateException("Session is not active");
+        if (session == null) {
+            return List.of();
         }
 
-        // Save user message
-        ChatMessage userMessage = ChatMessage.builder()
-                .session(session)
-                .role(MessageRole.USER)
-                .content(request.getMessage())
-                .createdAt(OffsetDateTime.now())
-                .build();
-        chatMessageRepository.save(userMessage);
-
-        // Generate AI response
-        String aiResponseContent = generateAIResponse(request.getMessage(), session);
-
-        int responseTimeMs = (int) (System.currentTimeMillis() - startTime);
-
-        // Save AI message
-        ChatMessage aiMessage = ChatMessage.builder()
-                .session(session)
-                .role(MessageRole.ASSISTANT)
-                .content(aiResponseContent)
-                .modelUsed(openAiModel)
-                .responseTimeMs(responseTimeMs)
-                .createdAt(OffsetDateTime.now())
-                .build();
-        ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
-
-        // Update session
-        session.setLastMessageAt(OffsetDateTime.now());
-        chatSessionRepository.save(session);
-
-        log.info("Chat response generated in {}ms for session: {}", responseTimeMs, request.getSessionCode());
-
-        return mapToResponse(savedAiMessage);
+        return messageRepository.findBySessionIdOrderByCreatedAtAsc(session.getId());
     }
 
-    // ==================== CHAT HISTORY ====================
-
     @Override
-    @Transactional(readOnly = true)
-    public List<ChatResponse> getChatHistory(String sessionCode) {
-        ChatSession session = chatSessionRepository.findBySessionCodeWithMessages(sessionCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found: " + sessionCode));
-
-        return session.getMessages().stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
-
-    // ==================== FEEDBACK ====================
-
-    @Override
-    public void submitFeedback(Integer messageId, Boolean isHelpful, String note) {
-        log.info("Submitting feedback for message: {}", messageId);
-
-        ChatMessage message = chatMessageRepository.findById(messageId)
-                .orElseThrow(() -> new ResourceNotFoundException("Message not found: " + messageId));
-
-        message.setIsHelpful(isHelpful);
-        message.setFeedbackNote(note);
-        chatMessageRepository.save(message);
-
-        log.info("Feedback submitted for message: {}", messageId);
-    }
-
-    // ==================== PROJECT RECOMMENDATION ====================
-
-    @Override
-    public ChatResponse recommendProjects(String query, UUID userId) {
-        log.info("Generating project recommendations for user: {}", userId);
-        long startTime = System.currentTimeMillis();
-
-        // Get or create session for recommendations
-        String sessionCode = "RECOMMEND-" + UUID.randomUUID().toString().substring(0, 8);
-        ChatSession session = ChatSession.builder()
-                .sessionCode(sessionCode)
-                .userId(userId)
-                .sessionStatus(SessionStatus.ACTIVE)
-                .startedAt(OffsetDateTime.now())
-                .lastMessageAt(OffsetDateTime.now())
-                .build();
-        session = chatSessionRepository.save(session);
-
-        // Generate recommendation response
-        String recommendationContent = generateProjectRecommendation(query);
-
-        int responseTimeMs = (int) (System.currentTimeMillis() - startTime);
-
-        // Save recommendation message
-        ChatMessage recommendMessage = ChatMessage.builder()
-                .session(session)
-                .role(MessageRole.ASSISTANT)
-                .content(recommendationContent)
-                .modelUsed(openAiModel)
-                .responseTimeMs(responseTimeMs)
-                .createdAt(OffsetDateTime.now())
-                .build();
-        ChatMessage saved = chatMessageRepository.save(recommendMessage);
-
-        return mapToResponse(saved);
+    public void closeSession(UUID userId) {
+        sessionRepository.findByUserIdAndSessionStatus(userId, SessionStatus.ACTIVE)
+                .ifPresent(session -> {
+                    session.setSessionStatus(SessionStatus.CLOSED);
+                    session.setClosedAt(OffsetDateTime.now());
+                    sessionRepository.save(session);
+                });
     }
 
     // ==================== HELPER METHODS ====================
 
-    private String generateSessionCode() {
-        return "CHAT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-    }
+    private String callChatGPT(Integer sessionId, String userMessage) {
+        // Lấy lịch sử chat (10 tin nhắn gần nhất để tiết kiệm tokens)
+        List<ChatMessage> history = messageRepository
+                .findBySessionIdOrderByCreatedAtDesc(sessionId, PageRequest.of(0, 10))
+                .stream()
+                .sorted(Comparator.comparing(ChatMessage::getCreatedAt))
+                .toList();
 
-    private String generateAIResponse(String userMessage, ChatSession session) {
-        // Check if OpenAI API key is configured
-        if (openAiApiKey == null || openAiApiKey.isEmpty()) {
-            return generateFallbackResponse(userMessage);
+        // Build messages cho GitHub Models API
+        List<Map<String, String>> messages = new ArrayList<>();
+
+        // System prompt (vai trò của bot)
+        messages.add(Map.of(
+                "role", "system",
+                "content", systemPrompt));
+
+        // Thêm lịch sử chat
+        for (ChatMessage msg : history) {
+            String role = msg.getRole().equals(MessageRole.USER) ? "user" : "assistant";
+            messages.add(Map.of("role", role, "content", msg.getContent()));
         }
 
+        // Thêm tin nhắn mới
+        messages.add(Map.of("role", "user", "content", userMessage));
+
+        // Gọi GitHub Models API using HttpURLConnection
+        HttpURLConnection conn = null;
         try {
-            // TODO: Implement actual OpenAI API call
-            // For now, return a fallback response
-            return generateFallbackResponse(userMessage);
+            // Build request body
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("messages", messages);
+            requestBody.put("model", model);
+            requestBody.put("temperature", 0.7);
+            requestBody.put("max_tokens", 500);
+
+            String jsonBody = objectMapper.writeValueAsString(requestBody);
+
+            log.info("Calling GitHub Models API: {} with model: {}", apiUrl, model);
+
+            // Create connection
+            URL url = new URL(apiUrl);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Authorization", "Bearer " + githubToken);
+            conn.setConnectTimeout(30000); // 30 seconds
+            conn.setReadTimeout(60000);    // 60 seconds
+            conn.setDoOutput(true);
+
+            // Send request
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = jsonBody.getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+
+            // Read response
+            int responseCode = conn.getResponseCode();
+            log.info("GitHub Models API response code: {}", responseCode);
+
+            StringBuilder response = new StringBuilder();
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(
+                            responseCode >= 400 ? conn.getErrorStream() : conn.getInputStream(),
+                            StandardCharsets.UTF_8))) {
+                String responseLine;
+                while ((responseLine = br.readLine()) != null) {
+                    response.append(responseLine.trim());
+                }
+            }
+
+            if (responseCode >= 400) {
+                log.error("GitHub Models API error response: {}", response);
+                return "Xin lỗi, tôi đang gặp sự cố kỹ thuật. Vui lòng thử lại sau.";
+            }
+
+            // Parse response
+            JsonNode root = objectMapper.readTree(response.toString());
+            String aiResponse = root.path("choices").get(0)
+                    .path("message").path("content").asText();
+
+            log.info("GitHub Models response received, length: {}", aiResponse.length());
+            return aiResponse;
+
+        } catch (java.net.UnknownHostException e) {
+            log.error("DNS ERROR: Cannot resolve {}. Please check:", apiUrl);
+            log.error("  1. Internet connection");
+            log.error("  2. VPN/Proxy settings (try disabling Cloudflare WARP if installed)");
+            log.error("  3. Add to hosts file: 51.12.47.32 models.inference.ai.azure.com");
+            return "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet hoặc tắt VPN/Proxy.";
         } catch (Exception e) {
-            log.error("Error calling OpenAI API: {}", e.getMessage());
-            return generateFallbackResponse(userMessage);
+            log.error("GitHub Models API error: {}", e.getMessage(), e);
+            return "Xin lỗi, tôi đang gặp sự cố kỹ thuật. Vui lòng thử lại sau.";
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
     }
 
-    private String generateFallbackResponse(String userMessage) {
-        String lowerMessage = userMessage.toLowerCase();
-
-        if (lowerMessage.contains("dự án") || lowerMessage.contains("project")) {
-            return "Hiện tại hệ thống có nhiều dự án trồng rừng và bảo vệ môi trường. " +
-                   "Bạn có thể xem danh sách dự án tại mục 'Dự án' trên menu. " +
-                   "Nếu bạn cần tìm kiếm dự án cụ thể, hãy cho tôi biết thêm về nhu cầu của bạn!";
-        }
-
-        if (lowerMessage.contains("tín chỉ") || lowerMessage.contains("carbon") || lowerMessage.contains("credit")) {
-            return "Tín chỉ carbon là chứng nhận quyền phát thải một lượng CO2 nhất định. " +
-                   "Bạn có thể mua tín chỉ carbon để bù đắp lượng khí thải của mình hoặc đầu tư vào các dự án xanh. " +
-                   "Hãy xem mục 'Carbon Credits' để biết thêm chi tiết!";
-        }
-
-        if (lowerMessage.contains("hợp đồng") || lowerMessage.contains("contract")) {
-            return "Để tham gia dự án, bạn cần ký kết hợp đồng với chúng tôi. " +
-                   "Hợp đồng sẽ quy định rõ quyền lợi và nghĩa vụ của các bên. " +
-                   "Bạn có thể xem và quản lý hợp đồng tại mục 'Hợp đồng' trong tài khoản của mình.";
-        }
-
-        if (lowerMessage.contains("thanh toán") || lowerMessage.contains("payment")) {
-            return "Hệ thống hỗ trợ thanh toán qua VNPay và nhiều phương thức khác. " +
-                   "Bạn có thể thanh toán trực tuyến an toàn và nhanh chóng. " +
-                   "Mọi giao dịch đều được mã hóa và bảo mật.";
-        }
-
-        if (lowerMessage.contains("xin chào") || lowerMessage.contains("hello") || lowerMessage.contains("hi")) {
-            return "Xin chào! Tôi là trợ lý AI của hệ thống quản lý tín chỉ carbon. " +
-                   "Tôi có thể giúp bạn tìm hiểu về các dự án, tín chỉ carbon, hợp đồng và nhiều hơn nữa. " +
-                   "Bạn cần hỗ trợ gì hôm nay?";
-        }
-
-        return "Cảm ơn bạn đã liên hệ! Tôi là trợ lý AI của hệ thống quản lý tín chỉ carbon. " +
-               "Tôi có thể giúp bạn với các câu hỏi về:\n" +
-               "• Dự án trồng rừng và bảo vệ môi trường\n" +
-               "• Tín chỉ carbon và cách mua/bán\n" +
-               "• Hợp đồng và quy trình tham gia\n" +
-               "• Thanh toán và giao dịch\n\n" +
-               "Hãy cho tôi biết bạn cần hỗ trợ gì nhé!";
-    }
-
-    private String generateProjectRecommendation(String query) {
-        // TODO: Implement actual project recommendation logic with AI
-        return "Dựa trên yêu cầu của bạn, tôi đề xuất một số dự án phù hợp:\n\n" +
-               "1. **Dự án Trồng rừng Miền Trung** - Phù hợp cho đầu tư dài hạn\n" +
-               "2. **Dự án Bảo vệ Rừng Ngập mặn** - Lợi nhuận ổn định\n" +
-               "3. **Dự án Phục hồi Rừng Tây Nguyên** - Tiềm năng cao\n\n" +
-               "Bạn có muốn biết thêm chi tiết về dự án nào không?";
-    }
-
-    private ChatSessionResponse mapToSessionResponse(ChatSession session) {
-        return ChatSessionResponse.builder()
-                .id(session.getId())
-                .sessionCode(session.getSessionCode())
-                .userId(session.getUserId())
-                .sessionStatus(session.getSessionStatus())
-                .messageCount(session.getMessages() != null ? session.getMessages().size() : 0)
-                .startedAt(session.getStartedAt())
-                .lastMessageAt(session.getLastMessageAt())
-                .closedAt(session.getClosedAt())
+    private void saveMessage(ChatSession session, MessageRole role, String content) {
+        ChatMessage message = ChatMessage.builder()
+                .session(session)
+                .role(role)
+                .content(content)
                 .build();
+        messageRepository.save(message);
     }
 
-    private ChatResponse mapToResponse(ChatMessage message) {
-        return ChatResponse.builder()
-                .messageId(message.getId())
-                .sessionCode(message.getSession().getSessionCode())
-                .role(message.getRole())
-                .content(message.getContent())
-                .modelUsed(message.getModelUsed())
-                .responseTimeMs(message.getResponseTimeMs())
-                .referencedProjects(message.getReferencedProjects())
-                .referencedCredits(message.getReferencedCredits())
-                .isHelpful(message.getIsHelpful())
-                .createdAt(message.getCreatedAt())
+    private ChatSession createNewSession(UUID userId) {
+        log.info("Creating new chat session for user: {}", userId);
+
+        // Generate unique session code
+        String sessionCode = "CHAT-" + System.currentTimeMillis() + "-" +
+                UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+        ChatSession session = ChatSession.builder()
+                .sessionCode(sessionCode)
+                .userId(userId)
+                .sessionStatus(SessionStatus.ACTIVE)
+                .startedAt(OffsetDateTime.now())
                 .build();
+        return sessionRepository.save(session);
     }
 }
-

@@ -47,12 +47,12 @@ export default function FarmPage() {
         size: size
       };
 
-      if (isFarmer) {
-        response = await farmApi.getMyFarms(params);
-      } else if (search.trim()) {
+      if (search.trim()) {
         response = await farmApi.search(search, params);
       } else if (status !== 'ALL') {
         response = await farmApi.getByStatus(status, params);
+      } else if (isFarmer) {
+        response = await farmApi.getMyFarms(params);
       } else {
         response = await farmApi.getAll(params);
       }

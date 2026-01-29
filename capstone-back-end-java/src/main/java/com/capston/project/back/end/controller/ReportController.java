@@ -8,8 +8,8 @@ import com.capston.project.back.end.response.generic.ApiResponse;
 import com.capston.project.back.end.service.ExportService;
 import com.capston.project.back.end.service.ReportService;
 import lombok.RequiredArgsConstructor;
-import org. springframework.http.HttpHeaders;
-import org.springframework. http.MediaType;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -36,14 +36,14 @@ public class ReportController {
 
 	@GetMapping("/co2/project/{projectId}")
 	public ResponseEntity<ApiResponse<Co2ReportResponse>> getCo2ReportByProject(@PathVariable Integer projectId,
-	                                                                            @ModelAttribute ReportFilterRequest filter) {
+			@ModelAttribute ReportFilterRequest filter) {
 		Co2ReportResponse report = reportService.getCo2ReportByProject(projectId, filter);
 		return ResponseEntity.ok(ApiResponse.success(report));
 	}
 
 	@GetMapping("/co2/farm/{farmId}")
 	public ResponseEntity<ApiResponse<Co2ReportResponse>> getCo2ReportByFarm(@PathVariable Integer farmId,
-	                                                                         @ModelAttribute ReportFilterRequest filter) {
+			@ModelAttribute ReportFilterRequest filter) {
 		Co2ReportResponse report = reportService.getCo2ReportByFarm(farmId, filter);
 		return ResponseEntity.ok(ApiResponse.success(report));
 	}
@@ -51,14 +51,15 @@ public class ReportController {
 	// ==================== REVENUE REPORTS ====================
 
 	@GetMapping("/revenue")
-	public ResponseEntity<ApiResponse<RevenueReportResponse>> getRevenueReport(@ModelAttribute ReportFilterRequest filter) {
+	public ResponseEntity<ApiResponse<RevenueReportResponse>> getRevenueReport(
+			@ModelAttribute ReportFilterRequest filter) {
 		RevenueReportResponse report = reportService.getRevenueReport(filter);
 		return ResponseEntity.ok(ApiResponse.success("Revenue report generated", report));
 	}
 
 	@GetMapping("/revenue/project/{projectId}")
 	public ResponseEntity<ApiResponse<RevenueReportResponse>> getRevenueReportByProject(@PathVariable Integer projectId,
-	                                                                                    @ModelAttribute ReportFilterRequest filter) {
+			@ModelAttribute ReportFilterRequest filter) {
 		RevenueReportResponse report = reportService.getRevenueReportByProject(projectId, filter);
 		return ResponseEntity.ok(ApiResponse.success(report));
 	}
@@ -66,14 +67,15 @@ public class ReportController {
 	// ==================== CREDIT REPORTS ====================
 
 	@GetMapping("/credits")
-	public ResponseEntity<ApiResponse<CreditReportResponse>> getCreditReport(@ModelAttribute ReportFilterRequest filter) {
+	public ResponseEntity<ApiResponse<CreditReportResponse>> getCreditReport(
+			@ModelAttribute ReportFilterRequest filter) {
 		CreditReportResponse report = reportService.getCreditReport(filter);
 		return ResponseEntity.ok(ApiResponse.success("Credit report generated", report));
 	}
 
 	@GetMapping("/credits/project/{projectId}")
 	public ResponseEntity<ApiResponse<CreditReportResponse>> getCreditReportByProject(@PathVariable Integer projectId,
-	                                                                                  @ModelAttribute ReportFilterRequest filter) {
+			@ModelAttribute ReportFilterRequest filter) {
 		CreditReportResponse report = reportService.getCreditReportByProject(projectId, filter);
 		return ResponseEntity.ok(ApiResponse.success(report));
 	}
@@ -86,9 +88,10 @@ public class ReportController {
 		String filename = "CO2_Report_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".xlsx";
 
 		return ResponseEntity.ok()
-		                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
-		                     .contentType(MediaType.parseMediaType("application/vnd. openxmlformats-officedocument.spreadsheetml.sheet"))
-		                     .body(excelContent);
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+				.contentType(
+						MediaType.parseMediaType("application/vnd. openxmlformats-officedocument.spreadsheetml.sheet"))
+				.body(excelContent);
 	}
 
 	@GetMapping("/revenue/export/excel")
@@ -97,33 +100,35 @@ public class ReportController {
 		String filename = "Revenue_Report_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".xlsx";
 
 		return ResponseEntity.ok()
-		                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
-		                     .contentType(MediaType.parseMediaType("application/vnd. openxmlformats-officedocument.spreadsheetml. sheet"))
-		                     .body(excelContent);
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+				.contentType(
+						MediaType.parseMediaType("application/vnd. openxmlformats-officedocument.spreadsheetml. sheet"))
+				.body(excelContent);
 	}
 
 	@GetMapping("/credits/export/excel")
 	public ResponseEntity<byte[]> exportCreditReportToExcel(@ModelAttribute ReportFilterRequest filter) {
-		byte[] excelContent = exportService. exportCreditReportToExcel(filter);
-		String filename = "Credit_Report_" + LocalDate. now().format(DateTimeFormatter. ofPattern("yyyyMMdd")) + ".xlsx";
+		byte[] excelContent = exportService.exportCreditReportToExcel(filter);
+		String filename = "Credit_Report_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".xlsx";
 
 		return ResponseEntity.ok()
-		                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
-		                     .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-		                     .body(excelContent);
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+				.contentType(
+						MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+				.body(excelContent);
 	}
 
 	// ==================== PDF EXPORTS ====================
 
 	@GetMapping("/co2/export/pdf")
 	public ResponseEntity<byte[]> exportCo2ReportToPdf(@ModelAttribute ReportFilterRequest filter) {
-		byte[] pdfContent = exportService. exportCo2ReportToPdf(filter);
+		byte[] pdfContent = exportService.exportCo2ReportToPdf(filter);
 		String filename = "CO2_Report_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".pdf";
 
 		return ResponseEntity.ok()
-		                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
-		                     .contentType(MediaType.APPLICATION_PDF)
-		                     .body(pdfContent);
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+				.contentType(MediaType.APPLICATION_PDF)
+				.body(pdfContent);
 	}
 
 	@GetMapping("/revenue/export/pdf")
@@ -132,9 +137,9 @@ public class ReportController {
 		String filename = "Revenue_Report_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".pdf";
 
 		return ResponseEntity.ok()
-		                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
-		                     .contentType(MediaType. APPLICATION_PDF)
-		                     .body(pdfContent);
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+				.contentType(MediaType.APPLICATION_PDF)
+				.body(pdfContent);
 	}
 
 	@GetMapping("/credits/export/pdf")
@@ -143,8 +148,8 @@ public class ReportController {
 		String filename = "Credit_Report_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".pdf";
 
 		return ResponseEntity.ok()
-		                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
-		                     .contentType(MediaType.APPLICATION_PDF)
-		                     .body(pdfContent);
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+				.contentType(MediaType.APPLICATION_PDF)
+				.body(pdfContent);
 	}
 }

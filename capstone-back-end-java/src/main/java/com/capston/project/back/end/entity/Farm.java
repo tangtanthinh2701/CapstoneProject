@@ -1,6 +1,7 @@
 package com.capston.project.back.end.entity;
 
 import com.capston.project.back.end.common.FarmStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -82,6 +83,7 @@ public class Farm {
 	// Relationships
 	@OneToMany(mappedBy = "farm", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
 	@Builder.Default
+	@JsonIgnore
 	private List<TreeBatch> treeBatches = new ArrayList<>();
 
 	@OneToMany(mappedBy = "farm", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

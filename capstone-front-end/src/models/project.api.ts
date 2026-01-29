@@ -37,21 +37,25 @@ export interface ProjectPhase {
 
 export const projectApi = {
   getAll: (params?: any) => api.get('/projects', { params }),
-  getPublic: (params?: any) => api.get('/projects/public', { params }),
-  search: (keyword: string, params?: any) => api.get('/projects/search', { params: { ...params, keyword } }),
   getById: (id: number | string) => api.get<Project>(`/projects/${id}`),
+  getByCode: (code: string) => api.get(`/projects/code/${code}`),
+  getByStatus: (status: string, params?: any) => api.get(`/projects/status/${status}`, { params }),
+  search: (keyword: string, params?: any) => api.get('/projects/search', { params: { ...params, keyword } }),
   create: (data: any) => api.post('/projects/create-projects', data),
   update: (id: number | string, data: any) => api.put(`/projects/${id}`, data),
   delete: (id: number | string) => api.delete(`/projects/${id}`),
 
   // Phase management
+  getPhases: (projectId: number | string) => api.get(`/projects/${projectId}/phases`),
   addPhase: (projectId: number | string, data: any) => api.post(`/projects/${projectId}/phases`, data),
+  updatePhase: (projectId: number | string, phaseId: number | string, data: any) => api.put(`/projects/${projectId}/phases/${phaseId}`, data),
+  deletePhase: (projectId: number | string, phaseId: number | string) => api.delete(`/projects/${projectId}/phases/${phaseId}`),
+
+  // Recalculation
+  recalculate: (projectId: number | string) => api.post(`/projects/${projectId}/recalculate`),
+  recalculateAll: () => api.post('/projects/recalculate-all'),
 
   // Partner management
   addPartner: (projectId: number | string, data: any) => api.post(`/projects/${projectId}/partners`, data),
-  removePartner: (projectId: number | string, partnerId: string) => api.delete(`/projects/${projectId}/partners/${partnerId}`),
-
-  // Farm assignment
-  assignFarm: (projectId: number | string, farmId: number | string) => api.post(`/projects/${projectId}/farms/${farmId}`),
-  removeFarm: (projectId: number | string, farmId: number | string) => api.delete(`/projects/${projectId}/farms/${farmId}`),
+  removePartner: (projectId: number | string, partnerUserId: string) => api.delete(`/projects/${projectId}/partners/${partnerUserId}`),
 };

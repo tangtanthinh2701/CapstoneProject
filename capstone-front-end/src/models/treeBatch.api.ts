@@ -19,6 +19,10 @@ export interface TreeBatch {
 export const treeBatchApi = {
     getAll: (params?: any) => api.get('/tree-batches', { params }),
     getById: (id: number | string) => api.get<TreeBatch>(`/tree-batches/${id}`),
+    getByCode: (code: string) => api.get(`/tree-batches/code/${code}`),
     create: (data: any) => api.post('/tree-batches', data),
-    getMyAllocations: (params?: any) => api.get('/user/allocations', { params }),
+    update: (id: number | string, data: any) => api.put(`/tree-batches/${id}`, data),
+    delete: (id: number | string) => api.delete(`/tree-batches/${id}`),
+    getTotalTreesByFarm: (farmId: number | string) => api.get(`/tree-batches/farm/${farmId}/total-trees`),
+    getTotalAreaByFarm: (farmId: number | string) => api.get(`/tree-batches/farm/${farmId}/total-area`),
 };

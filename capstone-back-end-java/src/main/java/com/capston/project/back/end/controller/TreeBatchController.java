@@ -3,7 +3,7 @@ package com.capston.project.back.end.controller;
 import com.capston.project.back.end.response.generic.ApiResponse;
 import com.capston.project.back.end.service.TreeBatchService;
 import com.capston.project.back.end.request.TreeBatchRequest;
-import com.capston.project.back.end.entity.TreeBatch;
+import com.capston.project.back.end.response.TreeBatchResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,34 +31,31 @@ public class TreeBatchController {
 
     private final TreeBatchService treeBatchService;
 
-    // ==================== CRUD ====================
-
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
-    public ResponseEntity<ApiResponse<TreeBatch>> createTreeBatch(@Valid @RequestBody TreeBatchRequest request) {
-        TreeBatch batch = treeBatchService.createTreeBatch(request);
+    public ResponseEntity<ApiResponse<TreeBatchResponse>> createTreeBatch(@Valid @RequestBody TreeBatchRequest request) {
+        TreeBatchResponse batch = treeBatchService.createTreeBatch(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Tree batch created successfully", batch));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<TreeBatch>> getTreeBatchById(@PathVariable Integer id) {
-        TreeBatch batch = treeBatchService.getTreeBatchById(id);
+    public ResponseEntity<ApiResponse<TreeBatchResponse>> getTreeBatchById(@PathVariable Integer id) {
+        TreeBatchResponse batch = treeBatchService.getTreeBatchById(id);
         return ResponseEntity.ok(ApiResponse.success(batch));
     }
 
     @GetMapping("/code/{batchCode}")
-    public ResponseEntity<ApiResponse<TreeBatch>> getTreeBatchByCode(@PathVariable String batchCode) {
-        TreeBatch batch = treeBatchService.getTreeBatchByCode(batchCode);
+    public ResponseEntity<ApiResponse<TreeBatchResponse>> getTreeBatchByCode(@PathVariable String batchCode) {
+        TreeBatchResponse batch = treeBatchService.getTreeBatchByCode(batchCode);
         return ResponseEntity.ok(ApiResponse.success(batch));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
-    public ResponseEntity<ApiResponse<TreeBatch>> updateTreeBatch(
-            @PathVariable Integer id,
-            @Valid @RequestBody TreeBatchRequest request) {
-        TreeBatch batch = treeBatchService.updateTreeBatch(id, request);
+    public ResponseEntity<ApiResponse<TreeBatchResponse>> updateTreeBatch(@PathVariable Integer id,
+                                                                          @Valid @RequestBody TreeBatchRequest request) {
+        TreeBatchResponse batch = treeBatchService.updateTreeBatch(id, request);
         return ResponseEntity.ok(ApiResponse.success("Tree batch updated successfully", batch));
     }
 
@@ -72,7 +69,7 @@ public class TreeBatchController {
     // ==================== LIST & FILTER ====================
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<TreeBatch>>> getAllTreeBatches(
+    public ResponseEntity<ApiResponse<List<TreeBatchResponse>>> getAllTreeBatches(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -83,7 +80,7 @@ public class TreeBatchController {
                 : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<TreeBatch> batchPage = treeBatchService.getAllTreeBatches(pageable);
+        Page<TreeBatchResponse> batchPage = treeBatchService.getAllTreeBatches(pageable);
 
         return ResponseEntity.ok(ApiResponse.success(
                 "Tree batches retrieved successfully",
@@ -91,23 +88,24 @@ public class TreeBatchController {
                 buildPageInfo(batchPage)));
     }
 
-    @GetMapping("/farm/{farmId}")
-    public ResponseEntity<ApiResponse<List<TreeBatch>>> getTreeBatchesByFarm(@PathVariable Integer farmId) {
-        List<TreeBatch> batches = treeBatchService.getTreeBatchesByFarmId(farmId);
-        return ResponseEntity.ok(ApiResponse.success(batches));
-    }
-
-    @GetMapping("/phase/{phaseId}")
-    public ResponseEntity<ApiResponse<List<TreeBatch>>> getTreeBatchesByPhase(@PathVariable Integer phaseId) {
-        List<TreeBatch> batches = treeBatchService.getTreeBatchesByPhaseId(phaseId);
-        return ResponseEntity.ok(ApiResponse.success(batches));
-    }
-
-    @GetMapping("/species/{speciesId}")
-    public ResponseEntity<ApiResponse<List<TreeBatch>>> getTreeBatchesBySpecies(@PathVariable Integer speciesId) {
-        List<TreeBatch> batches = treeBatchService.getTreeBatchesBySpeciesId(speciesId);
-        return ResponseEntity.ok(ApiResponse.success(batches));
-    }
+//    @GetMapping("/farm/{farmId}")
+//    public ResponseEntity<ApiResponse<List<TreeBatchResponse>>> getTreeBatchesByFarm(@PathVariable Integer farmId) {
+//        List<TreeBatchResponse> batches = treeBatchService.getTreeBatchesByFarmId(farmId);
+//        return ResponseEntity.ok(ApiResponse.success(batches));
+//    }
+//
+//    @GetMapping("/phase/{phaseId}")
+//    public ResponseEntity<ApiResponse<List<TreeBatchResponse>>> getTreeBatchesByPhase(@PathVariable Integer phaseId) {
+//        List<TreeBatchResponse> batches = treeBatchService.getTreeBatchesByPhaseId(phaseId);
+//        return ResponseEntity.ok(ApiResponse.success(batches));
+//    }
+//
+//    @GetMapping("/species/{speciesId}")
+//    public ResponseEntity<ApiResponse<List<TreeBatchResponse>>> getTreeBatchesBySpecies(
+//            @PathVariable Integer speciesId) {
+//        List<TreeBatchResponse> batches = treeBatchService.getTreeBatchesBySpeciesId(speciesId);
+//        return ResponseEntity.ok(ApiResponse.success(batches));
+//    }
 
     // ==================== STATISTICS ====================
 

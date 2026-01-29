@@ -28,7 +28,7 @@ public interface ProjectService {
 
 	Page<ProjectResponse> getProjectsByStatus(ProjectStatus status, Pageable pageable);
 
-	Page<ProjectResponse> getProjectsByManager(UUID managerId, Pageable pageable);
+//	Page<ProjectResponse> getProjectsByManager(UUID managerId, Pageable pageable);
 
 	Page<ProjectResponse> searchProjects(String keyword, Pageable pageable);
 

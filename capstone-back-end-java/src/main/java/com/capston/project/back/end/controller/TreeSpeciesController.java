@@ -39,6 +39,15 @@ public class TreeSpeciesController {
 				.body(ApiResponse.success("Tree species created successfully", response));
 	}
 
+	@PostMapping("/bulk")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<ApiResponse<List<TreeSpeciesResponse>>> createBulk(
+			@Valid @RequestBody List<TreeSpeciesRequest> requests) {
+		List<TreeSpeciesResponse> responses = treeSpeciesService.createBulk(requests);
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(ApiResponse.success("Bulk tree species created successfully", responses));
+	}
+
 	@PutMapping("/{id}")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<TreeSpeciesResponse>> update(@PathVariable Integer id,
