@@ -5,9 +5,7 @@ import {
   deliverPurchase,
   cancelPurchase,
   type CarbonSummary,
-  type TreePurchase,
 } from '../models/treePurchase.api';
-import { getCurrentUserId } from '../utils/auth';
 
 interface Props {
   phaseId: number;
@@ -15,33 +13,6 @@ interface Props {
   onUpdate: () => void;
 }
 
-const handleApprove = async (purchaseId: number) => {
-  if (!window.confirm('Bạn có chắc muốn duyệt đơn này?')) return;
-
-  try {
-    setActionLoading(purchaseId);
-    setError(null);
-
-    // ✅ Use utility function with fallback
-    const userId = getCurrentUserId(projectManagerId);
-
-    console.log('🔵 Approving purchase:', purchaseId, 'by user:', userId);
-
-    await approvePurchase(purchaseId, userId);
-
-    console.log('✅ Purchase approved successfully');
-
-    alert('Duyệt đơn thành công!');
-    await loadData();
-    onUpdate();
-  } catch (err: any) {
-    console.error('❌ Approve failed:', err);
-    setError(err.message || 'Duyệt đơn thất bại');
-    alert(err.message || 'Duyệt đơn thất bại');
-  } finally {
-    setActionLoading(null);
-  }
-};
 
 const statusBadgeClass = (status: string) => {
   switch (status) {
@@ -268,11 +239,10 @@ export default function PurchaseListModal({
                     {(summary.carbonSurplus || 0) > 0 ? 'Thừa' : 'Thiếu'}
                   </p>
                   <p
-                    className={`font-semibold ${
-                      (summary.carbonSurplus || 0) > 0
-                        ? 'text-yellow-400'
-                        : 'text-red-400'
-                    }`}
+                    className={`font-semibold ${(summary.carbonSurplus || 0) > 0
+                      ? 'text-yellow-400'
+                      : 'text-red-400'
+                      }`}
                   >
                     {Math.abs(
                       summary.carbonSurplus || summary.carbonDeficit || 0,

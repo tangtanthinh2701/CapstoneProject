@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
 import { useAuth } from '../../contexts/AuthContext';
 import { userApi, type User } from '../../models/user.api';
 
 export default function ProfilePage() {
-    const navigate = useNavigate();
     const { user: authUser, logout } = useAuth();
 
     const [profile, setProfile] = useState<User | null>(null);

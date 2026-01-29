@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
     LineChart,
     Line,
@@ -16,17 +16,14 @@ import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
 import { treeBatchApi, type TreeBatch } from '../../models/treeBatch.api';
 import { treeGrowthApi, type TreeGrowthRecord } from '../../models/treeGrowth.api';
-import { useAuth } from '../../contexts/AuthContext';
 
 export default function TreeBatchDetailPage() {
-    const navigate = useNavigate();
     const { id } = useParams();
-    const { isAdmin } = useAuth();
 
     const [batch, setBatch] = useState<TreeBatch | null>(null);
     const [growthRecords, setGrowthRecords] = useState<TreeGrowthRecord[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [, setError] = useState<string | null>(null);
 
     // Growth record form
     const [showAddGrowth, setShowAddGrowth] = useState(false);

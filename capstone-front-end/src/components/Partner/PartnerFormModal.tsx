@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Partner, PartnerRequest } from '../../models/partner.model';
-import { X, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Image as ImageIcon } from 'lucide-react';
 
 interface PartnerFormModalProps {
   isOpen: boolean;
@@ -95,9 +95,8 @@ export const PartnerFormModal: React.FC<PartnerFormModalProps> = ({
               onChange={(e) =>
                 setFormData({ ...formData, partnerName: e.target.value })
               }
-              className={`w-full px-4 py-2 bg-gray-700 border ${
-                errors.partnerName ? 'border-red-500' : 'border-gray-600'
-              } rounded-lg text-white focus:outline-none focus:border-green-500 transition-colors`}
+              className={`w-full px-4 py-2 bg-gray-700 border ${errors.partnerName ? 'border-red-500' : 'border-gray-600'
+                } rounded-lg text-white focus:outline-none focus:border-green-500 transition-colors`}
               placeholder='Nhập tên đối tác...'
             />
             {errors.partnerName && (
