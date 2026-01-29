@@ -200,10 +200,13 @@ public class SecurityConfig {
 		return new BCryptPasswordEncoder();
 	}
 
+	@org.springframework.beans.factory.annotation.Value("${cors.allowed-origins}")
+	private String allowedOrigins;
+
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(List.of("http://localhost:5173"));
+		config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
 		config.setAllowCredentials(true);
