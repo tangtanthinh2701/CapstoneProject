@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { API_BASE_URL } from '../../utils/api';
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -76,7 +77,7 @@ export default function SignUpPage() {
     setErrors({});
 
     try {
-      const res = await fetch('http://localhost:8088/api/auth/register', {
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

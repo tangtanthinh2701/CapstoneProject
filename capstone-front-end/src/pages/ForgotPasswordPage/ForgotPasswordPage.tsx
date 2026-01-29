@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../../utils/api';
 
 export default function ForgotPasswordPage() {
     const navigate = useNavigate();
@@ -22,7 +23,7 @@ export default function ForgotPasswordPage() {
             setLoading(true);
             setError('');
 
-            const res = await fetch('http://localhost:8088/api/auth/forgot-password', {
+            const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email }),
@@ -52,7 +53,7 @@ export default function ForgotPasswordPage() {
             setLoading(true);
             setError('');
 
-            const res = await fetch('http://localhost:8088/api/auth/verify-otp', {
+            const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp }),
@@ -92,7 +93,7 @@ export default function ForgotPasswordPage() {
             setLoading(true);
             setError('');
 
-            const res = await fetch('http://localhost:8088/api/auth/reset-password', {
+            const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp, newPassword }),

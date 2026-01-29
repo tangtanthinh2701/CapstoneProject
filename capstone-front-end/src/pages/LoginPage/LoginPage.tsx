@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../utils/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('http://localhost:8088/api/auth/login', {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

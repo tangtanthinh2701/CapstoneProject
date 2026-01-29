@@ -92,6 +92,8 @@ interface ApiResponse<T> {
   pageInfo?: any;
 }
 
+import { API_BASE_URL } from '../utils/api';
+
 // ========== HELPERS ==========
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
@@ -104,13 +106,13 @@ const getAuthHeaders = () => {
   };
 };
 
-const API_BASE = 'http://localhost:8088/api/tree-purchases';
+const API_BASE = `${API_BASE_URL}/tree-purchases`;
 
 // ========== API CALLS ==========
 
 /** GET AVAILABLE TREES */
 export const getAvailableTrees = async (): Promise<AvailableTree[]> => {
-  const res = await fetch('http://localhost:8088/api/farms/available-trees', {
+  const res = await fetch(`${API_BASE_URL}/farms/available-trees`, {
     headers: getAuthHeaders(),
   });
 
