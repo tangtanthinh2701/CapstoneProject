@@ -4,7 +4,9 @@ export const CreditStatus = {
   PENDING: 'PENDING',
   VERIFIED: 'VERIFIED',
   ISSUED: 'ISSUED',
+  AVAILABLE: 'AVAILABLE',
   SOLD: 'SOLD',
+  SOLD_OUT: 'SOLD_OUT',
   RETIRED: 'RETIRED',
   CANCELLED: 'CANCELLED',
 } as const;
@@ -12,12 +14,14 @@ export const CreditStatus = {
 export type CreditStatus = (typeof CreditStatus)[keyof typeof CreditStatus];
 
 export const CreditStatusLabels: Record<CreditStatus, string> = {
-  [CreditStatus.PENDING]: 'Cho xac minh',
-  [CreditStatus.VERIFIED]: 'Da xac minh',
-  [CreditStatus.ISSUED]: 'Da phat hanh',
-  [CreditStatus.SOLD]: 'Da ban',
-  [CreditStatus.RETIRED]: 'Da su dung',
-  [CreditStatus.CANCELLED]: 'Da huy',
+  [CreditStatus.PENDING]: 'Chờ xác minh',
+  [CreditStatus.VERIFIED]: 'Đã xác minh',
+  [CreditStatus.ISSUED]: 'Đã phát hành',
+  [CreditStatus.AVAILABLE]: 'Có sẵn',
+  [CreditStatus.SOLD]: 'Đã bán',
+  [CreditStatus.SOLD_OUT]: 'Hết hàng',
+  [CreditStatus.RETIRED]: 'Đã sử dụng',
+  [CreditStatus.CANCELLED]: 'Đã hủy',
 };
 
 export const VerificationStandard = {
@@ -76,7 +80,7 @@ export interface CarbonCredit {
   pricePerCredit?: number;
   basePricePerCredit?: number;
   currentPricePerCredit?: number;
-  creditsStatus?: string;
+  creditsStatus?: CreditStatus;
   hasAvailableCredits?: boolean;
   isExpired?: boolean;
   verificationStandard: VerificationStandard;
