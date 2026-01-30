@@ -31,6 +31,7 @@ public class TreeGrowthRecord {
     @Column(name = "batch_id", nullable = false)
     private Integer batchId;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "batch_id", insertable = false, updatable = false)
     private TreeBatch batch;

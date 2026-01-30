@@ -3,7 +3,6 @@
 export const ProjectStatus = {
   PLANNING: 'PLANNING',
   ACTIVE: 'ACTIVE',
-  ON_HOLD: 'ON_HOLD',
   COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED',
 } as const;
@@ -11,29 +10,30 @@ export const ProjectStatus = {
 export type ProjectStatus = (typeof ProjectStatus)[keyof typeof ProjectStatus];
 
 export const ProjectStatusLabels: Record<ProjectStatus, string> = {
-  [ProjectStatus.PLANNING]: 'Đang lâp kế hoạch',
+  [ProjectStatus.PLANNING]: 'Đang lập kế hoạch',
   [ProjectStatus.ACTIVE]: 'Đang hoạt động',
-  [ProjectStatus.ON_HOLD]: 'Tạm dừng',
   [ProjectStatus.COMPLETED]: 'Hoàn thành',
   [ProjectStatus.CANCELLED]: 'Đã hủy',
 };
 
 export const PhaseStatus = {
-  NOT_STARTED: 'NOT_STARTED',
-  IN_PROGRESS: 'IN_PROGRESS',
+  PLANNING: 'PLANNING',
+  PLANTING: 'PLANTING',
+  GROWING: 'GROWING',
+  MATURE: 'MATURE',
+  HARVESTING: 'HARVESTING',
   COMPLETED: 'COMPLETED',
-  DELAYED: 'DELAYED',
-  CANCELLED: 'CANCELLED',
 } as const;
 
 export type PhaseStatus = (typeof PhaseStatus)[keyof typeof PhaseStatus];
 
 export const PhaseStatusLabels: Record<PhaseStatus, string> = {
-  [PhaseStatus.NOT_STARTED]: 'Chưa bắt đầu',
-  [PhaseStatus.IN_PROGRESS]: 'Đang tiến hành',
+  [PhaseStatus.PLANNING]: 'Lập kế hoạch',
+  [PhaseStatus.PLANTING]: 'Đang trồng',
+  [PhaseStatus.GROWING]: 'Đang phát triển',
+  [PhaseStatus.MATURE]: 'Trưởng thành',
+  [PhaseStatus.HARVESTING]: 'Đang thu hoạch',
   [PhaseStatus.COMPLETED]: 'Hoàn thành',
-  [PhaseStatus.DELAYED]: 'Chậm tiến độ',
-  [PhaseStatus.CANCELLED]: 'Đã hủy',
 };
 
 // ==================== PROJECT INTERFACES ====================
@@ -74,6 +74,8 @@ export interface ProjectPhase {
   actualEndDate?: string;
   targetCo2Kg: number;
   actualCo2Kg: number;
+  budget: number;
+  actualCost: number;
   phaseStatus: PhaseStatus;
   notes?: string;
   createdAt: string;
@@ -89,6 +91,9 @@ export interface ProjectCreateRequest {
   expectedEndDate?: string;
   projectStatus?: ProjectStatus;
   isPublic?: boolean;
+  code?: string;
+  totalBudget?: number;
+  targetCO2Kg?: number;
   phases?: PhaseCreateRequest[];
 }
 
@@ -100,6 +105,8 @@ export interface ProjectUpdateRequest {
   expectedEndDate?: string;
   projectStatus?: ProjectStatus;
   isPublic?: boolean;
+  totalBudget?: number;
+  targetCO2Kg?: number;
 }
 
 export interface PhaseCreateRequest {
@@ -109,6 +116,7 @@ export interface PhaseCreateRequest {
   plannedStartDate: string;
   plannedEndDate: string;
   targetCo2Kg: number;
+  budget?: number;
   phaseStatus?: PhaseStatus;
   notes?: string;
 }
@@ -119,6 +127,7 @@ export interface PhaseUpdateRequest {
   plannedStartDate?: string;
   plannedEndDate?: string;
   targetCo2Kg?: number;
+  budget?: number;
   phaseStatus?: PhaseStatus;
   notes?: string;
 }

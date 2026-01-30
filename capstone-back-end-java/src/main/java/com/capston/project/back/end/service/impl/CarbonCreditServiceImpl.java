@@ -51,7 +51,7 @@ public class CarbonCreditServiceImpl implements CarbonCreditService {
         Project project = projectRepository.findById(request.getProjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", request.getProjectId()));
 
-        // Suggest total credits based on actual CO2 (1 ton = 1 credit)
+        // Suggested total credits based on actual CO2 (1 ton = 1 credit)
         BigDecimal actualCo2Tons = project.getActualCo2Kg().divide(new BigDecimal(1000), 2, RoundingMode.FLOOR);
 
         CarbonCredit credit = CarbonCredit.builder()
@@ -71,6 +71,7 @@ public class CarbonCreditServiceImpl implements CarbonCreditService {
                 .verificationDate(request.getVerificationDate())
                 .certificateUrl(request.getCertificateUrl())
                 .issuedBy(request.getIssuedBy())
+                .expiresAt(request.getExpiresAt())
                 .build();
 
         // Map origins from request to entity
@@ -171,15 +172,20 @@ public class CarbonCreditServiceImpl implements CarbonCreditService {
         Project project = projectRepository.findById(credit.getProjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", credit.getProjectId()));
 
-        // Logic: Prevent purchase if project has reached its CO2 target
-        if (project.getActualCo2Kg() != null && project.getTargetCo2Kg() != null
-                && project.getActualCo2Kg().compareTo(project.getTargetCo2Kg()) >= 0) {
-            throw new IllegalStateException(
-                    "Carbon credits cannot be purchased for this project as it has reached or exceeded its CO2 target sequestration.");
+        // Logic: Prevent purchase if total sold credits would exceed project's CO2
+        // target
+        BigDecimal targetCo2Tons = project.getTargetCo2Kg().divide(new BigDecimal(1000), 2, RoundingMode.FLOOR);
+        Long totalSoldForProject = carbonCreditRepository.sumCreditsSoldByProjectId(project.getId());
+        int newTotalSold = (totalSoldForProject != null ? totalSoldForProject.intValue() : 0) + request.getQuantity();
+
+        if (newTotalSold > targetCo2Tons.longValue()) {
+            throw new IllegalStateException(String.format(
+                    "Purchase failed: Total credits sold for this project (%d) would exceed the CO2 target capacity of %d tons.",
+                    newTotalSold, targetCo2Tons.longValue()));
         }
 
         if (credit.getCreditsAvailable() < request.getQuantity()) {
-            throw new IllegalArgumentException("Not enough credits available");
+            throw new IllegalArgumentException("Not enough credits available in this batch");
         }
 
         BigDecimal totalAmount = credit.getCurrentPricePerCredit().multiply(new BigDecimal(request.getQuantity()));
@@ -391,7 +397,26 @@ public class CarbonCreditServiceImpl implements CarbonCreditService {
 
     private CarbonCreditResponse mapToResponse(CarbonCredit credit) {
         CarbonCreditResponse response = modelMapper.map(credit, CarbonCreditResponse.class);
-        projectRepository.findById(credit.getProjectId()).ifPresent(p -> response.setProjectName(p.getName()));
+
+        // Populate Project Info
+        projectRepository.findById(credit.getProjectId()).ifPresent(p -> {
+            response.setProjectName(p.getName());
+            response.setProjectCode(p.getCode());
+        });
+
+        // Set missing response fields
+        response.setPricePerCredit(credit.getCurrentPricePerCredit());
+        response.setCreditsStatus(credit.getCreditStatus());
+        response.setHasAvailableCredits(credit.hasAvailableCredits());
+        response.setIsExpired(credit.isExpired());
+
+        // Summaries
+        response.setTotalTransactions(credit.getTransactions() != null ? credit.getTransactions().size() : 0);
+        response.setTotalRevenue(credit.getTransactions() != null
+                ? credit.getTransactions().stream()
+                        .map(CreditTransaction::getTotalAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add)
+                : BigDecimal.ZERO);
 
         if (credit.getOrigins() != null) {
             List<CarbonCreditResponse.TreeOriginResponse> originResponses = credit.getOrigins().stream()

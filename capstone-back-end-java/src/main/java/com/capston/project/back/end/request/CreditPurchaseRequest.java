@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -15,9 +14,6 @@ import java.util.UUID;
 public class CreditPurchaseRequest {
 	@NotNull(message = "Credit ID is required")
 	private Integer creditId;
-
-	@NotNull(message = "Enterprise ID is required")
-	private UUID enterpriseId;
 
 	@NotNull(message = "Quantity is required")
 	@Min(value = 1, message = "Quantity must be at least 1")

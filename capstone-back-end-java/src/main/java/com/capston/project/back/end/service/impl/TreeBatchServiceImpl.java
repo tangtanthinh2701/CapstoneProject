@@ -23,6 +23,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -212,6 +213,29 @@ public class TreeBatchServiceImpl implements TreeBatchService {
     @Override
     @Transactional(readOnly = true)
     public Page<TreeBatchResponse> getAllTreeBatches(Pageable pageable) {
+        // FARMER: Only see batches from their own farms
+        if (securityUtils.isFarmer()) {
+            UUID currentUserId = securityUtils.getCurrentUserId();
+
+            // Filter batches by farm ownership at database level
+            Page<TreeBatch> allBatches = treeBatchRepository.findAll(pageable);
+
+            List<TreeBatchResponse> filteredBatches = allBatches.getContent().stream()
+                    .filter(batch -> {
+                        Farm farm = farmRepository.findById(batch.getFarmId()).orElse(null);
+                        return farm != null && farm.getCreatedBy() != null
+                                && farm.getCreatedBy().equals(currentUserId);
+                    })
+                    .map(this::mapToResponse)
+                    .toList();
+
+            return new org.springframework.data.domain.PageImpl<>(
+                    filteredBatches,
+                    pageable,
+                    filteredBatches.size());
+        }
+
+        // ADMIN: See all batches
         return treeBatchRepository.findAll(pageable).map(this::mapToResponse);
     }
 

@@ -42,7 +42,11 @@ import ContractWorkflowPage from '../pages/ContractPage/ContractWorkflowPage';
 
 // Carbon Credits  
 import CarbonCreditPage from '../pages/CarbonCreditPage/CarbonCreditPage';
+import CarbonCreditFormPage from '../pages/CarbonCreditPage/CarbonCreditFormPage';
+import CarbonCreditDetailPage from '../pages/CarbonCreditPage/CarbonCreditDetailPage';
 
+// Chatbot
+import ChatbotPage from '../pages/ChatbotPage/ChatbotPage';
 
 // Admin
 import UserManagementPage from '../pages/UserPage/UserManagementPage';
@@ -166,7 +170,21 @@ const router = createBrowserRouter([
   // CARBON CREDITS
   {
     path: '/credits',
-    element: <ProtectedRoute><CarbonCreditPage /></ProtectedRoute>,
+    element: <ProtectedRoute requiredRoles={['ADMIN', 'USER', 'FARMER']}><CarbonCreditPage /></ProtectedRoute>,
+  },
+  {
+    path: '/credits/new',
+    element: <ProtectedRoute requiredRoles={['ADMIN']}><CarbonCreditFormPage /></ProtectedRoute>,
+  },
+  {
+    path: '/credits/:id',
+    element: <ProtectedRoute requiredRoles={['ADMIN', 'USER', 'FARMER']}><CarbonCreditDetailPage /></ProtectedRoute>,
+  },
+
+  // CHATBOT
+  {
+    path: '/chatbot',
+    element: <ProtectedRoute><ChatbotPage /></ProtectedRoute>,
   },
 
   // ADMIN

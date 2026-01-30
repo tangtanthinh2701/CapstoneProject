@@ -47,6 +47,13 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success("IPN processed successfully", payment));
     }
 
+    // 3b. Confirm Payment (Mock - Admin/User)
+    @PostMapping("/{id}/confirm")
+    public ResponseEntity<ApiResponse<Payment>> confirmPayment(@PathVariable Integer id) {
+        Payment payment = paymentService.confirmPayment(id);
+        return ResponseEntity.ok(ApiResponse.success("Payment confirmed successfully", payment));
+    }
+
     // 4. Lấy danh sách giao dịch của user
     @GetMapping("/my-payments")
     public ResponseEntity<ApiResponse<Object>> getMyPayments(

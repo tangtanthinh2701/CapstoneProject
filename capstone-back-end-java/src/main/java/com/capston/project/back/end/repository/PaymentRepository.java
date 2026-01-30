@@ -22,5 +22,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
     Page<Payment> findByPaymentStatusOrderByCreatedAtDesc(PaymentStatus status, Pageable pageable);
 
     Long countByPaymentStatus(PaymentStatus status);
-}
 
+    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.paymentStatus = 'COMPLETED'")
+    java.math.BigDecimal sumTotalRevenue();
+}

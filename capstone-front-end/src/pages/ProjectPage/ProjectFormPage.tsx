@@ -4,12 +4,17 @@ import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
 import { projectApi } from '../../models/project.api';
 
-const statusOptions = [
-  { value: 'PLANNING', label: 'Lập kế hoạch' },
-  { value: 'ACTIVE', label: 'Đang hoạt động' },
-  { value: 'COMPLETED', label: 'Hoàn thành' },
-  { value: 'CANCELLED', label: 'Đã hủy' },
-];
+import { ProjectStatus, ProjectStatusLabels, PhaseStatus, PhaseStatusLabels } from '../../models/project.model';
+
+const statusOptions = Object.entries(ProjectStatus).map(([_, value]) => ({
+  value,
+  label: `${ProjectStatusLabels[value as ProjectStatus]} (${value})`,
+}));
+
+const phaseStatusOptions = Object.entries(PhaseStatus).map(([_, value]) => ({
+  value,
+  label: `${PhaseStatusLabels[value as PhaseStatus]} (${value})`,
+}));
 
 interface PhaseForm {
   id?: number;
@@ -95,7 +100,7 @@ export default function ProjectFormPage() {
             phaseNumber: p.phaseNumber || idx + 1,
             phaseName: p.phaseName || '',
             description: p.description || '',
-            phaseStatus: p.phaseStatus || 'PLANNING',
+            phaseStatus: Object.values(PhaseStatus).includes(p.phaseStatus as PhaseStatus) ? p.phaseStatus : 'PLANNING',
             plannedStartDate: p.plannedStartDate || '',
             plannedEndDate: p.plannedEndDate || '',
             actualStartDate: p.actualStartDate || '',
@@ -154,6 +159,7 @@ export default function ProjectFormPage() {
       const cleanPhases = form.phases.map((p, idx) => ({
         ...p,
         phaseNumber: idx + 1,
+        phaseOrder: idx + 1, // Add phaseOrder for backend compatibility
         plannedStartDate: p.plannedStartDate || null,
         plannedEndDate: p.plannedEndDate || null,
         actualStartDate: p.actualStartDate || null,
@@ -377,7 +383,7 @@ export default function ProjectFormPage() {
                         value={phase.phaseStatus}
                         onChange={(e) => updatePhaseField(index, 'phaseStatus', e.target.value)}
                       >
-                        {statusOptions.map((opt) => (
+                        {phaseStatusOptions.map((opt) => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
                       </select>
@@ -386,19 +392,25 @@ export default function ProjectFormPage() {
                     <div>
                       <label className="block text-xs mb-1 text-gray-400">Ngân sách (VND)</label>
                       <input
-                        type="number"
+                        type="text"
                         className="w-full px-3 py-2 rounded-lg bg-[#0E2219] border border-[#1E3A2B] text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                        value={phase.budget}
-                        onChange={(e) => updatePhaseField(index, 'budget', parseFloat(e.target.value) || 0)}
+                        value={phase.budget === 0 ? '' : phase.budget}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9.]/g, '');
+                          updatePhaseField(index, 'budget', val === '' ? 0 : parseFloat(val));
+                        }}
                       />
                     </div>
                     <div>
                       <label className="block text-xs mb-1 text-gray-400">Mục tiêu CO₂ (kg)</label>
                       <input
-                        type="number"
+                        type="text"
                         className="w-full px-3 py-2 rounded-lg bg-[#0E2219] border border-[#1E3A2B] text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                        value={phase.targetCo2Kg}
-                        onChange={(e) => updatePhaseField(index, 'targetCo2Kg', parseFloat(e.target.value) || 0)}
+                        value={phase.targetCo2Kg === 0 ? '' : phase.targetCo2Kg}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9.]/g, '');
+                          updatePhaseField(index, 'targetCo2Kg', val === '' ? 0 : parseFloat(val));
+                        }}
                       />
                     </div>
 

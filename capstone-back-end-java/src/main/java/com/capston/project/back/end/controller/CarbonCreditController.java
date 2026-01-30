@@ -189,6 +189,7 @@ public class CarbonCreditController {
 	// ==================== CREDIT TRANSACTION ====================
 
 	@PostMapping("/purchase")
+	@PreAuthorize("hasRole('USER')")
 	public ResponseEntity<ApiResponse<CreditTransactionResponse>> purchaseCredits(
 			@Valid @RequestBody CreditPurchaseRequest request,
 			Authentication authentication) {

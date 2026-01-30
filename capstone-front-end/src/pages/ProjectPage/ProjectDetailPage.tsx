@@ -4,6 +4,7 @@ import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
 import { useAuth } from '../../contexts/AuthContext';
 import { projectApi, type Project, type ProjectPhase } from '../../models/project.api';
+import { PhaseStatus, PhaseStatusLabels } from '../../models/project.model';
 
 const statusBadgeClass = (status: string) => {
   switch (status) {
@@ -17,14 +18,18 @@ const statusBadgeClass = (status: string) => {
 
 const phaseStatusClass = (status: string) => {
   switch (status) {
-    case 'PLANNING': return 'text-blue-400';
-    case 'PLANTING': return 'text-yellow-400';
-    case 'GROWING': return 'text-green-400';
-    case 'MATURE': return 'text-emerald-400';
-    case 'HARVESTING': return 'text-orange-400';
-    case 'COMPLETED': return 'text-gray-400';
-    default: return 'text-gray-400';
+    case 'PLANNING': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+    case 'PLANTING': return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+    case 'GROWING': return 'text-green-400 bg-green-500/10 border-green-500/20';
+    case 'MATURE': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+    case 'HARVESTING': return 'text-orange-400 bg-orange-500/10 border-orange-500/20';
+    case 'COMPLETED': return 'text-gray-400 bg-gray-500/10 border-gray-500/20';
+    default: return 'text-gray-400 bg-gray-500/10 border-gray-500/20';
   }
+};
+
+const phaseStatusLabel = (status: string) => {
+  return PhaseStatusLabels[status as PhaseStatus] || status;
 };
 
 const formatCurrency = (value?: number) => {
@@ -238,8 +243,8 @@ export default function ProjectDetailPage() {
                               {phase.phaseNumber}
                             </span>
                             <h4 className='text-lg font-bold group-hover:text-blue-400 transition-colors'>{phase.phaseName}</h4>
-                            <span className={`text-xs font-bold uppercase tracking-widest ${phaseStatusClass(phase.phaseStatus)}`}>
-                              • {phase.phaseStatus}
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border ${phaseStatusClass(phase.phaseStatus)}`}>
+                              {phaseStatusLabel(phase.phaseStatus)}
                             </span>
                           </div>
                           <p className='text-gray-400 text-sm mb-4 line-clamp-2'>{phase.description || 'Chưa có mô tả.'}</p>

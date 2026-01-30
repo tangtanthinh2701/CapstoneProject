@@ -39,26 +39,24 @@ export const VerificationStandardLabels: Record<VerificationStandard, string> = 
 };
 
 export const TransactionType = {
-  ISSUANCE: 'ISSUANCE',
   PURCHASE: 'PURCHASE',
-  SALE: 'SALE',
-  TRANSFER: 'TRANSFER',
   RETIRE: 'RETIRE',
-  ALLOCATION: 'ALLOCATION',
 } as const;
 
 export type TransactionType = (typeof TransactionType)[keyof typeof TransactionType];
 
 export const TransactionTypeLabels: Record<TransactionType, string> = {
-  [TransactionType.ISSUANCE]: 'Phát hành',
   [TransactionType.PURCHASE]: 'Mua',
-  [TransactionType.SALE]: 'Bán',
-  [TransactionType.TRANSFER]: 'Chuyển nhượng',
   [TransactionType.RETIRE]: 'Loại bỏ',
-  [TransactionType.ALLOCATION]: 'Phân bổ',
 };
 
-// ==================== CARBON CREDIT INTERFACES ====================
+export interface CreditOrigin {
+  farmId: number;
+  farmName?: string;
+  batchId: number;
+  batchCode?: string;
+  quantity: number;
+}
 
 export interface CarbonCredit {
   id: number;
@@ -66,24 +64,31 @@ export interface CarbonCredit {
   projectId: number;
   projectName?: string;
   projectCode?: string;
+  origins: CreditOrigin[];
   issuanceYear: number;
-  issuanceDate: string;
+  issuanceDate?: string;
   expirationDate?: string;
   totalCo2Tons: number;
   creditsIssued: number;
   creditsSold: number;
   creditsRetired: number;
   creditsAvailable: number;
-  basePricePerCredit: number;
-  currentPricePerCredit: number;
+  pricePerCredit?: number;
+  basePricePerCredit?: number;
+  currentPricePerCredit?: number;
+  creditsStatus?: string;
+  hasAvailableCredits?: boolean;
+  isExpired?: boolean;
   verificationStandard: VerificationStandard;
-  verificationDate?: string;
-  verifiedBy?: string;
   certificateUrl?: string;
-  creditStatus: CreditStatus;
-  notes?: string;
+  issuedBy?: string;
+  issuedAt: string;
+  expiresAt?: string;
   createdAt: string;
   updatedAt: string;
+  allocations: any[];
+  totalTransactions?: number;
+  totalRevenue?: number;
 }
 
 export interface CarbonCreditRequest {
@@ -92,9 +97,9 @@ export interface CarbonCreditRequest {
   totalCo2Tons: number;
   creditsIssued: number;
   basePricePerCredit: number;
-  currentPricePerCredit?: number;
-  verificationStandard: VerificationStandard;
-  notes?: string;
+  currentPricePerCredit: number;
+  verificationStandard: string;
+  origins: { farmId: number; batchId: number; quantity: number }[];
 }
 
 export interface CreditVerification {
@@ -172,14 +177,19 @@ export interface CreditAllocation {
 // ==================== CREDIT SUMMARY ====================
 
 export interface CreditSummary {
+  totalCreditRecords: number | null;
+  availableCreditRecords: number | null;
+  soldOutCreditRecords: number | null;
   totalCreditsIssued: number;
   totalCreditsSold: number;
   totalCreditsRetired: number;
   totalCreditsAvailable: number;
+  totalCo2Tons: number | null;
   totalRevenue: number;
-  averagePricePerCredit: number;
-  creditsByProject: CreditsByProject[];
-  creditsByYear: CreditsByYear[];
+  averagePricePerCredit: number | null;
+  totalTransactions: number | null;
+  purchasedTransactions: number | null;
+  retiredTransactions: number | null;
 }
 
 export interface CreditsByProject {

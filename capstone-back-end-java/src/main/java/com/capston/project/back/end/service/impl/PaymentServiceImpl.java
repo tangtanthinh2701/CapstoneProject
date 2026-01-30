@@ -76,6 +76,18 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new RuntimeException("Payment not found for TxnRef: " + response.getTxnRef()));
     }
 
+    @Transactional
+    public Payment confirmPayment(Integer paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new RuntimeException("Payment not found"));
+
+        payment.setPaymentStatus(com.capston.project.back.end.common.PaymentStatus.COMPLETED);
+        payment.setCompletedAt(java.time.OffsetDateTime.now());
+        payment.setPaymentDate(java.time.OffsetDateTime.now());
+
+        return paymentRepository.save(payment);
+    }
+
     public Page<Payment> getMyPayments(Pageable pageable) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)

@@ -4,6 +4,7 @@ import Breadcrumbs from '../../components/Breadcrumbs';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { projectApi, type Project } from '../../models/project.api';
+import { ProjectStatus, ProjectStatusLabels } from '../../models/project.model';
 
 interface PageInfo {
   page: number;
@@ -200,10 +201,9 @@ export default function ProjectListPage() {
             className='px-4 py-3 bg-[#0E2219] border border-[#1E3A2B] rounded-xl text-gray-100 focus:outline-none focus: ring-2 focus:ring-green-500'
           >
             <option value='ALL'>Tất cả trạng thái</option>
-            <option value='PLANNING'>PLANNING</option>
-            <option value='ACTIVE'>ACTIVE</option>
-            <option value='COMPLETED'>COMPLETED</option>
-            <option value='CANCELLED'>CANCELLED</option>
+            {Object.entries(ProjectStatus).map(([_, value]) => (
+              <option key={value} value={value}>{ProjectStatusLabels[value]}</option>
+            ))}
           </select>
         </div>
 

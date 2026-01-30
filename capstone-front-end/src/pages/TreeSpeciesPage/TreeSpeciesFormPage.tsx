@@ -194,10 +194,10 @@ export default function TreeSpeciesFormPage() {
                 type="text"
                 className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="25"
-                value={form.baseCarbonRate}
+                value={form.baseCarbonRate === 0 ? '' : form.baseCarbonRate}
                 onChange={(e) => {
                   const val = e.target.value.replace(/[^0-9.]/g, '');
-                  updateField('baseCarbonRate', val === '' ? '' : parseFloat(val));
+                  updateField('baseCarbonRate', val === '' ? 0 : parseFloat(val));
                 }}
               />
             </div>

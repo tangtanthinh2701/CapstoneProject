@@ -31,6 +31,7 @@ public class DashboardServiceImpl implements DashboardService {
 	private final FarmRepository farmRepository;
 	private final TreeBatchRepository treeBatchRepository;
 	private final CarbonCreditRepository creditRepository;
+	private final com.capston.project.back.end.repository.PaymentRepository paymentRepository;
 
 	@Override
 	public DashboardSummaryResponse getDashboardSummary() {
@@ -56,6 +57,15 @@ public class DashboardServiceImpl implements DashboardService {
 		Long creditsSold = creditRepository.sumCreditsSold();
 		Long creditsRetired = creditRepository.sumCreditsRetired();
 
+		// Actual CO2 absorbed
+		BigDecimal totalCo2AbsorbedKg = projectRepository.sumActualCo2Kg();
+		BigDecimal totalCo2AbsorbedTons = totalCo2AbsorbedKg != null
+				? totalCo2AbsorbedKg.divide(new BigDecimal(1000), 2, java.math.RoundingMode.HALF_UP)
+				: BigDecimal.ZERO;
+
+		// Total Revenue
+		BigDecimal totalRevenue = paymentRepository.sumTotalRevenue();
+
 		return DashboardSummaryResponse.builder()
 				.totalProjects(totalProjects)
 				.activeProjects(activeProjects)
@@ -63,12 +73,12 @@ public class DashboardServiceImpl implements DashboardService {
 				.totalFarms(totalFarms)
 				.activeFarms(activeFarms)
 				.totalTrees(totalTrees)
-				.totalCo2Absorbed(BigDecimal.ZERO)
-				.totalCo2AbsorbedTons(BigDecimal.ZERO)
+				.totalCo2Absorbed(totalCo2AbsorbedKg != null ? totalCo2AbsorbedKg : BigDecimal.ZERO)
+				.totalCo2AbsorbedTons(totalCo2AbsorbedTons)
 				.totalCreditsIssued(creditsIssued != null ? creditsIssued : 0L)
 				.totalCreditsSold(creditsSold != null ? creditsSold : 0L)
 				.totalCreditsRetired(creditsRetired != null ? creditsRetired : 0L)
-				.totalRevenue(BigDecimal.ZERO)
+				.totalRevenue(totalRevenue != null ? totalRevenue : BigDecimal.ZERO)
 				.build();
 	}
 

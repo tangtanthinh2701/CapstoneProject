@@ -1,52 +1,106 @@
-// Chatbot API - Fully compliant with the API guide
-import axios from 'axios';
 import { API_BASE_URL } from '../utils/api';
-
-export interface ChatSession {
-  id: number;
-  sessionCode: string;
-  userId: string;
-  createdAt: string;
-  lastMessageAt?: string;
-}
 
 export interface ChatMessage {
   id: number;
-  sessionId: number;
-  senderType: 'USER' | 'BOT';
+  role: 'USER' | 'ASSISTANT';
   content: string;
+  modelUsed?: string | null;
+  tokensUsed?: number | null;
+  responseTimeMs?: number | null;
+  referencedProjects?: string | null;
+  referencedCredits?: string | null;
+  isHelpful?: boolean | null;
+  feedbackNote?: string | null;
   createdAt: string;
+  sessionId: number;
 }
 
 export interface SendMessageRequest {
-  content: string;
+  message: string;
+}
+
+export interface SendMessageResponse {
+  message: string;
+  timestamp: string;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  errors: any;
+  timestamp: string;
+  pageInfo?: any;
 }
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('token');
-  return { Authorization: `Bearer ${token}` };
+  return {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
 };
 
 // ==================== APIs ====================
 
-export const createSession = () =>
-  axios.post<ChatSession>(`${API_BASE_URL}/chat/sessions`, null, {
+export const sendMessage = async (message: string): Promise<SendMessageResponse> => {
+  const response = await fetch(`${API_BASE_URL}/chatbot/message`, {
+    method: 'POST',
+    headers: getAuthHeader(),
+    body: JSON.stringify({ message }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Không thể gửi tin nhắn');
+  }
+
+  const json: ApiResponse<SendMessageResponse> = await response.json();
+
+  if (!json.success) {
+    throw new Error(json.message || 'Gửi tin nhắn thất bại');
+  }
+
+  return json.data;
+};
+
+export const getChatHistory = async (): Promise<ChatMessage[]> => {
+  const response = await fetch(`${API_BASE_URL}/chatbot/history`, {
+    method: 'GET',
     headers: getAuthHeader(),
   });
 
-export const sendMessage = (sessionCode: string, data: SendMessageRequest) =>
-  axios.post<ChatMessage>(`${API_BASE_URL}/chat/sessions/${sessionCode}/messages`, data, {
+  if (!response.ok) {
+    throw new Error('Không thể tải lịch sử chat');
+  }
+
+  const json: ApiResponse<ChatMessage[]> = await response.json();
+
+  if (!json.success) {
+    throw new Error(json.message || 'Tải lịch sử thất bại');
+  }
+
+  return json.data;
+};
+
+export const closeSession = async (): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/chatbot/close-session`, {
+    method: 'POST',
     headers: getAuthHeader(),
   });
 
-export const getSessionMessages = (sessionCode: string) =>
-  axios.get<ChatMessage[]>(`${API_BASE_URL}/chat/sessions/${sessionCode}/messages`, {
-    headers: getAuthHeader(),
-  });
+  if (!response.ok) {
+    throw new Error('Không thể đóng session');
+  }
 
-// For convenience
+  const json: ApiResponse<null> = await response.json();
+
+  if (!json.success) {
+    throw new Error(json.message || 'Đóng session thất bại');
+  }
+};
+
 export const chatbotApi = {
-  createSession,
   sendMessage,
-  getSessionMessages,
+  getChatHistory,
+  closeSession,
 };

@@ -174,12 +174,14 @@ export default function TransactionPage() {
 
               <div className="mb-6">
                 <input
-                  type="number"
+                  type="text"
                   className="w-full px-4 py-3 rounded-xl bg-[#071811] border border-[#1E3A2B] text-center text-xl font-bold text-green-400 focus:ring-2 focus:ring-green-500 outline-none"
-                  value={amount}
-                  onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
-                  min={10000}
-                  step={10000}
+                  value={amount === 0 ? '' : amount}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    setAmount(val === '' ? 0 : parseInt(val));
+                  }}
+                  placeholder="Nhập số tiền..."
                 />
                 <p className="text-xs text-gray-500 mt-2">Tối thiểu 10.000đ</p>
               </div>

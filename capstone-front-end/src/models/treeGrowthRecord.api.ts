@@ -1,59 +1,67 @@
-import axios from 'axios';
-
-import { API_BASE_URL } from '../utils/api';
+import api from '../utils/api';
 
 export interface TreeGrowthRecord {
     id: number;
     batchId: number;
     recordedDate: string;
     quantityAlive: number;
+    quantityDead: number;
     avgHeightCm: number;
-    avgTrunkDiameterCm?: number;
+    avgTrunkDiameterCm: number;
+    avgCanopyDiameterCm: number;
     healthStatus: string;
-    notes?: string;
-    recordedById?: string;
+    co2AbsorbedKg: number;
+    environmentFactor: number;
+    healthNotes: string;
+    recordedBy: string | null;
+    createdAt: string;
 }
 
-export interface CreateGrowthRecordRequest {
+export interface GrowthRecordSummary {
+    latestCO2Kg: number;
+    latestRecordDate: string;
+    totalCO2Kg: number;
+    batchCode: string;
+    totalCO2Tons: number;
     batchId: number;
-    recordedDate: string;
-    quantityAlive: number;
-    avgHeightCm: number;
-    avgTrunkDiameterCm?: number;
-    healthStatus: string;
-    notes?: string;
 }
 
-const getAuthHeader = () => {
-    const token = localStorage.getItem('token');
-    return { Authorization: `Bearer ${token}` };
-};
-
-// ==================== APIs ====================
-
-export const createGrowthRecord = (data: CreateGrowthRecordRequest) =>
-    axios.post<TreeGrowthRecord>(`${API_BASE_URL}/tree-growth-records`, data, {
-        headers: getAuthHeader(),
-    });
-
-export const getRecordsByBatch = (batchId: number) =>
-    axios.get<TreeGrowthRecord[]>(`${API_BASE_URL}/tree-growth-records/batch/${batchId}`, {
-        headers: getAuthHeader(),
-    });
-
-export const calculateGrowthRecordCO2 = (id: number) =>
-    axios.post(`${API_BASE_URL}/tree-growth-records/${id}/calculate-co2`, null, {
-        headers: getAuthHeader(),
-    });
-
-export const getCO2SummaryByBatch = (batchId: number) =>
-    axios.get(`${API_BASE_URL}/tree-growth-records/batch/${batchId}/co2-summary`, {
-        headers: getAuthHeader(),
-    });
+export interface FarmGrowthSummary {
+    farmName: string;
+    totalCO2Kg: number;
+    totalCO2Tons: number;
+    totalTrees: number;
+    farmId: number;
+}
 
 export const treeGrowthRecordApi = {
-    createGrowthRecord,
-    getRecordsByBatch,
-    calculateGrowthRecordCO2,
-    getCO2SummaryByBatch,
+    // Create new record
+    create: (data: Partial<TreeGrowthRecord>) => api.post('/tree-growth-records', data),
+
+    // Update record
+    update: (id: number, data: Partial<TreeGrowthRecord>) => api.put(`/tree-growth-records/${id}`, data),
+
+    // Get all records (paginated usually, but keeping simple for now)
+    getAll: () => api.get('/tree-growth-records'),
+
+    // Get record by ID
+    getById: (id: number) => api.get(`/tree-growth-records/${id}`),
+
+    // Get records by batch ID
+    getByBatchId: (batchId: number) => api.get(`/tree-growth-records/batch/${batchId}`),
+
+    // Get latest record for a batch
+    getLatest: (batchId: number) => api.get(`/tree-growth-records/batch/${batchId}/latest`),
+
+    // Calculate CO2 for a record
+    calculateCO2: (id: number) => api.post(`/tree-growth-records/${id}/calculate-co2`),
+
+    // Get total CO2 by batch
+    getTotalCO2ByBatch: (batchId: number) => api.get(`/tree-growth-records/batch/${batchId}/total-co2`),
+
+    // Get total CO2 by farm
+    getTotalCO2ByFarm: (farmId: number) => api.get(`/tree-growth-records/farm/${farmId}/total-co2`),
+
+    // Get unhealthy batches
+    getUnhealthyBatches: () => api.get('/tree-growth-records/unhealthy'),
 };

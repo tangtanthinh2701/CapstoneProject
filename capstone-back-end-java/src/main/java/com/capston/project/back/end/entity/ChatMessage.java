@@ -12,7 +12,7 @@ import java.util.Map;
 
 @Entity
 @Table(name = "chat_messages", indexes = {
-    @Index(name = "idx_chat_messages_session", columnList = "session_id, created_at")
+        @Index(name = "idx_chat_messages_session", columnList = "session_id, created_at")
 })
 @Getter
 @Setter
@@ -27,6 +27,7 @@ public class ChatMessage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private ChatSession session;
 
     @Enumerated(EnumType.STRING)
@@ -68,4 +69,3 @@ public class ChatMessage {
         return session != null ? session.getId() : null;
     }
 }
-

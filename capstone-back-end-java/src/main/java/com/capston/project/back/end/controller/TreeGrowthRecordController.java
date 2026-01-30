@@ -36,11 +36,10 @@ public class TreeGrowthRecordController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'FARMER')")
-    public ResponseEntity<ApiResponse<TreeGrowthRecord>> createGrowthRecord(
-            @Valid @RequestBody TreeGrowthRecordRequest request) {
+    public ResponseEntity<ApiResponse<TreeGrowthRecord>> createGrowthRecord(@Valid @RequestBody TreeGrowthRecordRequest request) {
         TreeGrowthRecord record = growthRecordService.createGrowthRecord(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Growth record created successfully", record));
+                             .body(ApiResponse.success("Growth record created successfully", record));
     }
 
     @GetMapping("/{id}")

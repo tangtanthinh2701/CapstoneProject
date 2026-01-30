@@ -24,10 +24,6 @@ public class TreeGrowthRecordRequest {
     @NotNull(message = "Recorded date is required")
     private LocalDate recordedDate;
 
-    @NotNull(message = "Quantity alive is required")
-    @Min(value = 0, message = "Quantity alive cannot be negative")
-    private Integer quantityAlive;
-
     @Min(value = 0, message = "Quantity dead cannot be negative")
     private Integer quantityDead;
 

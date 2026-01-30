@@ -82,6 +82,9 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
 	@Query("SELECT COALESCE(SUM(p.targetCo2Kg), 0) FROM Project p")
 	BigDecimal sumTargetCo2Kg();
 
+	@Query("SELECT COALESCE(SUM(p.actualCo2Kg), 0) FROM Project p")
+	BigDecimal sumActualCo2Kg();
+
 	@Query("SELECT p FROM Project p ORDER BY p.actualCo2Kg DESC LIMIT :limit")
 	List<Project> findTopProjectsByCo2(@Param("limit") int limit);
 

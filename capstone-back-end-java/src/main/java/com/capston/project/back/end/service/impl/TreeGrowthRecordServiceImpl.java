@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -64,35 +65,54 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
             environmentFactor = getEnvironmentFactor(batch.getFarmId(), request.getRecordedDate());
         }
 
-        int quantityDead = request.getQuantityDead() != null ? request.getQuantityDead() : 0;
-        int quantityPlanted = batch.getQuantityPlanted();
-        int quantityAlive = quantityPlanted - quantityDead;
+        // NEW LOGIC: Calculate cumulative deaths
+        int newDeaths = request.getQuantityDead() != null ? request.getQuantityDead() : 0;
+        int previousCumulativeDeaths = getCumulativeDeathsBeforeDate(request.getBatchId(), request.getRecordedDate());
+        int totalCumulativeDeaths = previousCumulativeDeaths + newDeaths;
 
+        int quantityPlanted = batch.getQuantityPlanted();
+        int quantityAlive = quantityPlanted - totalCumulativeDeaths;
+
+        // Validation: Cannot have more deaths than planted
         if (quantityAlive < 0) {
             throw new IllegalArgumentException(
-                    String.format("quantityDead (%d) cannot exceed quantityPlanted (%d)", quantityDead,
-                            quantityPlanted));
+                    String.format(
+                            "Total cumulative deaths (%d) cannot exceed quantity planted (%d). Previous deaths: %d, New deaths: %d",
+                            totalCumulativeDeaths, quantityPlanted, previousCumulativeDeaths, newDeaths));
         }
+
+        // Validation: New deaths cannot be negative
+        if (newDeaths < 0) {
+            throw new IllegalArgumentException("Number of new deaths cannot be negative");
+        }
+
+        log.info("Batch {}: Planted={}, PreviousDeaths={}, NewDeaths={}, TotalDeaths={}, Alive={}",
+                batch.getBatchCode(), quantityPlanted, previousCumulativeDeaths, newDeaths,
+                totalCumulativeDeaths, quantityAlive);
+
+        // Set recordedBy from security context if not provided
+        UUID recordedBy = request.getRecordedBy() != null ? request.getRecordedBy() : securityUtils.getCurrentUserId();
 
         TreeGrowthRecord record = TreeGrowthRecord.builder()
                 .batchId(request.getBatchId())
                 .recordedDate(request.getRecordedDate())
                 .quantityAlive(quantityAlive)
-                .quantityDead(quantityDead)
+                .quantityDead(newDeaths) // Store only NEW deaths in this record
                 .avgHeightCm(request.getAvgHeightCm())
                 .avgTrunkDiameterCm(request.getAvgTrunkDiameterCm())
                 .avgCanopyDiameterCm(request.getAvgCanopyDiameterCm())
                 .healthStatus(request.getHealthStatus() != null ? request.getHealthStatus() : HealthStatus.HEALTHY)
                 .healthNotes(request.getHealthNotes())
                 .environmentFactor(environmentFactor)
-                .recordedBy(request.getRecordedBy())
+                .recordedBy(recordedBy)
                 .build();
 
         BigDecimal co2Absorbed = calculateCO2Absorbed(batch, record);
         record.setCo2AbsorbedKg(co2Absorbed);
 
         TreeGrowthRecord saved = growthRecordRepository.save(record);
-        log.info("Growth record created with CO2: {} kg", co2Absorbed);
+        log.info("Growth record created with CO2: {} kg, Alive: {}, New deaths: {}",
+                co2Absorbed, quantityAlive, newDeaths);
 
         updateProjectCO2(batch);
 
@@ -106,6 +126,22 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
                         batch.getBatchCode(),
                         saved.getHealthStatus().name(),
                         saved.getHealthNotes());
+            }
+        }
+
+        // Notify if significant deaths occurred
+        if (newDeaths > 0) {
+            Farm farm = farmRepository.findById(batch.getFarmId()).orElse(null);
+            if (farm != null && farm.getCreatedBy() != null) {
+                double deathRate = (newDeaths * 100.0) / quantityPlanted;
+                if (deathRate > 5.0) { // Alert if more than 5% mortality in one record
+                    webSocketService.notifyTreeHealthIssue(
+                            farm.getCreatedBy(),
+                            saved.getBatchId(),
+                            batch.getBatchCode(),
+                            "HIGH_MORTALITY",
+                            String.format("%d cây chết (%.1f%% của tổng số cây trồng)", newDeaths, deathRate));
+                }
             }
         }
 
@@ -137,22 +173,43 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
             }
         }
 
-        if (request.getRecordedDate() != null)
-            record.setRecordedDate(request.getRecordedDate());
-        if (request.getQuantityDead() != null) {
-            int quantityDead = request.getQuantityDead();
-            int quantityPlanted = batch.getQuantityPlanted();
-            int quantityAlive = quantityPlanted - quantityDead;
+        LocalDate recordDate = record.getRecordedDate();
+        if (request.getRecordedDate() != null) {
+            recordDate = request.getRecordedDate();
+            record.setRecordedDate(recordDate);
+        }
 
-            if (quantityAlive < 0) {
-                throw new IllegalArgumentException(
-                        String.format("quantityDead (%d) cannot exceed quantityPlanted (%d)", quantityDead,
-                                quantityPlanted));
+        // NEW LOGIC: Recalculate quantityAlive when quantityDead is updated
+        if (request.getQuantityDead() != null) {
+            int newDeaths = request.getQuantityDead();
+
+            // Validation: New deaths cannot be negative
+            if (newDeaths < 0) {
+                throw new IllegalArgumentException("Number of deaths cannot be negative");
             }
 
-            record.setQuantityDead(quantityDead);
+            // Get cumulative deaths BEFORE this record (excluding this record)
+            int previousCumulativeDeaths = getCumulativeDeathsBeforeDate(record.getBatchId(), recordDate);
+            int totalCumulativeDeaths = previousCumulativeDeaths + newDeaths;
+
+            int quantityPlanted = batch.getQuantityPlanted();
+            int quantityAlive = quantityPlanted - totalCumulativeDeaths;
+
+            // Validation: Cannot have more deaths than planted
+            if (quantityAlive < 0) {
+                throw new IllegalArgumentException(
+                        String.format(
+                                "Total cumulative deaths (%d) cannot exceed quantity planted (%d). Previous deaths: %d, This record deaths: %d",
+                                totalCumulativeDeaths, quantityPlanted, previousCumulativeDeaths, newDeaths));
+            }
+
+            log.info("Updating record {}: Planted={}, PreviousDeaths={}, NewDeaths={}, TotalDeaths={}, Alive={}",
+                    id, quantityPlanted, previousCumulativeDeaths, newDeaths, totalCumulativeDeaths, quantityAlive);
+
+            record.setQuantityDead(newDeaths);
             record.setQuantityAlive(quantityAlive);
         }
+
         if (request.getAvgHeightCm() != null)
             record.setAvgHeightCm(request.getAvgHeightCm());
         if (request.getAvgTrunkDiameterCm() != null)
@@ -165,6 +222,11 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
             record.setHealthNotes(request.getHealthNotes());
         if (request.getEnvironmentFactor() != null)
             record.setEnvironmentFactor(request.getEnvironmentFactor());
+
+        // Ensure recordedBy is updated if not set
+        if (record.getRecordedBy() == null) {
+            record.setRecordedBy(securityUtils.getCurrentUserId());
+        }
 
         BigDecimal co2Absorbed = calculateCO2Absorbed(batch, record);
         record.setCo2AbsorbedKg(co2Absorbed);
@@ -218,6 +280,32 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
     @Override
     @Transactional(readOnly = true)
     public Page<TreeGrowthRecord> getAllGrowthRecords(Pageable pageable) {
+        // FARMER: Only see records from their own farms' batches
+        if (securityUtils.isFarmer()) {
+            java.util.UUID currentUserId = securityUtils.getCurrentUserId();
+
+            // Filter records by batch ownership (via farm)
+            Page<TreeGrowthRecord> allRecords = growthRecordRepository.findAll(pageable);
+
+            List<TreeGrowthRecord> filteredRecords = allRecords.getContent().stream()
+                    .filter(record -> {
+                        TreeBatch batch = treeBatchRepository.findById(record.getBatchId()).orElse(null);
+                        if (batch == null)
+                            return false;
+
+                        Farm farm = farmRepository.findById(batch.getFarmId()).orElse(null);
+                        return farm != null && farm.getCreatedBy() != null
+                                && farm.getCreatedBy().equals(currentUserId);
+                    })
+                    .toList();
+
+            return new org.springframework.data.domain.PageImpl<>(
+                    filteredRecords,
+                    pageable,
+                    filteredRecords.size());
+        }
+
+        // ADMIN: See all records
         return growthRecordRepository.findAll(pageable);
     }
 
@@ -346,6 +434,33 @@ public class TreeGrowthRecordServiceImpl implements TreeGrowthRecordService {
     }
 
     // ==================== HELPER METHODS ====================
+
+    /**
+     * Get cumulative deaths BEFORE a given date (excluding the date itself)
+     * This is used to calculate how many trees have died before creating/updating a
+     * record
+     * 
+     * @param batchId    The batch ID
+     * @param beforeDate The date to check before (exclusive)
+     * @return Total cumulative deaths before the given date
+     */
+    private int getCumulativeDeathsBeforeDate(Integer batchId, LocalDate beforeDate) {
+        List<TreeGrowthRecord> previousRecords = growthRecordRepository
+                .findByBatchIdOrderByRecordedDateDesc(batchId)
+                .stream()
+                .filter(r -> r.getRecordedDate().isBefore(beforeDate))
+                .toList();
+
+        int totalDeaths = 0;
+        for (TreeGrowthRecord record : previousRecords) {
+            if (record.getQuantityDead() != null) {
+                totalDeaths += record.getQuantityDead();
+            }
+        }
+
+        log.debug("Batch {}: Cumulative deaths before {}: {}", batchId, beforeDate, totalDeaths);
+        return totalDeaths;
+    }
 
     private BigDecimal getEnvironmentFactor(Integer farmId, LocalDate date) {
         Optional<FarmEnvironmentRecord> envRecord = environmentRecordRepository.findByFarmIdAndRecordedDate(farmId,

@@ -14,7 +14,8 @@ export default function Sidebar() {
     { label: 'Loại cây', path: '/tree-species', icon: 'compost', roles: ['ADMIN', 'FARMER'] },
     { label: 'Hợp đồng', path: '/contracts', icon: 'description', roles: ['ADMIN', 'FARMER', 'USER'] },
     { label: 'Phê duyệt HĐ', path: '/contracts/workflow', icon: 'assignment', roles: ['ADMIN'] },
-    { label: 'Tín chỉ Carbon', path: '/credits', icon: 'co2', roles: ['ADMIN', 'USER'] },
+    { label: 'Tín chỉ Carbon', path: '/credits', icon: 'co2', roles: ['ADMIN', 'USER', 'FARMER'] },
+    { label: 'Trợ lý AI', path: '/chatbot', icon: 'smart_toy', roles: ['ADMIN', 'FARMER', 'USER'] },
     { label: 'Quản lý Users', path: '/users', icon: 'people', roles: ['ADMIN'] },
   ];
 

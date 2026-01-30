@@ -12,5 +12,7 @@ public interface PaymentService {
 
     Payment handleVnpayCallback(HttpServletRequest request);
 
+    Payment confirmPayment(Integer paymentId);
+
     Page<Payment> getMyPayments(Pageable pageable);
 }

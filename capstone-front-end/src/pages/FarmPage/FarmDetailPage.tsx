@@ -4,6 +4,7 @@ import Sidebar from '../../components/Sidebar';
 import Breadcrumbs from '../../components/Breadcrumbs';
 import { useAuth } from '../../contexts/AuthContext';
 import { farmApi, type Farm } from '../../models/farm.api';
+import { treeGrowthRecordApi, type FarmGrowthSummary } from '../../models/treeGrowthRecord.api';
 
 const statusBadge = (status: string) => {
   switch (status) {
@@ -24,6 +25,7 @@ export default function FarmDetailPage() {
   const { user, isAdmin, hasRole } = useAuth();
 
   const [farm, setFarm] = useState<Farm | null>(null);
+  const [co2Summary, setCo2Summary] = useState<FarmGrowthSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,9 +35,12 @@ export default function FarmDetailPage() {
     const loadData = async () => {
       try {
         setLoading(true);
-        const response = await farmApi.getById(id);
-        const data = (response as any)?.data || response;
-        setFarm(data);
+        const [farmRes, co2Res] = await Promise.all([
+          farmApi.getById(id),
+          treeGrowthRecordApi.getTotalCO2ByFarm(parseInt(id))
+        ]);
+        setFarm(farmRes.data);
+        setCo2Summary(co2Res.data);
       } catch (err: any) {
         setError(err.message || 'Không tải được dữ liệu');
       } finally {
@@ -130,6 +135,35 @@ export default function FarmDetailPage() {
             </div>
           )}
         </div>
+
+        {/* CO2 SUMMARY */}
+        {co2Summary && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/10 p-6 rounded-2xl border border-green-500/20 shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="material-icons text-green-500">eco</span>
+                <p className="text-green-400 text-xs font-black uppercase tracking-widest">Tổng CO₂ hấp thụ</p>
+              </div>
+              <div className="flex items-end gap-2">
+                <h4 className="text-3xl font-black text-white">{co2Summary.totalCO2Kg.toFixed(2)}</h4>
+                <span className="text-gray-400 text-sm font-bold mb-1">Kg</span>
+              </div>
+              <p className="text-[10px] text-gray-500 mt-2 font-bold tracking-tight">≈ {co2Summary.totalCO2Tons.toFixed(4)} TẤN</p>
+            </div>
+
+            <div className="bg-[#0E2219] p-6 rounded-2xl border border-[#1E3A2B] shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="material-icons text-blue-500">park</span>
+                <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Tổng số cây</p>
+              </div>
+              <div className="flex items-end gap-2">
+                <h4 className="text-3xl font-black text-white">{co2Summary.totalTrees}</h4>
+                <span className="text-gray-400 text-sm font-bold mb-1">Cây</span>
+              </div>
+              <p className="text-[10px] text-gray-500 mt-2 font-bold tracking-tight">CỦA TẤT CẢ LÔ CÂY</p>
+            </div>
+          </div>
+        )}
 
         {/* INFO CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
